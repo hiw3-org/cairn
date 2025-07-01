@@ -63,4 +63,6 @@ interface IHypercertToken {
     /// @dev Returns the `uri` for metadata of the claim represented by `tokenID`
     /// @dev Metadata must conform to { Hypercert Metadata } spec (based on ERC1155 Metadata)
     function uri(uint256 tokenID) external view returns (string memory metadata);
+
+    function ownerOf(uint256 tokenID) external view returns (address owner);
 }
