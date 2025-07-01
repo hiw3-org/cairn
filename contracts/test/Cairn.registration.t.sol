@@ -14,6 +14,10 @@ contract CairnTest is Test {
     address public funder = vm.addr(321321321);
 
     string public uri = "ipfs://QmTestProjectOnSepolia";
+    string public seedUri1 = "ipfs://QmSeedProject1";
+    string public seedUri2 = "ipfs://QmSeedProject2";
+    string public seedUri3 = "ipfs://QmSeedProject3";
+
     uint256 public UNITS = 1000;   
     IHypercertToken.TransferRestrictions public RESTRICTIONS = IHypercertToken.TransferRestrictions.AllowAll;
 
@@ -21,6 +25,8 @@ contract CairnTest is Test {
     uint256 public hypercertTokenId;
 
     string public outputsURI = "ipfs://QmOutputsURI";
+
+    uint8 public minRequiredPoR = 3;
 
     function setUp() public {
         vm.recordLogs();
@@ -37,103 +43,165 @@ contract CairnTest is Test {
         hypercertTypeId = uint256(entries[0].topics[1]);
         hypercertTokenId = hypercertTypeId + 1;
 
-        // Deploy your Cairn contract pointing to real Hypercert
+        // Deploy Cairn contract with minRequiredPoR=3 and maxPoRProject=10 (example)
         vm.prank(deployer);
-        cairn = new Cairn(0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941);
+        cairn = new Cairn(address(hypercert), minRequiredPoR, 10);
+
+        // Seed initial projects as deployer
+        vm.prank(deployer);
+        cairn.initProject(seedUri1, deployer);
+
+        vm.prank(deployer);
+        cairn.initProject(seedUri2, deployer);
+
+        vm.prank(deployer);
+        cairn.initProject(seedUri3, deployer);
     }
 
-    function testRegisterProject() public {
-        vm.startPrank(scientist);        
+    /// @notice Helper to record one proof per project for a user on multiple projects
+    function recordProofsOnDistinctProjects(address user, string[] memory projectURIs) internal {
+        vm.startPrank(user);
+        for (uint256 i = 0; i < projectURIs.length; i++) {
+            cairn.recordProof(projectURIs[i], string(abi.encodePacked("ipfs://proof-", vm.toString(i))));
+        }
+        vm.stopPrank();
+    }
 
-        // Call registerProject, which calls real mintClaim on Hypercert Sepolia
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);
+    function testRegisterProjectSuccess() public {
+        // User records one PoR per distinct seeded project to accumulate minRequiredPoR
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
 
-        // Check that metadata URI is stored
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
+        vm.startPrank(scientist);
+        cairn.registerProject(uri);
+
         string[] memory uris = cairn.getUserMetadataURIs(scientist);
         assertEq(uris.length, 1);
         assertEq(uris[0], uri);
 
-        // Initially tokenID is 0 because mintClaim does not return it
-        Cairn.Project memory project = cairn.getProject(scientist, uri);
-        uint256 tokenID = project.tokenID;
-        assertEq(tokenID, 0);
+        Cairn.Project memory project = cairn.getProject(uri);
+        assertEq(project.creator, scientist);
+        assertEq(project.tokenID, 0);
+        assertEq(bytes(project.outputsURI).length, 0);
 
         vm.stopPrank();
     }
 
-    function testStoreTokenIDSuccess() public {
+    function testRecordProofRevertsIfDuplicate() public {
         vm.startPrank(scientist);
+        cairn.recordProof(seedUri1, "ipfs://proof1");
 
-        // Register project first
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);
+        vm.expectRevert("You have already recorded a proof for this project");
+        cairn.recordProof(seedUri1, "ipfs://proof2");
 
-        // Store tokenID (must be owned by scientist)
+        vm.stopPrank();
+    }
+
+    function testRegisterProjectRevertsIfDuplicateURI() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
+        vm.startPrank(scientist);
+        cairn.registerProject(uri);
+        vm.expectRevert("Metadata URI already used globally");
+        cairn.registerProject(uri);
+        vm.stopPrank();
+    }
+
+    function testStoreTokenIDSuccess() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
+        vm.startPrank(scientist);
+        cairn.registerProject(uri);
         cairn.storeTokenID(uri, hypercertTokenId);
 
-        Cairn.Project memory project = cairn.getProject(scientist, uri);
+        Cairn.Project memory project = cairn.getProject(uri);
         assertEq(project.tokenID, hypercertTokenId);
 
         vm.stopPrank();
     }
 
-    function testStoreTokenIDRevertsIfTokenIDZero() public {
+    function testStoreTokenIDRevertsIfZero() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
         vm.startPrank(scientist);
-
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);
-
+        cairn.registerProject(uri);
         vm.expectRevert("Invalid tokenID");
         cairn.storeTokenID(uri, 0);
-
         vm.stopPrank();
     }
 
-    function testStoreTokenIDRevertsIfProjectDoesNotExist() public {
+    function testStoreTokenIDRevertsIfProjectNotExist() public {
         vm.startPrank(scientist);
-
         vm.expectRevert("Project does not exist yet");
         cairn.storeTokenID(uri, hypercertTokenId);
-
         vm.stopPrank();
     }
 
     function testStoreTokenIDRevertsIfNotCreator() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
         vm.startPrank(scientist);
-
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);
-
+        cairn.registerProject(uri);
         vm.stopPrank();
 
         vm.startPrank(scientist2);
-
         vm.expectRevert("You are not the creator of this project");
         cairn.storeTokenID(uri, hypercertTokenId);
-
         vm.stopPrank();
     }
 
-    function testStoreTokenIDRevertsIfTokenIDAlreadySet() public {
+    function testStoreTokenIDRevertsIfAlreadySet() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(scientist, seedProjects);
+
         vm.startPrank(scientist);
-
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);
-
+        cairn.registerProject(uri);
         cairn.storeTokenID(uri, hypercertTokenId);
-
         vm.expectRevert("tokenID already set");
         cairn.storeTokenID(uri, hypercertTokenId);
-
         vm.stopPrank();
     }
 
-    function testStoreTokenIDRevertsIfNotOwnerOfTokenID() public {
-        // Token owned by scientist, but funder tries to store tokenID
+    function testStoreTokenIDRevertsIfNotOwner() public {
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+
+        recordProofsOnDistinctProjects(funder, seedProjects);
+
         vm.startPrank(funder);
-
-        cairn.registerProject(uri, UNITS, RESTRICTIONS);        
-
+        cairn.registerProject(uri);
         vm.expectRevert("You are not owner of tokenID or the tokenID does not exists");
         cairn.storeTokenID(uri, hypercertTokenId);
-
         vm.stopPrank();
-    } 
-
+    }
 }
