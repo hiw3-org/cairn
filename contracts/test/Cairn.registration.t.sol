@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/Cairn.sol";
@@ -17,6 +17,7 @@ contract CairnTest is Test {
     string public seedUri1 = "ipfs://QmSeedProject1";
     string public seedUri2 = "ipfs://QmSeedProject2";
     string public seedUri3 = "ipfs://QmSeedProject3";
+    string public seedUri4 = "ipfs://QmSeedProject4";
 
     uint256 public UNITS = 1000;   
     IHypercertToken.TransferRestrictions public RESTRICTIONS = IHypercertToken.TransferRestrictions.AllowAll;
@@ -27,6 +28,7 @@ contract CairnTest is Test {
     string public outputsURI = "ipfs://QmOutputsURI";
 
     uint8 public minRequiredPoR = 3;
+    uint8 public maxPoRProject = 10;
 
     function setUp() public {
         vm.recordLogs();
@@ -43,32 +45,60 @@ contract CairnTest is Test {
         hypercertTypeId = uint256(entries[0].topics[1]);
         hypercertTokenId = hypercertTypeId + 1;
 
-        // Deploy Cairn contract with minRequiredPoR=3 and maxPoRProject=10 (example)
+        // Deploy Cairn contract with minRequiredPoR and maxPoRProject
         vm.prank(deployer);
-        cairn = new Cairn(address(hypercert), minRequiredPoR, 10);
+        cairn = new Cairn(address(hypercert), minRequiredPoR, maxPoRProject, 7 days);
 
-        // Seed initial projects as deployer
-        vm.prank(deployer);
-        cairn.initProject(seedUri1, deployer);
+        string[] memory seedProjects = new string[](minRequiredPoR);
+        seedProjects[0] = seedUri1;
+        seedProjects[1] = seedUri2;
+        seedProjects[2] = seedUri3;
+        
+        for (uint256 i = 0; i < seedProjects.length; i++) {
+            vm.prank(deployer);
+            cairn.initProject(seedProjects[i], deployer);
+            vm.prank(deployer);
+            hypercert.mintClaim(deployer, UNITS, seedProjects[i], RESTRICTIONS);
+            uint256 seedHypercertTypeId = getTokenIdByURI(seedProjects[i]);
+            uint256 seedHypercertTokenId = seedHypercertTypeId + 1;
+            vm.prank(deployer);
+            cairn.storeTokenID(seedProjects[i], seedHypercertTokenId);
+            vm.prank(deployer);
+            cairn.recordOutputs(seedProjects[i], string(abi.encodePacked("ipfs://outputs-", vm.toString(i))));
+        }
+    }
 
-        vm.prank(deployer);
-        cairn.initProject(seedUri2, deployer);
+    /// @notice Helper to scan the logs and retrieve tokenID
+    function getTokenIdByURI(string memory targetURI) internal returns (uint256) {
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 eventSig = keccak256("ClaimStored(uint256,string,uint256)");
 
-        vm.prank(deployer);
-        cairn.initProject(seedUri3, deployer);
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (entries[i].topics.length > 0 && entries[i].topics[0] == eventSig) {
+                uint256 claimID = uint256(entries[i].topics[1]);
+
+                // Decode non-indexed parameters: (string uri, uint256 units)
+                (string memory _uri, ) = abi.decode(entries[i].data, (string, uint256));
+
+                if (keccak256(bytes(_uri)) == keccak256(bytes(targetURI))) {
+                    return claimID;
+                }
+            }
+        }
+        revert("Token with given URI not found");
     }
 
     /// @notice Helper to record one proof per project for a user on multiple projects
-    function recordProofsOnDistinctProjects(address user, string[] memory projectURIs) internal {
-        vm.startPrank(user);
+    /// Note: Proofs can only be recorded if outputs are set on the project
+    function recordProofsOnDistinctProjects(address user, string[] memory projectURIs) internal {        
         for (uint256 i = 0; i < projectURIs.length; i++) {
+            vm.prank(user);
             cairn.recordProof(projectURIs[i], string(abi.encodePacked("ipfs://proof-", vm.toString(i))));
         }
-        vm.stopPrank();
+        vm.warp(block.timestamp + 7 days + 1);
     }
 
     function testRegisterProjectSuccess() public {
-        // User records one PoR per distinct seeded project to accumulate minRequiredPoR
         string[] memory seedProjects = new string[](minRequiredPoR);
         seedProjects[0] = seedUri1;
         seedProjects[1] = seedUri2;
@@ -79,7 +109,7 @@ contract CairnTest is Test {
         vm.startPrank(scientist);
         cairn.registerProject(uri);
 
-        string[] memory uris = cairn.getUserMetadataURIs(scientist);
+        string[] memory uris = cairn.getUserProjectURIs(scientist);
         assertEq(uris.length, 1);
         assertEq(uris[0], uri);
 
@@ -87,16 +117,6 @@ contract CairnTest is Test {
         assertEq(project.creator, scientist);
         assertEq(project.tokenID, 0);
         assertEq(bytes(project.outputsURI).length, 0);
-
-        vm.stopPrank();
-    }
-
-    function testRecordProofRevertsIfDuplicate() public {
-        vm.startPrank(scientist);
-        cairn.recordProof(seedUri1, "ipfs://proof1");
-
-        vm.expectRevert("You have already recorded a proof for this project");
-        cairn.recordProof(seedUri1, "ipfs://proof2");
 
         vm.stopPrank();
     }

@@ -1,122 +1,124 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "./interfaces/IHypercertToken.sol";
 import "forge-std/console.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract Cairn is Ownable {
     IHypercertToken public hypercertToken;
+    
     uint8 public minRequiredPoR;
     uint8 public maxPoRProject;
+    uint256 public disputeWindowPoR;
 
     struct Project {
         address creator; 
         uint256 tokenID;
-        string metadataURI;
+        string projectURI;
         string outputsURI;
-        ProofOfReproducibility[] proofs;
+        string[] proofs;
 
         // TODO FUNDERS: addr => amount
     }
 
-    enum ProofState {
-        PENDING,
-        VERIFIED,
-        DISPUTE,
-        UNVERIFIED
-    }
-
     struct ProofOfReproducibility {
         string proofURI;       // IPFS URI of the proof metadata
+        string projectURI;     // IPFS URI to the project metadata (plus ID)
         address recorder;      // Who recorded the proof
-        ProofState state;      // State of the proof
+        uint256 recordedAt;    // Timestamp when recorded
+        bool dispute;          // If PoR is disputed for validity
+        string disputeURI;     // IPFS URI of the dispute metadata        
     }
 
-    string[] public allMetadataURIs; 
-    mapping(string => Project) private projects; 
-    mapping(address => string[]) public userMetadataURIs;
-    // Global tracking of used metadata URIs to enforce uniqueness across all creators
-    mapping(string => bool) private _metadataURIsUsed;
+    string[] public allProjectURIs; 
+    mapping(string => Project) public projects; 
+    mapping(address => string[]) public userProjectURIs;
+    mapping(string => bool) private _projectURIsUsed;
 
-    mapping(address => uint256) public userTotalPoRCount;      // total proofs recorded
-    mapping(address => uint256) public userAvailablePoRCount;  // proofs available to create project
-    // Tracks if a user has already recorded a PoR for a given project metadataURI
-    mapping(string => mapping(address => bool)) public hasRecordedProof;
+    string[] public allProofURIs; 
+    mapping(string => ProofOfReproducibility) public proofs; 
+    mapping(address => string[]) public userProofURIs;
+    mapping(string => bool) private _proofURIsUsed;
+    mapping(string => mapping(address => bool)) private hasRecordedProof;
 
 
-    event ProjectRegistered(address indexed creator, uint256 indexed tokenID, string metadataURI);
-    event OutputsRecorded(address indexed creator, uint256 indexed tokenID, string metadataURI, string outputsURI);
-    event ProofRecorded(address indexed creator, uint256 indexed tokenID, string metadataURI, string proofURI);
+    event ProjectRegistered(address indexed creator, uint256 indexed tokenID, string projectURI);
+    event OutputsRecorded(address indexed creator, uint256 indexed tokenID, string projectURI, string outputsURI);
+    event ProofRecorded(address indexed creator, uint256 indexed tokenID, string projectURI, string proofURI);
+    event ProofDisputed(address indexed disputer, string indexed proofURI, string disputeURI);
 
-    constructor(address _hypercertToken, uint8 _minRequiredPoR, uint8 _maxPoRProject) {
+
+    constructor(address _hypercertToken, uint8 _minRequiredPoR, uint8 _maxPoRProject, uint256 _disputeWindowPoR) Ownable(msg.sender) {
         hypercertToken = IHypercertToken(_hypercertToken);
         minRequiredPoR = _minRequiredPoR;
         maxPoRProject = _maxPoRProject;
+        disputeWindowPoR = _disputeWindowPoR;
     }
 
 
     /// ---------------- SETTER FUNCTIONS ----------------------
 
-    /// @notice Register a new project with unique metadataURI globally
-    function registerProject(string memory metadataURI) external {
-        require(!_metadataURIsUsed[metadataURI], "Metadata URI already used globally");
+    /// @notice Register a new project with unique projectURI globally
+    function registerProject(string memory projectURI) external {
+        require(!_projectURIsUsed[projectURI], "Metadata URI already used globally");
 
-        require(userAvailablePoRCount[msg.sender] >= minRequiredPoR, "Not enough available PoRs to register project");
+        uint256 availablePoRs = getUserAvailablePoRCount(msg.sender);
+        require(availablePoRs >= minRequiredPoR, "Not enough available PoRs to register project");
 
         // Project struct init
-        Project storage project = projects[metadataURI];
+        Project storage project = projects[projectURI];
         project.creator = msg.sender;
         project.tokenID = 0;
-        project.metadataURI = metadataURI;
+        project.projectURI = projectURI;
         project.outputsURI = "";
 
-        userMetadataURIs[msg.sender].push(metadataURI);
-        allMetadataURIs.push(metadataURI);
-        _metadataURIsUsed[metadataURI] = true;
-        userAvailablePoRCount[msg.sender] -= minRequiredPoR;
+        userProjectURIs[msg.sender].push(projectURI);
+        allProjectURIs.push(projectURI);
+        _projectURIsUsed[projectURI] = true;
 
-        emit ProjectRegistered(msg.sender, 0, metadataURI);
+        emit ProjectRegistered(msg.sender, 0, projectURI);
     }
 
-    function initProject(string memory metadataURI, address _creator) external onlyOwner {
+    function initProject(string memory projectURI, address _creator) external onlyOwner {
         require(_creator != address(0), "Invalid creator address");
-        require(!_metadataURIsUsed[metadataURI], "Metadata URI already used");
-        Project storage project = projects[metadataURI];
+        require(!_projectURIsUsed[projectURI], "Metadata URI already used");
+        
+        Project storage project = projects[projectURI];
         project.creator = _creator;
         project.tokenID = 0;
-        project.metadataURI = metadataURI;
+        project.projectURI = projectURI;
         project.outputsURI = "";
 
-        userMetadataURIs[_creator].push(metadataURI);
-        allMetadataURIs.push(metadataURI);
-        _metadataURIsUsed[metadataURI] = true;
+        userProjectURIs[_creator].push(projectURI);
+        allProjectURIs.push(projectURI);
+        _projectURIsUsed[projectURI] = true;
 
-        emit ProjectRegistered(_creator, 0, metadataURI);
+        emit ProjectRegistered(_creator, 0, projectURI);
     }
 
-    /// @notice Store the tokenID for a project identified by creator and metadataURI
-    function storeTokenID(string memory metadataURI, uint256 tokenID) external {
+    /// @notice Store the tokenID for a project identified by creator and projectURI
+    function storeTokenID(string memory projectURI, uint256 tokenID) external {
         require(tokenID != 0, "Invalid tokenID");
-        require(_metadataURIsUsed[metadataURI], "Project does not exist yet");
+        require(_projectURIsUsed[projectURI], "Project does not exist yet");
         // Check that the project exists for msg.sender
-        Project storage project = projects[metadataURI];
+        Project storage project = projects[projectURI];
         require(project.creator == msg.sender, "You are not the creator of this project");
         require(project.tokenID == 0, "tokenID already set");
         console.log("Owner of token", hypercertToken.ownerOf(tokenID));
         require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not owner of tokenID or the tokenID does not exists");
 
-        projects[metadataURI].tokenID = tokenID;
+        project.tokenID = tokenID;
 
-        emit ProjectRegistered(msg.sender, tokenID, metadataURI);
+        emit ProjectRegistered(msg.sender, tokenID, projectURI);
     }
 
-    /// @notice Store the outputs of a project identified by metadataURI
-    function recordOutputs(string memory metadataURI, string memory outputsURI) external {
-        require(_metadataURIsUsed[metadataURI], "Project does not exist yet");
+    /// @notice Store the outputs of a project identified by projectURI
+    function recordOutputs(string memory projectURI, string memory outputsURI) external {
+        require(_projectURIsUsed[projectURI], "Project does not exist yet");
 
-        // Access the project of msg.sender by metadataURI
-        Project storage project = projects[metadataURI];
+        // Access the project of msg.sender by projectURI
+        Project storage project = projects[projectURI];
         require(project.creator == msg.sender, "You are not the creator of this project");
         // Check that tokenID has been stored (must be non-zero)
         require(project.tokenID != 0, "Project tokenID not set");
@@ -127,58 +129,130 @@ contract Cairn is Ownable {
         // Record the outputs URI
         project.outputsURI = outputsURI;
 
-        emit OutputsRecorded(msg.sender, project.tokenID, metadataURI, outputsURI);
+        emit OutputsRecorded(msg.sender, project.tokenID, projectURI, outputsURI);
     }
 
-    /// @notice Store the PoR of a project identified by metadataURI
-    function recordProof(string memory metadataURI, string memory proofURI) external {
-        require(_metadataURIsUsed[metadataURI], "Project does not exist");
-        Project storage project = projects[metadataURI];
+    /// @notice Store the PoR of a project identified by projectURI
+    function recordProof(string memory projectURI, string memory proofURI) external {
+        require(_projectURIsUsed[projectURI], "Project does not exist");
+        require(!_proofURIsUsed[proofURI], "Proof URI already used");
+
+        Project storage project = projects[projectURI];
+        require(bytes(project.outputsURI).length != 0, "Outputs are not yet recorded");
         require(project.creator != msg.sender, "You are creator of this project");
         require(project.proofs.length < maxPoRProject, "Max PoRs reached");
-        require(!hasRecordedProof[metadataURI][msg.sender], "You have already recorded a proof for this project");
+        require(!hasRecordedProof[projectURI][msg.sender], "You have already recorded a proof for this project");
+        require(bytes(proofURI).length > 0, "Invalid proof URI");
 
-        project.proofs.push(ProofOfReproducibility({
+        // Create and store proof
+        proofs[proofURI] = ProofOfReproducibility({
             proofURI: proofURI,
+            projectURI: projectURI,
             recorder: msg.sender,
-            state: ProofState.PENDING
-        }));
+            dispute: false,
+            recordedAt: block.timestamp,
+            disputeURI: ""
+        });
 
-        userTotalPoRCount[msg.sender] += 1;
-        userAvailablePoRCount[msg.sender] += 1;
+        project.proofs.push(proofURI);
+        userProofURIs[msg.sender].push(proofURI);
+        _proofURIsUsed[proofURI] = true;
+        hasRecordedProof[projectURI][msg.sender] = true;
 
-        emit ProofRecorded(msg.sender, project.tokenID, metadataURI, proofURI);
+        emit ProofRecorded(msg.sender, project.tokenID, projectURI, proofURI);
     }
 
-    // TODO Validate PoR
-    // TODO Dispute PoR
-    // TODO Vote PoR
+    /// @notice Dispute the PoR
+    function disputeProof(string memory proofURI, string memory disputeURI) external {
+        require(_proofURIsUsed[proofURI], "Proof does not exist");
+        require(bytes(disputeURI).length > 0, "Dispute URI cannot be empty");
+
+        ProofOfReproducibility storage proof = proofs[proofURI];
+
+        require(!proof.dispute, "Proof already disputed");
+
+        proof.dispute = true;
+        proof.disputeURI = disputeURI;
+
+        emit ProofDisputed(msg.sender, proofURI, disputeURI);
+    }
+
+    /// @notice Resolve dispute - currently admin can call this
+    /// TODO - DAO voting + better coordination mechanism
+    function resolveDispute(string memory proofURI) external onlyOwner {
+        require(_proofURIsUsed[proofURI], "Proof does not exist");
+
+        ProofOfReproducibility storage proof = proofs[proofURI];
+        require(proof.dispute, "Proof is not disputed");
+
+        proof.dispute = false;
+        proof.disputeURI = "";
+
+        emit ProofDisputed(address(0), proofURI, "");
+    }
 
     // TODO Funding 
 
     /// ---------------- GETTER FUNCTIONS ----------------------
 
-    /// @notice Get array of user's projects metadataURIs
-    function getUserMetadataURIs(address user) external view returns (string[] memory) {
-        return userMetadataURIs[user];
+    /// @notice Get array of user's projects projectURIs
+    function getUserProjectURIs(address user) external view returns (string[] memory) {
+        return userProjectURIs[user];
     }
 
     /// @notice Get multiple projects
     function getAllProjects(uint256 start, uint256 count) external view returns (Project[] memory) {
         uint256 end = start + count;
-        if (end > allMetadataURIs.length) {
-            end = allMetadataURIs.length;
+        if (end > allProjectURIs.length) {
+            end = allProjectURIs.length;
         }
         Project[] memory result = new Project[](end - start);
         for (uint256 i = start; i < end; i++) {
-            result[i - start] = projects[allMetadataURIs[i]];
+            result[i - start] = projects[allProjectURIs[i]];
         }
         return result;
     }
 
-    /// @notice Get project by metadataURI
-    function getProject(string memory metadataURI) external view returns (Project memory) {
-        require(_metadataURIsUsed[metadataURI], "Project does not exist");
-        return projects[metadataURI];
+    /// @notice Get project by projectURI
+    function getProject(string memory projectURI) external view returns (Project memory) {
+        require(_projectURIsUsed[projectURI], "Project does not exist");
+        return projects[projectURI];
+    }
+
+    /// @notice Get proof details by proofURI
+    function getProof(string memory proofURI) external view returns (ProofOfReproducibility memory) {
+        require(_proofURIsUsed[proofURI], "Proof does not exist");
+        return proofs[proofURI];
+    }
+
+    /// @notice Get all proof URIs for a project
+    function getProofURIsByProject(string memory projectURI) external view returns (string[] memory) {
+        require(_projectURIsUsed[projectURI], "Project does not exist");
+        return projects[projectURI].proofs;
+    }
+
+    /// @notice Get all proof URIs recorded by a user
+    function getUserProofURIs(address user) external view returns (string[] memory) {
+        return userProofURIs[user];
+    }
+
+    /// @notice Check if a proof is valid (not disputed and dispute window passed)
+    function isProofValid(string memory proofURI) public view returns (bool) {
+        require(_proofURIsUsed[proofURI], "Proof does not exist");
+        ProofOfReproducibility storage proof = proofs[proofURI];
+        if (proof.dispute) return false;
+        if (block.timestamp < proof.recordedAt + disputeWindowPoR) return false;
+        return true;
+    }
+
+    /// @notice Get count of available valid PoRs for a user
+    function getUserAvailablePoRCount(address user) public view returns (uint256 count) {
+        string[] storage userProofs = userProofURIs[user];
+        count = 0;
+        for (uint256 i = 0; i < userProofs.length; i++) {
+            if (isProofValid(userProofs[i])) {
+                count++;
+            }
+        }
     }
 }
