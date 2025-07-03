@@ -12,14 +12,27 @@ contract Cairn is Ownable {
     uint8 public maxPoRProject;
     uint256 public disputeWindowPoR;
 
-    struct Project {
-        address creator; 
-        uint256 tokenID;
-        string projectURI;
-        string outputsURI;
-        string[] proofs;
+    enum Impact {
+        NONE,      // No impact
+        LOW,       // Low impact
+        MEDIUM,    // Medium impact
+        HIGH       // High impact
+    }
 
-        // TODO FUNDERS: addr => amount
+    uint256 public constant MAX_FUNDING_LOW;
+    uint256 public constant MAX_FUNDING_MEDIUM;
+    uint256 public constant MAX_FUNDING_HIGH;
+
+
+    struct Project {
+        address creator;                // Who created the project
+        uint256 tokenID;                // Hypercert token ID for this project
+        string projectURI;              // IPFS URI of the project metadata
+        string outputsURI;              // IPFS URI of the outputs metadata
+        string[] proofs;                // Array of PoR URIs
+        Impact impact;                  // Impact level of the project
+        address[] impactAssetsOwners;   // List of addresses that own impact assets
+        address[] fundingIDs;           // List of funding IDs for this project
     }
 
     struct ProofOfReproducibility {
@@ -29,6 +42,13 @@ contract Cairn is Ownable {
         uint256 recordedAt;    // Timestamp when recorded
         bool dispute;          // If PoR is disputed for validity
         string disputeURI;     // IPFS URI of the dispute metadata        
+    }
+
+    struct Funding {
+        address fundingID;     // Unique ID for funding
+        address funder;        // Who funded the project
+        uint256 amount;        // Amount funded
+        string projectURI;     // IPFS URI of the project metadata
     }
 
     string[] public allProjectURIs; 
@@ -42,6 +62,10 @@ contract Cairn is Ownable {
     mapping(string => bool) private _proofURIsUsed;
     mapping(string => mapping(address => bool)) private hasRecordedProof;
 
+    // Funding related
+    mapping(address => Funding[]) public projectFundings;
+    mapping(address => address[]) public userFundingIDs;
+
 
     event ProjectRegistered(address indexed creator, uint256 indexed tokenID, string projectURI);
     event OutputsRecorded(address indexed creator, uint256 indexed tokenID, string projectURI, string outputsURI);
@@ -49,11 +73,14 @@ contract Cairn is Ownable {
     event ProofDisputed(address indexed disputer, string indexed proofURI, string disputeURI);
 
 
-    constructor(address _hypercertToken, uint8 _minRequiredPoR, uint8 _maxPoRProject, uint256 _disputeWindowPoR) Ownable(msg.sender) {
+    constructor(address _hypercertToken, uint8 _minRequiredPoR, uint8 _maxPoRProject, uint256 _disputeWindowPoR, uint256 _maxFundingLow, uint256 _maxFundingMedium, uint256 _maxFundingHigh) Ownable(msg.sender) {
         hypercertToken = IHypercertToken(_hypercertToken);
         minRequiredPoR = _minRequiredPoR;
         maxPoRProject = _maxPoRProject;
         disputeWindowPoR = _disputeWindowPoR;
+        MAX_FUNDING_LOW = _maxFundingLow;
+        MAX_FUNDING_MEDIUM = _maxFundingMedium;
+        MAX_FUNDING_HIGH = _maxFundingHigh;
     }
 
 
@@ -72,6 +99,7 @@ contract Cairn is Ownable {
         project.tokenID = 0;
         project.projectURI = projectURI;
         project.outputsURI = "";
+        project.impact = Impact.NONE;
 
         userProjectURIs[msg.sender].push(projectURI);
         allProjectURIs.push(projectURI);
@@ -89,6 +117,7 @@ contract Cairn is Ownable {
         project.tokenID = 0;
         project.projectURI = projectURI;
         project.outputsURI = "";
+        project.impact = Impact.NONE;
 
         userProjectURIs[_creator].push(projectURI);
         allProjectURIs.push(projectURI);
@@ -191,7 +220,54 @@ contract Cairn is Ownable {
         emit ProofDisputed(address(0), proofURI, "");
     }
 
-    // TODO Funding 
+    /// @notice Set impact level for a project; only if minimum PoRs reached
+    function setProjectImpact(string memory projectURI, ImpactLevel impactLevel) external onlyOwner {
+        require(_projectURIsUsed[projectURI], "Project does not exist");
+        require(impactLevel != ImpactLevel.NONE, "Impact cannot be NONE");
+        Project storage project = projects[projectURI];
+        require(project.impact == ImpactLevel.NONE, "Impact already set");
+
+        // Count valid PoRs for this project
+        uint256 validPoRs = 0;
+        for (uint256 i = 0; i < project.proofs.length; i++) {
+            string memory proofURI = project.proofs[i];
+            if (isProofValid(proofURI)) {
+                validPoRs++;
+            }
+        }
+
+        require(validPoRs >= minRequiredPoR, "Not enough valid PoRs to set impact");        
+
+        project.impact = impactLevel;
+    }
+
+    
+    /// @notice Claim ownership of impact assets for a project
+    function claimImpactAssetsOwnership(string memory projectURI) external {
+        require(_projectURIsUsed[projectURI], "Project does not exist");
+
+        Project storage project = projects[projectURI];
+
+        // Check if the user is already an owner
+        for (uint256 i = 0; i < project.impactAssetsOwners.length; i++) {
+            if (project.impactAssetsOwners[i] == msg.sender) {
+                revert("You already own impact assets for this project");
+            }
+        }
+
+        // Check if the user owns the impact asset token
+        uint256 tokenID = project.tokenID;
+        require(tokenID != 0, "Token ID not set for this project");
+        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not the owner of the impact asset token");
+
+        // Check if the user has set allowance for transfer of the impact assets
+        require(hypercertToken.isApprovedForAll(msg.sender, address(this)), "You must set allowance for transfer of impact assets");
+
+        // Add user to impact assets owners
+        project.impactAssetsOwners.push(msg.sender);
+    }
+
+    /// TODO Fund project function - Funder must set allowance for transfer of USDFC token to transfer the funding amount. 
 
     /// ---------------- GETTER FUNCTIONS ----------------------
 
