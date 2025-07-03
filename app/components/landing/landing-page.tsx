@@ -7,26 +7,37 @@ import {
   SearchIcon,
   UsersGroupIcon,
   TwitterIcon,
-  DiscordIcon,
   GitHubIcon,
   IpfsIcon,
+  WalletIcon,
+  ArrowRightIcon,
+  ChevronDownIcon,
+  MenuIcon,
+  CloseIcon,
 } from "../ui/icons";
-import { LandingHeaderLogo } from "../ui/logo";
+import { LandingHeaderLogo, AppLogo } from "../ui/logo";
 import React from "react";
-import { useState, useEffect } from "react";
 import { useAppContext } from "../../context/app-provider";
+import { UserRole } from "../../lib/types";
 
 const LandingHeader = ({
   onNavigate,
 }: {
   onNavigate: (page: "howitworks") => void;
 }) => {
-  const { currentUser, setCurrentUser } = useAppContext();
+  const { setCurrentUser, setUserRole, setConnectedWallet } = useAppContext();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   const scrollToSection = (sectionId: string) => {
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    document
+      .getElementById(sectionId)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleNavigate = (page: "howitworks") => {
+    onNavigate(page);
+    setIsMobileMenuOpen(false);
   };
 
   const handleConnectWallet = async () => {
@@ -52,6 +63,10 @@ const LandingHeader = ({
           organization,
           porContributedCount: 3, // or fetch actual data if available
         });
+
+        setUserRole(UserRole.Scientist); // Default to Researcher role
+
+        setConnectedWallet(address);
       } catch (err) {
         console.error("User rejected wallet connection", err);
       }
@@ -60,42 +75,20 @@ const LandingHeader = ({
     }
   };
 
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (typeof window.ethereum !== "undefined") {
-        const accounts = await window.ethereum.request({
-          method: "eth_accounts",
-        });
-        if (accounts.length > 0) {
-          const address = accounts[0];
-
-          // Only set currentUser if not already set (avoid overwriting)
-          if (!currentUser.walletAddress) {
-            setCurrentUser({
-              walletAddress: address,
-              name: "Unnamed User", // fallback
-              porContributedCount: 0,
-            });
-          }
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
   return (
-    <header className="sticky top-0 z-50 bg-white/80 dark:bg-cairn-gray-950/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-40 bg-cairn-gray-950/80 backdrop-blur-lg border-b border-cairn-gray-800">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         <LandingHeaderLogo />
-        <div className="hidden lg:flex items-center space-x-8">
+
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center space-x-8">
           <a
             href="#features-researchers"
             onClick={(e) => {
               e.preventDefault();
               scrollToSection("features-researchers");
             }}
-            className="text-sm font-semibold text-cairn-gray-600 hover:text-cairn-blue-600 dark:text-cairn-gray-300 dark:hover:text-cairn-blue-400 transition-colors"
+            className="text-sm font-semibold text-cairn-gray-300 hover:text-white transition-colors"
           >
             For Researchers
           </a>
@@ -105,7 +98,7 @@ const LandingHeader = ({
               e.preventDefault();
               scrollToSection("features-funders");
             }}
-            className="text-sm font-semibold text-cairn-gray-600 hover:text-cairn-blue-600 dark:text-cairn-gray-300 dark:hover:text-cairn-blue-400 transition-colors"
+            className="text-sm font-semibold text-cairn-gray-300 hover:text-white transition-colors"
           >
             For Funders
           </a>
@@ -115,138 +108,323 @@ const LandingHeader = ({
               e.preventDefault();
               onNavigate("howitworks");
             }}
-            className="text-sm font-semibold text-cairn-gray-600 hover:text-cairn-blue-600 dark:text-cairn-gray-300 dark:hover:text-cairn-blue-400 transition-colors"
+            className="text-sm font-semibold text-cairn-gray-300 hover:text-white transition-colors"
           >
             How It Works
           </a>
         </div>
-        {currentUser ? (
-          <div className="hidden lg:block text-sm font-semibold text-cairn-blue-700 dark:text-cairn-blue-300">
-            {currentUser.walletAddress.substring(0, 6)}...
-            {currentUser.walletAddress.slice(-4)}
-          </div>
-        ) : (
+        <button
+          onClick={() => handleConnectWallet()}
+          className="hidden md:flex items-center space-x-2 bg-blue-600 text-white font-semibold text-sm py-2.5 px-5 rounded-full hover:bg-blue-500 transition-all duration-300 shadow-lg hover:shadow-blue-500/40 transform hover:scale-105"
+        >
+          <WalletIcon className="w-5 h-5" />
+          <span>Connect Wallet</span>
+        </button>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden flex items-center">
           <button
-            onClick={handleConnectWallet}
-            className="hidden lg:block bg-cairn-blue-600 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-cairn-blue-700 transition-colors shadow-md hover:shadow-lg"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-md text-cairn-gray-300 hover:text-white hover:bg-cairn-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
           >
-            Connect Wallet
+            <span className="sr-only">Open main menu</span>
+            {isMobileMenuOpen ? (
+              <CloseIcon className="block h-6 w-6" aria-hidden="true" />
+            ) : (
+              <MenuIcon className="block h-6 w-6" aria-hidden="true" />
+            )}
           </button>
-        )}
-        <div className="lg:hidden">{/* Mobile menu button */}</div>
+        </div>
       </nav>
+
+      {/* Mobile Menu Panel */}
+      {isMobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-cairn-gray-900 animate-fade-in"
+          aria-modal="true"
+        >
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 h-full">
+            <div className="mt-6 flow-root">
+              <div className="-my-6 divide-y divide-cairn-gray-700">
+                <div className="space-y-2 py-6">
+                  <a
+                    href="#features-researchers"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection("features-researchers");
+                    }}
+                    className="block rounded-lg py-3 px-4 text-base font-semibold leading-7 text-cairn-gray-200 hover:bg-cairn-gray-800"
+                  >
+                    For Researchers
+                  </a>
+                  <a
+                    href="#features-funders"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection("features-funders");
+                    }}
+                    className="block rounded-lg py-3 px-4 text-base font-semibold leading-7 text-cairn-gray-200 hover:bg-cairn-gray-800"
+                  >
+                    For Funders
+                  </a>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavigate("howitworks");
+                    }}
+                    className="block rounded-lg py-3 px-4 text-base font-semibold leading-7 text-cairn-gray-200 hover:bg-cairn-gray-800"
+                  >
+                    How It Works
+                  </a>
+                </div>
+                <div className="py-6">
+                  <button
+                    onClick={handleConnectWallet}
+                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold text-sm py-3 px-5 rounded-full hover:bg-blue-500 transition-all duration-300 shadow-lg hover:shadow-blue-500/40"
+                  >
+                    <WalletIcon className="w-5 h-5" />
+                    <span>Connect Wallet</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
 
-const HeroSection = ({ onEnter }: { onEnter: () => void }) => (
-  <section className="relative text-center py-32 sm:py-40 lg:py-48 bg-white dark:bg-cairn-gray-950 from-white to-cairn-gray-50 dark:from-cairn-gray-950 dark:to-cairn-gray-900 bg-gradient-to-b">
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cairn-blue-600 to-cairn-deep-blue dark:from-cairn-blue-400 dark:to-cairn-light-blue">
-        Reproducible Research,
-        <br />
-        Retroactively Rewarded
-      </h1>
-      <p className="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-cairn-gray-600 dark:text-cairn-gray-400">
-        A Web3 platform empowering Embodied AI researchers and funders through
-        transparent Proof-of-Reproducibility and impact tracking.
-      </p>
-      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <button
-          onClick={onEnter}
-          className="w-full sm:w-auto bg-cairn-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-cairn-blue-700 transition-transform hover:scale-105 shadow-lg"
-        >
-          Start a Research Project
-        </button>
-        <button
-          onClick={onEnter}
-          className="w-full sm:w-auto bg-transparent text-cairn-blue-600 dark:text-cairn-blue-400 font-semibold py-3 px-8 rounded-lg ring-2 ring-cairn-blue-200 dark:ring-cairn-blue-800 hover:bg-cairn-blue-50 dark:hover:bg-cairn-blue-900/50 transition-colors"
-        >
-          Explore Fundable Projects
-        </button>
+const HeroSection = () => {
+  const { setCurrentUser, setUserRole, setConnectedWallet } = useAppContext();
+  const handleConnectWallet = async (role: UserRole) => {
+    if (typeof window.ethereum !== "undefined") {
+      try {
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        const address = accounts[0];
+
+        // // Prompt for name/org
+        // const name = window.prompt("Enter your full name");
+        // if (!name) return;
+
+        // const organization = window.prompt(
+        //   "Enter your organization (optional)"
+        // );
+
+        // Update global context
+        setCurrentUser({
+          walletAddress: address,
+          porContributedCount: 3, // or fetch actual data if available
+          role: role || UserRole.Scientist, // Default to Researcher if not specified
+        });
+
+        setUserRole(role);
+        setConnectedWallet(address);
+      } catch (err) {
+        console.error("User rejected wallet connection", err);
+      }
+    } else {
+      alert("Please install MetaMask.");
+    }
+  };
+
+  // Generate particles for background
+  const particles = React.useMemo(
+    () =>
+      Array.from({ length: 50 }).map((_, i) => {
+        const size = Math.random() * 2 + 1;
+        const duration = Math.random() * 40 + 40;
+        const delay = Math.random() * -80;
+        const x1 = (Math.random() - 0.5) * 100;
+        const y1 = (Math.random() - 0.5) * 100;
+        const x2 = (Math.random() - 0.5) * 100;
+        const y2 = (Math.random() - 0.5) * 100;
+        const x3 = (Math.random() - 0.5) * 100;
+        const y3 = (Math.random() - 0.5) * 100;
+
+        return {
+          id: i,
+          style: {
+            width: `${size}px`,
+            height: `${size}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `move ${duration}s linear ${delay}s infinite`,
+            "--tx1": `${x1}px`,
+            "--ty1": `${y1}px`,
+            "--tx2": `${x2}px`,
+            "--ty2": `${y2}px`,
+            "--tx3": `${x3}px`,
+            "--ty3": `${y3}px`,
+          },
+        };
+      }),
+    []
+  );
+
+  return (
+    <section className="relative overflow-hidden bg-cairn-gray-950 text-white min-h-screen flex items-center justify-center">
+      <div className="absolute inset-0 z-0 opacity-30">
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className="absolute bg-white rounded-full"
+            style={p.style}
+          />
+        ))}
       </div>
+      <div className="absolute inset-0 bg-gradient-to-tr from-cairn-gray-950 via-cairn-gray-950/80 to-blue-900/20 z-0"></div>
+      <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-cairn-gray-950 to-transparent z-10"></div>
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 60% 40%, rgba(29, 78, 216, 0.15), transparent 50%)",
+        }}
+      ></div>
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 80%, rgba(37, 99, 235, 0.1), transparent 40%)",
+        }}
+      ></div>
+
+      <div className="relative z-20 container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1
+            className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight"
+            style={{ lineHeight: 1.1 }}
+          >
+            <span className="bg-clip-text text-transparent bg-gradient-to-br from-white to-cairn-gray-300">
+              Reproducible Research,
+            </span>
+            <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-br from-blue-400 to-blue-500">
+              Retroactively Rewarded
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-cairn-gray-300">
+            A Web3 platform empowering Embodied AI researchers and funders
+            through transparent Proof-of-Reproducibility and impact tracking.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => handleConnectWallet(UserRole.Scientist)}
+              className="group w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-full hover:bg-blue-500 transition-all duration-300 shadow-lg hover:shadow-blue-500/50 transform hover:scale-105"
+            >
+              <span>Start a Research Project</span>
+              <ArrowRightIcon className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </button>
+            <button
+              onClick={() => handleConnectWallet(UserRole.Funder)}
+              className="group w-full sm:w-auto flex items-center justify-center space-x-2 bg-cairn-gray-800/50 text-cairn-gray-200 font-semibold py-3 px-6 rounded-full ring-1 ring-cairn-gray-700 hover:bg-cairn-gray-800 hover:text-white transition-colors"
+            >
+              <span>Explore Fundable Projects</span>
+              <SearchIcon className="w-5 h-5 transition-transform group-hover:scale-110" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 hidden sm:block">
+        <a
+          href="#features-researchers"
+          onClick={(e) => {
+            e.preventDefault();
+            document
+              .getElementById("features-researchers")
+              ?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="animate-bounce"
+        >
+          <ChevronDownIcon className="w-8 h-8 text-cairn-gray-600" />
+        </a>
+      </div>
+    </section>
+  );
+};
+
+const FeatureCard = ({
+  icon: Icon,
+  name,
+  description,
+}: {
+  icon: React.FC<any>;
+  name: string;
+  description: string;
+}) => (
+  <div className="group relative bg-cairn-gray-900/40 backdrop-blur-md p-8 rounded-2xl border border-cairn-gray-800 transition-all duration-300 hover:-translate-y-2 hover:border-blue-500/50 hover:bg-cairn-gray-900/80">
+    <div className="absolute -inset-px bg-gradient-to-br from-blue-600/50 to-cairn-gray-800 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"></div>
+    <div className="relative">
+      <div className="mb-5 bg-cairn-gray-800/50 w-14 h-14 rounded-xl flex items-center justify-center border border-cairn-gray-700">
+        <Icon className="h-7 w-7 text-blue-400 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-12deg]" />
+      </div>
+      <h3 className="text-xl font-semibold text-white">{name}</h3>
+      <p className="mt-2 text-base text-cairn-gray-400">{description}</p>
     </div>
-  </section>
+  </div>
 );
 
-const KeyFeaturesSection = () => {
+const FeaturesSection = () => {
   const scientistFeatures = [
     {
       name: "Reproducible Experiments",
       description:
-        "Ensure your experiments are easily reproducible with detailed logs and version control.",
+        "Ensure your experiments are easily reproducible with detailed logs and control.",
       icon: BeakerIcon,
     },
     {
       name: "Secure Data Management",
       description:
-        "Manage your research data securely on IPFS with blockchain-based provenance.",
+        "Store research data immutably via IPFS and prove its origin with on-chain records.",
       icon: IpfsIcon,
     },
     {
-      name: "Collaborative Tools",
+      name: "Proof-Backed Collaboration",
       description:
-        "Collaborate effectively with peers and funders through integrated communication tools.",
+        "Collaborate with peers and funders through reproducibility-driven workflows and transparent research validation.",
       icon: UsersGroupIcon,
     },
   ];
-
   const funderFeatures = [
     {
-      name: "Transparent Project Tracking",
+      name: "Verifiable Research Progress",
       description:
-        "Monitor the progress of funded projects with real-time updates and transparent logs.",
+        "Track funded projects through on-chain outputs and reproducibility proofs—making every milestone auditable and tamper-proof.",
       icon: SearchIcon,
     },
     {
       name: "Impact Evaluation",
       description:
-        "Access comprehensive reports and data analysis to evaluate research outcomes.",
+        "Explore scientific impact through community evaluation, reproducibility, and downstream metrics.",
       icon: ChartBarIcon,
     },
     {
       name: "Direct Engagement",
       description:
-        "Engage directly with scientists, provide feedback, and foster collaboration.",
+        "Fund researchers whose verified work aligns with your mission—without intermediaries.",
       icon: LinkIcon,
     },
   ];
 
-  const FeatureCard = ({
-    icon: Icon,
-    name,
-    description,
-  }: {
-    icon: React.FC<any>;
-    name: string;
-    description: string;
-  }) => (
-    <div className="bg-white dark:bg-cairn-gray-800/50 rounded-2xl p-8 text-left border border-cairn-gray-200 dark:border-cairn-gray-800 shadow-sm hover:shadow-xl hover:border-cairn-blue-300 dark:hover:border-cairn-blue-700 transition-all duration-300 transform hover:-translate-y-1">
-      <div className="mb-4">
-        <Icon className="h-8 w-8 text-cairn-blue-600 dark:text-cairn-blue-400" />
-      </div>
-      <h3 className="text-lg font-semibold text-cairn-gray-900 dark:text-white">
-        {name}
-      </h3>
-      <p className="mt-1 text-base text-cairn-gray-600 dark:text-cairn-gray-400">
-        {description}
-      </p>
-    </div>
-  );
-
   return (
-    <section className="py-24 sm:py-32 bg-cairn-gray-50 dark:bg-cairn-gray-900">
+    <section className="py-24 sm:py-32 bg-cairn-gray-950 relative overflow-hidden">
+      <div
+        className="absolute inset-0 bg-grid-pattern opacity-5"
+        style={{ backgroundSize: "40px 40px" }}
+      ></div>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-24">
         <div id="features-researchers">
-          <div className="text-left max-w-3xl">
-            <h2 className="text-base font-semibold leading-7 text-cairn-blue-600 dark:text-cairn-blue-400">
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-base font-semibold leading-7 text-blue-400">
               For Researchers
             </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-cairn-gray-900 dark:text-white sm:text-4xl">
+            <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Tools for Transparent Science
-            </p>
-            <p className="mt-6 text-lg leading-8 text-cairn-gray-600 dark:text-cairn-gray-400">
-              Explore the features designed to enhance your research workflow.
             </p>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -257,16 +435,12 @@ const KeyFeaturesSection = () => {
         </div>
 
         <div id="features-funders">
-          <div className="text-left max-w-3xl">
-            <h2 className="text-base font-semibold leading-7 text-cairn-blue-600 dark:text-cairn-blue-400">
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-base font-semibold leading-7 text-blue-400">
               For Funders
             </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-cairn-gray-900 dark:text-white sm:text-4xl">
+            <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Invest with Confidence
-            </p>
-            <p className="mt-6 text-lg leading-8 text-cairn-gray-600 dark:text-cairn-gray-400">
-              Discover how CAIRN helps you manage and support research projects
-              effectively.
             </p>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -280,151 +454,69 @@ const KeyFeaturesSection = () => {
   );
 };
 
-const CtaSection = ({
-  onEnter,
-  showLearnMore = true,
-  onNavigate,
-}: {
-  onEnter: () => void;
-  showLearnMore?: boolean;
-  onNavigate: (page: "howitworks") => void;
-}) => (
-  <section className="bg-gradient-to-r from-cairn-blue-700 to-cairn-deep-blue">
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
-      <div className="relative isolate overflow-hidden text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Ready to Pioneer the Future of Research?
-        </h2>
-        <p className="mt-6 text-lg leading-8 text-cairn-blue-200">
-          Join CAIRN today. Start a project, fund groundbreaking science, and be
-          part of the DeSci revolution.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-x-6">
-          <button
-            onClick={onEnter}
-            className="rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-cairn-blue-700 shadow-lg hover:bg-cairn-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-transform hover:scale-105"
-          >
-            Enter the Platform
-          </button>
-          {showLearnMore && (
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate("howitworks");
-              }}
-              className="text-sm font-semibold leading-6 text-white hover:text-cairn-blue-100 transition-colors"
-            >
-              Learn more <span aria-hidden="true">→</span>
-            </a>
-          )}
+export const AppFooter = () => (
+  <footer className="bg-background-light dark:bg-cairn-gray-950 text-text-secondary dark:text-cairn-gray-400 border-t border-border dark:border-cairn-gray-800">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        {/* Left Side: Logo and Copyright */}
+        <div className="flex flex-col sm:flex-row items-center gap-x-4 gap-y-2 text-center sm:text-left">
+          <AppLogo />
+          <p className="text-sm">
+            &copy; {new Date().getFullYear()} CAIRN Protocol. All rights
+            reserved.
+          </p>
         </div>
-      </div>
-    </div>
-  </section>
-);
 
-const LandingFooter = () => (
-  <footer className="bg-cairn-gray-900 text-cairn-gray-400">
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-        <div>
-          <h3 className="text-sm font-semibold text-white">Platform</h3>
-          <ul className="mt-4 space-y-2">
-            <li>
-              <a href="#" className="hover:text-white">
-                For Researchers
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                For Funders
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white">Resources</h3>
-          <ul className="mt-4 space-y-2">
-            <li>
-              <a href="#" className="hover:text-white">
-                Documentation
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                How It Works
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white">Community</h3>
-          <ul className="mt-4 space-y-2">
-            <li>
-              <a href="#" className="hover:text-white">
-                DAO Governance
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                Contact
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white">Legal</h3>
-          <ul className="mt-4 space-y-2">
-            <li>
-              <a href="#" className="hover:text-white">
-                Privacy Policy
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                Terms of Service
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className="mt-12 pt-8 border-t border-cairn-gray-800 flex flex-col sm:flex-row justify-between items-center">
-        <p className="text-sm">
-          &copy; {new Date().getFullYear()} CAIRN Protocol. All rights reserved.
-        </p>
-        <div className="flex space-x-6 mt-4 sm:mt-0">
-          <a href="#" className="hover:text-white">
-            <TwitterIcon className="h-6 w-6" />
+        {/* Right Side: Navigation and Social Links */}
+        <nav
+          className="flex items-center gap-x-6"
+          aria-label="Footer navigation"
+        >
+          <a
+            href="#"
+            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+          >
+            Docs
           </a>
-          <a href="#" className="hover:text-white">
-            <DiscordIcon className="h-6 w-6" />
+          <a
+            href="#"
+            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+          >
+            FAQ
           </a>
-          <a href="#" className="hover:text-white">
-            <GitHubIcon className="h-6 w-6" />
+          <a
+            href="#"
+            className="hover:text-text dark:hover:text-white transition-colors"
+            aria-label="Twitter"
+          >
+            <TwitterIcon className="h-5 w-5" />
           </a>
-        </div>
+          <a
+            href="#"
+            className="hover:text-text dark:hover:text-white transition-colors"
+            aria-label="GitHub"
+          >
+            <GitHubIcon className="h-5 w-5" />
+          </a>
+        </nav>
       </div>
     </div>
   </footer>
 );
 
 export const LandingPage = ({
-  onEnter,
   onNavigate,
 }: {
-  onEnter: () => void;
   onNavigate: (page: "howitworks") => void;
 }) => {
   return (
-    <div className="bg-white dark:bg-cairn-gray-950 text-cairn-gray-800 dark:text-cairn-gray-200 font-sans">
+    <div className="bg-cairn-gray-950 font-sans">
       <LandingHeader onNavigate={onNavigate} />
       <main>
-        <HeroSection onEnter={onEnter} />
-        <KeyFeaturesSection />
-        <CtaSection onEnter={onEnter} onNavigate={onNavigate} />
+        <HeroSection />
+        <FeaturesSection />
       </main>
-      <LandingFooter />
+      <AppFooter />
     </div>
   );
 };

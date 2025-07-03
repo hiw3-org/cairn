@@ -38,7 +38,7 @@ export interface Project {
   startDate: string;
   endDate: string;
   lastOutputDate: string;
-  reproducibilities: Reproducibility[];
+  reproducibilities: ProofOfReproducibility[];
   fundingGoal?: number;
   fundingPool: number;
   impactScore: number;
@@ -80,15 +80,6 @@ export interface Output {
   };
 }
 
-export interface Reproducibility {
-  id: string;
-  timestamp: string;
-  evidence: Output[];
-  notes: string;
-  verifier: string; // wallet address
-  status: PoRStatus;
-}
-
 export interface ToastInfo {
   id: number;
   message: string;
@@ -98,8 +89,7 @@ export interface ToastInfo {
 export interface UserProfile {
   walletAddress: string;
   porContributedCount: number;
-  name: string;
-  organization?: string;
+  role: UserRole;
 }
 
 export interface FundingEvent {
@@ -145,6 +135,8 @@ export interface ProjectOutput {
 
 export interface ProofOfReproducibility {
   project_id: string;
+  timestamp: string;
+  description: string;
   code_url: string;
   output_url: string;
   video_url?: string;

@@ -12,7 +12,7 @@ import {
   Project,
   ToastInfo,
   UserProfile,
-  Reproducibility,
+  ProofOfReproducibility,
   Output,
   ProjectStatus,
   PoRStatus,
@@ -34,18 +34,29 @@ interface AppContextType {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   currentUser: UserProfile;
+  setCurrentUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   toasts: ToastInfo[];
   addToast: (message: string, type?: ToastInfo["type"]) => void;
   dismissToast: (id: number) => void;
   handlePorSubmit: (
     projectId: string,
-    reproducibilityData: { notes: string; evidence: Output[] }
+    reproducibilityData: ProofOfReproducibility
   ) => void;
   handleAddProject: (project: Project) => void;
   handleAddOutputs: (projectId: string, outputs: Output[]) => Project;
   handleDispute: (projectId: string, reproducibilityId: string) => void;
   handleInstantFund: (projectId: string, amount: number) => void;
   fundingHistory: FundingEvent[];
+
+  // Auth
+  connectedWallet: string | null;
+  setConnectedWallet: React.Dispatch<React.SetStateAction<string | null>>;
+  isAuthenticated: boolean;
+  connectWallet: (role?: UserRole) => Promise<void>;
+  disconnectWallet: () => void;
+  isOnboardingModalOpen: boolean;
+  completeOnboarding: () => void;
+  closeOnboardingModal: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -58,6 +69,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     useState<FundingEvent[]>(MOCK_FUNDING_HISTORY);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
 
   const setIsDarkMode = (dark: boolean) => {
     setIsDarkModeState(dark);
@@ -70,6 +82,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
   };
+
+  const isAuthenticated = !!connectedWallet;
 
   useEffect(() => {
     // Set initial theme to light mode by default.
@@ -144,22 +158,23 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handlePorSubmit = (
     projectId: string,
-    reproducibilityData: { notes: string; evidence: Output[] }
+    reproducibilityData: ProofOfReproducibility
   ) => {
+    if (!currentUser) return;
+
+    // Add an 'id' here for internal tracking / React keys
+    const newReproducibility = {
+      ...reproducibilityData,
+      project_id: projectId,
+      timestamp: new Date().toISOString(),
+      id: `rep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, // unique id
+      status: PoRStatus.Waiting, // also add status here if needed
+      verifier: currentUser.walletAddress,
+    };
+
     setProjects((prevProjects) =>
       prevProjects.map((p) => {
         if (p.id === projectId) {
-          const newReproducibility: Reproducibility = {
-            id: `rep-${Date.now()}`,
-            timestamp: new Date().toISOString().split("T")[0],
-            verifier: currentUser.walletAddress,
-            notes: reproducibilityData.notes,
-            evidence: reproducibilityData.evidence.map((e) => ({
-              ...e,
-              id: e.id.replace("staged", "final"),
-            })),
-            status: PoRStatus.Waiting,
-          };
           return {
             ...p,
             reproducibilities: [...p.reproducibilities, newReproducibility],
@@ -168,10 +183,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         return p;
       })
     );
+
     setCurrentUser((prevUser) => ({
-      ...prevUser,
-      porContributedCount: prevUser.porContributedCount + 1,
+      ...prevUser!,
+      porContributedCount: prevUser!.porContributedCount + 1,
     }));
+
     addToast("PoR submitted! Your contribution is recorded.", "success");
   };
 
@@ -260,6 +277,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     handleDispute,
     handleInstantFund,
     fundingHistory,
+    isAuthenticated,
+    connectedWallet,
+    setConnectedWallet,
   };
 
   return (

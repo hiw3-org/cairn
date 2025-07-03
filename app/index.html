@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       /* For Webkit-based browsers (Chrome, Safari) */
       ::-webkit-scrollbar {
@@ -44,58 +44,66 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['IBM Plex Sans', 'sans-serif'],
-              mono: ['IBM Plex Mono', 'monospace'],
+              sans: ['Inter', 'sans-serif'],
+            },
+            borderRadius: {
+              'lg': '0.75rem',
+              'xl': '1rem',
+              '2xl': '1.5rem',
             },
             colors: {
-              'cairn-deep-blue': '#25348a',
-              'cairn-light-blue': '#1a9cb8',
-              'cairn-pale-blue': '#bfcfff',
-              'cairn-blue': {
-                '50': '#eff6ff',
-                '100': '#dbeafe',
-                '200': '#bfdbfe',
-                '300': '#93c5fd',
-                '400': '#60a5fa',
-                '500': '#3b82f6',
-                '600': '#2563eb',
-                '700': '#1d4ed8',
-                '800': '#1e40af',
-                '900': '#1e3a8a',
-                '950': '#172554',
+              'primary': {
+                DEFAULT: '#002F9E',
+                'hover': '#002684',
+                'light': '#E6EFFF',
+                'text': '#FFFFFF',
               },
-              'cairn-gray': {
-                '25': '#fcfcfd',
-                '50': '#f9fafb',
-                '100': '#f3f4f6',
-                '200': '#e5e7eb',
-                '300': '#d1d5db',
-                '400': '#9ca3af',
-                '500': '#6b7280',
-                '600': '#4b5563',
-                '700': '#374151',
-                '800': '#1f2937',
-                '900': '#111827',
-                '950': '#030712',
+              'background': {
+                DEFAULT: '#F9FAFC',
+                'light': '#FFFFFF',
+                'dark': '#111827',
+                'dark-light': '#1F2937',
+              },
+              'text': {
+                DEFAULT: '#111827',
+                'secondary': '#4B5563',
+                'dark': '#F9FAFB',
+                'dark-secondary': '#9CA3AF',
+              },
+              'border': {
+                DEFAULT: '#E5E7EB',
+                'dark': '#374151',
+              },
+              'status': {
+                  'success': '#10B981',
+                  'warning': '#F59E0B',
+                  'danger': '#EF4444',
+                  'info': '#3B82F6',
+                  'success-bg': '#D1FAE5',
+                  'warning-bg': '#FEF3C7',
+                  'danger-bg': '#FEE2E2',
+                  'info-bg': '#DBEAFE',
+                  'success-bg-dark': '#064E3B',
+                  'warning-bg-dark': '#78350F',
+                  'danger-bg-dark': '#991B1B',
+                  'info-bg-dark': '#1E40AF',
+              },
+              'cairn-gray': { // Kept for compatibility where needed
+                '25': '#fcfcfd', '50': '#f9fafb', '100': '#f3f4f6', '200': '#e5e7eb', '300': '#d1d5db', '400': '#9ca3af', '500': '#6b7280', '600': '#4b5563', '700': '#374151', '800': '#1f2937', '900': '#111827', '950': '#030712',
               },
             },
             keyframes: {
-              pulse: {
-                '0%, 100%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.4)', opacity: 1 },
-                '70%': { boxShadow: '0 0 0 10px rgba(59, 130, 246, 0)', opacity: 0.8 },
-                '100%': { opacity: 1 },
+              pulse: { '0%, 100%': { boxShadow: '0 0 0 0 rgba(0, 47, 158, 0.4)', opacity: 1 }, '70%': { boxShadow: '0 0 0 10px rgba(0, 47, 158, 0)', opacity: 0.8 }, '100%': { opacity: 1 } },
+              toastIn: { 'from': { transform: 'translateX(100%)', opacity: '0' }, 'to': { transform: 'translateX(0)', opacity: '1' } },
+              fadeIn: { 'from': { opacity: '0', transform: 'translateY(10px)' }, 'to': { opacity: '1', transform: 'translateY(0)' } },
+              scaleIn: { 'from': { opacity: '0', transform: 'scale(0.95)' }, 'to': { opacity: '1', transform: 'scale(1)' } },
+              move: {
+                '0%': { transform: 'translate(0px, 0px)' },
+                '100%': { transform: 'translate(100vw, 100vh)' }
               },
-              toastIn: {
-                  'from': { transform: 'translateX(100%)', opacity: '0' },
-                  'to': { transform: 'translateX(0)', opacity: '1' },
-              },
-              fadeIn: {
-                'from': { opacity: '0', transform: 'translateY(10px)' },
-                'to': { opacity: '1', transform: 'translateY(0)' },
-              },
-              scaleIn: {
-                'from': { opacity: '0', transform: 'scale(0.95)' },
-                'to': { opacity: '1', transform: 'scale(1)' },
+              glow: {
+                '0%, 100%': { opacity: '0.5' },
+                '50%': { opacity: '1' },
               }
             },
             animation: {
@@ -122,7 +130,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
+  <body class="font-sans text-text dark:text-text-dark bg-background dark:bg-background-dark">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

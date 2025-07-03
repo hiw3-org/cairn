@@ -29,17 +29,17 @@ interface Step {
 const StepIcon = ({ status }: { status: StepStatus }) => {
   switch (status) {
     case "success":
-      return <CheckCircleIcon className="w-full h-full text-green-500" />;
+      return <CheckCircleIcon className="w-full h-full text-status-success" />;
     case "active":
       return (
-        <SpinnerIcon className="w-full h-full text-cairn-blue-500 animate-spin" />
+        <SpinnerIcon className="w-full h-full text-primary animate-spin" />
       );
     case "error":
-      return <AlertTriangleIcon className="w-full h-full text-red-500" />;
+      return <AlertTriangleIcon className="w-full h-full text-status-danger" />;
     case "pending":
     default:
       return (
-        <div className="w-4 h-4 rounded-full bg-cairn-gray-300 dark:bg-cairn-gray-600" />
+        <div className="w-3 h-3 rounded-full bg-cairn-gray-300 dark:bg-cairn-gray-600" />
       );
   }
 };
@@ -47,20 +47,20 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
 // Component to display the creation steps
 const StepTracker = ({ steps }: { steps: Step[] }) => (
   <div className="py-8 px-4">
-    <h3 className="text-lg font-semibold text-center mb-2">
+    <h3 className="text-lg font-semibold text-center mb-2 text-text dark:text-text-dark">
       Your project is being created on-chain.
     </h3>
-    <p className="text-sm text-cairn-gray-500 dark:text-cairn-gray-400 text-center mb-8">
+    <p className="text-sm text-text-secondary dark:text-text-dark-secondary text-center mb-8">
       Please approve the transactions in your wallet when prompted.
     </p>
-    <ol className="relative border-l-2 border-cairn-gray-200 dark:border-cairn-gray-700 ml-4">
+    <ol className="relative border-l-2 border-border dark:border-border-dark ml-4">
       {steps.map((step, index) => (
         <li key={index} className="mb-10 ml-8 last:mb-0">
           <span
-            className={`absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-cairn-gray-50 dark:ring-cairn-gray-900 ${
+            className={`absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-8 ring-background-light dark:ring-background-dark-light ${
               step.status === "pending"
                 ? "bg-cairn-gray-200 dark:bg-cairn-gray-700"
-                : "bg-cairn-gray-100 dark:bg-cairn-gray-800"
+                : "bg-transparent"
             }`}
           >
             <StepIcon status={step.status} />
@@ -68,17 +68,17 @@ const StepTracker = ({ steps }: { steps: Step[] }) => (
           <h4
             className={`font-semibold ${
               step.status === "pending"
-                ? "text-cairn-gray-500"
-                : "text-cairn-gray-900 dark:text-white"
+                ? "text-text-secondary dark:text-text-dark-secondary"
+                : "text-text dark:text-text-dark"
             }`}
           >
             {step.name}
           </h4>
-          <p className="text-sm text-cairn-gray-500 dark:text-cairn-gray-400">
+          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
             {step.description}
           </p>
           {step.status === "error" && (
-            <p className="text-sm font-semibold text-red-500 mt-1">
+            <p className="text-sm font-semibold text-status-danger mt-1">
               Transaction failed. Please try again.
             </p>
           )}
@@ -88,6 +88,25 @@ const StepTracker = ({ steps }: { steps: Step[] }) => (
   </div>
 );
 
+const FormInput = React.memo((props: React.ComponentProps<"input">) => (
+  <input
+    {...props}
+    className="w-full p-2.5 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+  />
+));
+const FormTextarea = React.memo((props: React.ComponentProps<"textarea">) => (
+  <textarea
+    {...props}
+    className="w-full p-2.5 border border-border dark:border-border-dark rounded-lg bg-transparent h-24 focus:ring-1 focus:ring-primary focus:border-primary"
+  />
+));
+const FormSelect = React.memo((props: React.ComponentProps<"select">) => (
+  <select
+    {...props}
+    className="w-full p-2.5 border border-border dark:border-border-dark rounded-lg bg-transparent dark:text-white focus:ring-1 focus:ring-primary focus:border-primary"
+  />
+));
+
 export const NewProjectModal = ({
   onClose,
   onAddProject,
@@ -96,6 +115,7 @@ export const NewProjectModal = ({
   onAddProject: (p: Project) => void;
 }) => {
   const { registerProject } = useIpfsService();
+
   const { currentUser } = useAppContext();
   const [title, setTitle] = useState("");
   const [domain, setDomain] = useState<ResearchDomain>(ResearchDomain.Robotics);
@@ -108,14 +128,14 @@ export const NewProjectModal = ({
   const [steps, setSteps] = useState<Step[]>([]);
 
   const handleCreateProject = async () => {
-    if (!title || !description) return;
+    if (!title || !description || !currentUser) return;
 
     setCreationStatus("creating");
 
     const initialSteps: Step[] = [
       {
         name: "1. Create Project Metadata",
-        description: "Storing project details on IPFS.",
+        description: "Storing project details on the smart contract.",
         status: "active",
       },
       {
@@ -132,7 +152,6 @@ export const NewProjectModal = ({
     setSteps(initialSteps);
 
     try {
-      // Simulate Step 1: Create Metadata
       console.log("Creating project metadata...");
       console.log("Current user wallet address:", currentUser.walletAddress);
       console.log("User ", currentUser, "is creating a new project");
@@ -150,7 +169,6 @@ export const NewProjectModal = ({
         throw new Error("Failed to register project on IPFS.");
       }
       console.log("Project metadata stored with CID:", cid.toString());
-
       setSteps((currentSteps) =>
         currentSteps.map((step, index) =>
           index === 0
@@ -161,9 +179,7 @@ export const NewProjectModal = ({
         )
       );
 
-      // Simulate Step 2: Mint Hypercert
       await new Promise((resolve) => setTimeout(resolve, 2500));
-      // if (Math.random() < 0.2) throw new Error("Wallet transaction rejected."); // Uncomment to test error case
       setSteps((currentSteps) =>
         currentSteps.map((step, index) =>
           index === 1
@@ -174,7 +190,6 @@ export const NewProjectModal = ({
         )
       );
 
-      // Simulate Step 3: Link Assets
       await new Promise((resolve) => setTimeout(resolve, 2000));
       setSteps((currentSteps) =>
         currentSteps.map((step) => ({ ...step, status: "success" }))
@@ -208,6 +223,7 @@ export const NewProjectModal = ({
         impactScore: 0,
         outputs: [],
         reproducibilityRequirements: REPRODUCIBILITY_TEMPLATES[domain],
+        impactAssetOwners: [],
       };
       onAddProject(newProject);
     } catch (error) {
@@ -225,86 +241,80 @@ export const NewProjectModal = ({
       return (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
               Project Title
             </label>
-            <input
+            <FormInput
               type="text"
               placeholder="e.g., Autonomous Drone Navigation"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
               Description
             </label>
-            <textarea
+            <FormTextarea
               placeholder="A brief summary of your research goals and methods."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent h-24"
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
                 Organization (Optional)
               </label>
-              <input
+              <FormInput
                 type="text"
                 placeholder="e.g., Atlas Robotics"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
-                className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
                 Contributor Info URL (Optional)
               </label>
-              <input
+              <FormInput
                 type="url"
                 placeholder="e.g., Google Scholar, lab site"
                 value={additionalInfoUrl}
                 onChange={(e) => setAdditionalInfoUrl(e.target.value)}
-                className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
                 Research Domain
               </label>
-              <select
+              <FormSelect
                 value={domain}
                 onChange={(e) => setDomain(e.target.value as ResearchDomain)}
-                className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent dark:text-white"
               >
                 {RESEARCH_DOMAINS.map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <div>
-              <label className="block text-sm font-medium text-cairn-gray-700 dark:text-cairn-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
                 Tags
               </label>
-              <input
+              <FormInput
                 type="text"
                 placeholder="AI, Robotics, SLAM (comma-separated)"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full p-2 border border-cairn-gray-300 dark:border-cairn-gray-600 rounded-md bg-transparent"
               />
             </div>
           </div>
           <div>
-            <div className="flex items-start p-3 mb-3 text-sm rounded-md bg-cairn-blue-50 text-cairn-blue-800 dark:bg-cairn-blue-900/50 dark:text-cairn-blue-200">
+            <div className="flex items-start p-3 mb-3 text-sm rounded-lg bg-status-info-bg text-status-info dark:bg-status-info-bg-dark/50">
               <InfoIcon className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
               <span>
                 New projects have a status of a <strong>Draft</strong> and are
@@ -312,15 +322,15 @@ export const NewProjectModal = ({
                 your project list and Manage your new project.
               </span>
             </div>
-            <h4 className="text-md font-medium text-cairn-gray-800 dark:text-cairn-gray-200 mb-2">
+            <h4 className="text-md font-medium text-text dark:text-text-dark mb-2">
               Research Output Guidelines
             </h4>
-            <p className="text-sm text-cairn-gray-500 dark:text-cairn-gray-400 mb-3">
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary mb-3">
               These are some examples of outputs for a project in the{" "}
               <strong>{domain}</strong> domain. Provide as much detail as
               possible.
             </p>
-            <ul className="space-y-2 text-sm text-cairn-gray-600 dark:text-cairn-gray-400 list-disc list-inside bg-cairn-gray-100 dark:bg-cairn-gray-800 p-3 rounded-md">
+            <ul className="space-y-2 text-sm text-text-secondary list-disc list-inside bg-cairn-gray-100 dark:bg-cairn-gray-800 p-3 rounded-lg">
               {REPRODUCIBILITY_TEMPLATES[domain].map((req, i) => (
                 <li key={i}>{req}</li>
               ))}
@@ -344,7 +354,7 @@ export const NewProjectModal = ({
           <button
             onClick={handleCreateProject}
             disabled={!title || !description}
-            className="bg-cairn-blue-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-cairn-blue-700 transition-colors disabled:bg-cairn-gray-400 disabled:cursor-not-allowed"
+            className="bg-primary text-primary-text font-semibold py-2.5 px-6 rounded-lg hover:bg-primary-hover transition-colors disabled:bg-cairn-gray-400 disabled:cursor-not-allowed"
           >
             Create Project
           </button>
@@ -356,7 +366,7 @@ export const NewProjectModal = ({
         <div className="flex justify-end">
           <button
             disabled
-            className="bg-cairn-blue-500 text-white font-semibold py-2 px-6 rounded-lg flex items-center cursor-wait"
+            className="bg-primary/80 text-primary-text font-semibold py-2.5 px-6 rounded-lg flex items-center cursor-wait"
           >
             <SpinnerIcon className="animate-spin w-5 h-5 mr-2" />
             Processing...
@@ -369,7 +379,7 @@ export const NewProjectModal = ({
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+            className="bg-status-success text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center"
           >
             <CheckCircleIcon className="w-5 h-5 mr-2" />
             Done
@@ -382,13 +392,13 @@ export const NewProjectModal = ({
         <div className="flex justify-end space-x-4">
           <button
             onClick={onClose}
-            className="text-cairn-gray-700 dark:text-cairn-gray-300 font-semibold py-2 px-4 rounded-lg hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-700"
+            className="text-text-secondary dark:text-text-dark-secondary font-semibold py-2.5 px-4 rounded-lg hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-700"
           >
             Close
           </button>
           <button
             onClick={handleRetry}
-            className="bg-yellow-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-yellow-600 transition-colors"
+            className="bg-status-warning text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-yellow-600 transition-colors"
           >
             Try Again
           </button>

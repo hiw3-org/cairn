@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { App } from "./App";
 import { AppProvider } from "./context/app-provider";
 import { IpfsProvider } from "./context/ipfsContext";
 
