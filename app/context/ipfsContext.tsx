@@ -5,8 +5,8 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import { createIpfsClient } from "./ipfsClient";
-import type { IpfsClient } from "./types";
+import { createIpfsClient } from "../ipfs/ipfsClient";
+import type { IpfsClient } from "../lib/types";
 
 interface IpfsProviderProps {
   children: ReactNode;
