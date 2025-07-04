@@ -18,6 +18,8 @@ contract CairnTest is Test {
     string public seedUri2 = "ipfs://QmSeedProject2";
     string public seedUri3 = "ipfs://QmSeedProject3";
 
+    uint256 public unitPrice = 1e6;
+
     uint256 public UNITS = 1000;   
     IHypercertToken.TransferRestrictions public RESTRICTIONS = IHypercertToken.TransferRestrictions.AllowAll;
 
@@ -27,6 +29,7 @@ contract CairnTest is Test {
     string public outputsURI = "ipfs://QmOutputsURI";
 
     uint8 public minRequiredPoR = 3;
+    uint8 public maxPoRProject = 10;
 
     function setUp() public {
         vm.recordLogs();
@@ -36,31 +39,39 @@ contract CairnTest is Test {
 
         hypercert = IHypercertToken(0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941);
 
+        // Mint token for scientist and get tokenID from logs
         vm.prank(scientist);
         hypercert.mintClaim(scientist, UNITS, uri, RESTRICTIONS);
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
         hypercertTypeId = uint256(entries[0].topics[1]);
         hypercertTokenId = hypercertTypeId + 1;
-
-        // Deploy Cairn contract with minRequiredPoR and maxPoRProject
+        // Deploy Cairn contract with paymentToken address set to zero for now
         vm.prank(deployer);
-        cairn = new Cairn(address(hypercert), minRequiredPoR, 10, 7 days);
+        cairn = new Cairn(address(hypercert), address(0), minRequiredPoR, maxPoRProject, 7 days, 1 ether, 5 ether, 10 ether);
 
+        // Seed initial projects as deployer using initProject
         string[] memory seedProjects = new string[](minRequiredPoR);
         seedProjects[0] = seedUri1;
         seedProjects[1] = seedUri2;
         seedProjects[2] = seedUri3;
-        
+
         for (uint256 i = 0; i < seedProjects.length; i++) {
             vm.prank(deployer);
             cairn.initProject(seedProjects[i], deployer);
+
             vm.prank(deployer);
             hypercert.mintClaim(deployer, UNITS, seedProjects[i], RESTRICTIONS);
+
             uint256 seedHypercertTypeId = getTokenIdByURI(seedProjects[i]);
             uint256 seedHypercertTokenId = seedHypercertTypeId + 1;
+
             vm.prank(deployer);
-            cairn.storeTokenID(seedProjects[i], seedHypercertTokenId);
+            hypercert.setApprovalForAll(address(cairn), true);
+
+            vm.prank(deployer);
+            cairn.storeTokenIDInit(seedProjects[i], seedHypercertTokenId, unitPrice);
+
             vm.prank(deployer);
             cairn.recordOutputs(seedProjects[i], string(abi.encodePacked("ipfs://outputs-", vm.toString(i))));
         }
@@ -87,7 +98,6 @@ contract CairnTest is Test {
     }
 
     /// @notice Helper to record one proof per project for a user on multiple projects
-    /// Note: Proofs can only be recorded if outputs are set on the project
     function recordProofsOnDistinctProjects(address user, string[] memory projectURIs) internal {        
         for (uint256 i = 0; i < projectURIs.length; i++) {
             vm.prank(user);
@@ -106,8 +116,10 @@ contract CairnTest is Test {
 
         vm.startPrank(scientist);
 
-        cairn.registerProject(uri);
-        cairn.storeTokenID(uri, hypercertTokenId);
+        // Approve Cairn contract to transfer scientist's tokens
+        hypercert.setApprovalForAll(address(cairn), true);
+
+        cairn.registerProject(uri, hypercertTokenId, unitPrice);
 
         cairn.recordOutputs(uri, outputsURI);
 
@@ -135,8 +147,12 @@ contract CairnTest is Test {
         recordProofsOnDistinctProjects(scientist, seedProjects);
 
         vm.startPrank(scientist);
-        cairn.registerProject(uri);
-        cairn.storeTokenID(uri, hypercertTokenId);
+
+        // Approve Cairn contract
+        hypercert.setApprovalForAll(address(cairn), true);
+
+        cairn.registerProject(uri, hypercertTokenId, unitPrice);
+
         vm.stopPrank();
 
         vm.startPrank(scientist2);
@@ -147,22 +163,6 @@ contract CairnTest is Test {
         vm.stopPrank();
     }
 
-    function testRecordOutputsRevertsIfTokenIDNotSet() public {
-        string[] memory seedProjects = new string[](minRequiredPoR);
-        seedProjects[0] = seedUri1;
-        seedProjects[1] = seedUri2;
-        seedProjects[2] = seedUri3;
-
-        recordProofsOnDistinctProjects(scientist, seedProjects);
-
-        vm.startPrank(scientist);
-        cairn.registerProject(uri);
-
-        vm.expectRevert("Project tokenID not set");
-        cairn.recordOutputs(uri, outputsURI);
-
-        vm.stopPrank();
-    }
 
     function testRecordOutputsRevertsIfOutputsAlreadyRecorded() public {
         string[] memory seedProjects = new string[](minRequiredPoR);
@@ -173,8 +173,11 @@ contract CairnTest is Test {
         recordProofsOnDistinctProjects(scientist, seedProjects);
 
         vm.startPrank(scientist);
-        cairn.registerProject(uri);
-        cairn.storeTokenID(uri, hypercertTokenId);
+
+        // Approve Cairn contract
+        hypercert.setApprovalForAll(address(cairn), true);
+
+        cairn.registerProject(uri, hypercertTokenId, unitPrice);
 
         cairn.recordOutputs(uri, outputsURI);
 

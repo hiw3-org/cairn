@@ -65,4 +65,7 @@ interface IHypercertToken {
     function uri(uint256 tokenID) external view returns (string memory metadata);
 
     function ownerOf(uint256 tokenID) external view returns (address owner);
+    function isApprovedForAll(address to, address approved) external view returns (bool);
+    function setApprovalForAll(address operator, bool _approved) external;
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) external;
 }

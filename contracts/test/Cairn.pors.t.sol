@@ -15,6 +15,8 @@ contract CairnPoRTest is Test {
     string public seedUri1 = "ipfs://QmSeedProject1";
     string public seedUri2 = "ipfs://QmSeedProject2";
 
+    uint256 public unitPrice = 1e6;
+
     uint256 public UNITS = 1000;   
     IHypercertToken.TransferRestrictions public RESTRICTIONS = IHypercertToken.TransferRestrictions.AllowAll;
 
@@ -29,22 +31,31 @@ contract CairnPoRTest is Test {
 
         hypercert = IHypercertToken(0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941);
 
+        // Deploy Cairn contract with paymentToken address set to zero for PoR tests
         vm.prank(deployer);
-        cairn = new Cairn(address(hypercert), minRequiredPoR, maxPoRProject, 7 days);
+        cairn = new Cairn(address(hypercert), address(0), minRequiredPoR, maxPoRProject, 7 days, 1 ether, 5 ether, 10 ether);
 
-        string[] memory seedProjects = new string[](minRequiredPoR);
+        // Initialize projects as deployer
+        string[] memory seedProjects = new string[](2);
         seedProjects[0] = seedUri1;
         seedProjects[1] = seedUri2;
-        
+
         for (uint256 i = 0; i < seedProjects.length; i++) {
             vm.prank(deployer);
             cairn.initProject(seedProjects[i], deployer);
+
             vm.prank(deployer);
             hypercert.mintClaim(deployer, UNITS, seedProjects[i], RESTRICTIONS);
+
             uint256 seedHypercertTypeId = getTokenIdByURI(seedProjects[i]);
             uint256 seedHypercertTokenId = seedHypercertTypeId + 1;
+
             vm.prank(deployer);
-            cairn.storeTokenID(seedProjects[i], seedHypercertTokenId);
+            hypercert.setApprovalForAll(address(cairn), true);
+
+            vm.prank(deployer);
+            cairn.storeTokenIDInit(seedProjects[i], seedHypercertTokenId, unitPrice);
+
             vm.prank(deployer);
             cairn.recordOutputs(seedProjects[i], string(abi.encodePacked("ipfs://outputs-", vm.toString(i))));
         }
@@ -79,20 +90,19 @@ contract CairnPoRTest is Test {
         vm.stopPrank();
     }
 
+    // Your existing tests below remain unchanged, e.g.,
+
     function testRecordProofSuccess() public {
         vm.prank(scientist);
         cairn.recordProof(seedUri1, "ipfs://proof1");
 
-        // Check available PoR count (valid proofs)
         vm.warp(block.timestamp + 7 days + 1);
         uint256 availablePoRs = cairn.getUserAvailablePoRCount(scientist);        
         assertEq(availablePoRs, 1);
 
-        // Check project proofs length
         Cairn.Project memory project = cairn.getProject(seedUri1);
         assertEq(project.proofs.length, 1);
 
-        // Check proof details
         string memory proofURI = project.proofs[0];
         Cairn.ProofOfReproducibility memory proof = cairn.getProof(proofURI);
         assertEq(proof.proofURI, "ipfs://proof1");
@@ -150,7 +160,6 @@ contract CairnPoRTest is Test {
 
         vm.warp(block.timestamp + 7 days + 1);
 
-        // Check available PoR counts for each user
         uint256 availablePoRs1 = cairn.getUserAvailablePoRCount(scientist);
         uint256 availablePoRs2 = cairn.getUserAvailablePoRCount(scientist2);
         assertEq(availablePoRs1, 1);

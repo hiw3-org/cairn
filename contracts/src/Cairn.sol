@@ -4,9 +4,14 @@ pragma solidity ^0.8.20;
 import "./interfaces/IHypercertToken.sol";
 import "forge-std/console.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Cairn is Ownable {
+    using SafeERC20 for IERC20;
+
     IHypercertToken public hypercertToken;
+    IERC20 public paymentToken;
     
     uint8 public minRequiredPoR;
     uint8 public maxPoRProject;
@@ -19,20 +24,17 @@ contract Cairn is Ownable {
         HIGH       // High impact
     }
 
-    uint256 public constant MAX_FUNDING_LOW;
-    uint256 public constant MAX_FUNDING_MEDIUM;
-    uint256 public constant MAX_FUNDING_HIGH;
-
 
     struct Project {
         address creator;                // Who created the project
-        uint256 tokenID;                // Hypercert token ID for this project
+        uint256 typeID;                 // Hypercert type ID for this project
+        uint256[] tokenIDs;             // Array of token IDs (fractions) for this project
         string projectURI;              // IPFS URI of the project metadata
         string outputsURI;              // IPFS URI of the outputs metadata
         string[] proofs;                // Array of PoR URIs
         Impact impact;                  // Impact level of the project
-        address[] impactAssetsOwners;   // List of addresses that own impact assets
-        address[] fundingIDs;           // List of funding IDs for this project
+        address funder;                 // Address of the funder for this project
+        uint256 fundingGoal;            // Funding goal for the project (if applicable)
     }
 
     struct ProofOfReproducibility {
@@ -42,13 +44,6 @@ contract Cairn is Ownable {
         uint256 recordedAt;    // Timestamp when recorded
         bool dispute;          // If PoR is disputed for validity
         string disputeURI;     // IPFS URI of the dispute metadata        
-    }
-
-    struct Funding {
-        address fundingID;     // Unique ID for funding
-        address funder;        // Who funded the project
-        uint256 amount;        // Amount funded
-        string projectURI;     // IPFS URI of the project metadata
     }
 
     string[] public allProjectURIs; 
@@ -63,43 +58,46 @@ contract Cairn is Ownable {
     mapping(string => mapping(address => bool)) private hasRecordedProof;
 
     // Funding related
-    mapping(address => Funding[]) public projectFundings;
-    mapping(address => address[]) public userFundingIDs;
+    mapping(Impact => uint256) public maxFundingForImpact;
 
-
-    event ProjectRegistered(address indexed creator, uint256 indexed tokenID, string projectURI);
-    event OutputsRecorded(address indexed creator, uint256 indexed tokenID, string projectURI, string outputsURI);
-    event ProofRecorded(address indexed creator, uint256 indexed tokenID, string projectURI, string proofURI);
+    event ProjectRegistered(address indexed creator, uint256 indexed typeID, string projectURI);
+    event OutputsRecorded(address indexed creator, uint256 indexed typeID, string projectURI, string outputsURI);
+    event ProofRecorded(address indexed creator, uint256 indexed typeID, string projectURI, string proofURI);
     event ProofDisputed(address indexed disputer, string indexed proofURI, string disputeURI);
 
 
-    constructor(address _hypercertToken, uint8 _minRequiredPoR, uint8 _maxPoRProject, uint256 _disputeWindowPoR, uint256 _maxFundingLow, uint256 _maxFundingMedium, uint256 _maxFundingHigh) Ownable(msg.sender) {
+    constructor(address _hypercertToken, address _paymentToken, uint8 _minRequiredPoR, uint8 _maxPoRProject, uint256 _disputeWindowPoR, uint256 _maxFundingLow, uint256 _maxFundingMedium, uint256 _maxFundingHigh) Ownable(msg.sender) {
         hypercertToken = IHypercertToken(_hypercertToken);
+        paymentToken = IERC20(_paymentToken);
         minRequiredPoR = _minRequiredPoR;
         maxPoRProject = _maxPoRProject;
         disputeWindowPoR = _disputeWindowPoR;
-        MAX_FUNDING_LOW = _maxFundingLow;
-        MAX_FUNDING_MEDIUM = _maxFundingMedium;
-        MAX_FUNDING_HIGH = _maxFundingHigh;
+        maxFundingForImpact[Impact.LOW] = _maxFundingLow;
+        maxFundingForImpact[Impact.MEDIUM] = _maxFundingMedium;
+        maxFundingForImpact[Impact.HIGH] = _maxFundingHigh;
     }
 
 
     /// ---------------- SETTER FUNCTIONS ----------------------
 
     /// @notice Register a new project with unique projectURI globally
-    function registerProject(string memory projectURI) external {
-        require(!_projectURIsUsed[projectURI], "Metadata URI already used globally");
-
+    function registerProject(string memory projectURI, uint256 tokenID, uint256 unitPrice) external {
+        require(!_projectURIsUsed[projectURI], "Metadata URI already in use");
         uint256 availablePoRs = getUserAvailablePoRCount(msg.sender);
         require(availablePoRs >= minRequiredPoR, "Not enough available PoRs to register project");
+        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not owner of tokenID or the tokenID does not exists");
+        require(hypercertToken.isApprovedForAll(msg.sender, address(this)), "You must set allowance for transfer of impact assets");
 
         // Project struct init
         Project storage project = projects[projectURI];
         project.creator = msg.sender;
-        project.tokenID = 0;
+        project.typeID = tokenID >> 128 << 128;    
+        project.tokenIDs.push(tokenID);
         project.projectURI = projectURI;
         project.outputsURI = "";
         project.impact = Impact.NONE;
+        project.fundingGoal = hypercertToken.unitsOf(tokenID) * unitPrice;
+        project.funder = address(0);
 
         userProjectURIs[msg.sender].push(projectURI);
         allProjectURIs.push(projectURI);
@@ -108,16 +106,20 @@ contract Cairn is Ownable {
         emit ProjectRegistered(msg.sender, 0, projectURI);
     }
 
+    /// @notice Initialize a project with a given projectURI and creator (admin only). Does not set tokenIDs or outputs.
     function initProject(string memory projectURI, address _creator) external onlyOwner {
         require(_creator != address(0), "Invalid creator address");
         require(!_projectURIsUsed[projectURI], "Metadata URI already used");
         
         Project storage project = projects[projectURI];
         project.creator = _creator;
-        project.tokenID = 0;
+        project.typeID = 0;
+        delete project.tokenIDs;
         project.projectURI = projectURI;
         project.outputsURI = "";
         project.impact = Impact.NONE;
+        project.fundingGoal = 0;
+        project.funder = address(0);
 
         userProjectURIs[_creator].push(projectURI);
         allProjectURIs.push(projectURI);
@@ -126,21 +128,46 @@ contract Cairn is Ownable {
         emit ProjectRegistered(_creator, 0, projectURI);
     }
 
-    /// @notice Store the tokenID for a project identified by creator and projectURI
+    /// @notice Store tokenIDs for initial project
+    function storeTokenIDInit(string memory projectURI, uint256 tokenID, uint256 unitPrice) external {
+        require(_projectURIsUsed[projectURI], "Project does not exist yet");
+        Project storage project = projects[projectURI];
+        require(project.typeID == 0, "Project typeID already set");
+        // Check if the user is actually the owner of the tokenID
+        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not the owner of this tokenID");
+        
+        // Check if the user has set allowance for transfer of the impact assets
+        require(hypercertToken.isApprovedForAll(msg.sender, address(this)), "You must set allowance for transfer of impact assets");
+
+        project.fundingGoal = hypercertToken.unitsOf(tokenID) * unitPrice;
+        project.typeID = tokenID >> 128 << 128;   
+        project.tokenIDs.push(tokenID);
+    }
+
+    /// @notice Store additional tokenIDs for a project identified by projectURI
     function storeTokenID(string memory projectURI, uint256 tokenID) external {
         require(tokenID != 0, "Invalid tokenID");
         require(_projectURIsUsed[projectURI], "Project does not exist yet");
-        // Check that the project exists for msg.sender
+        // Access the project of msg.sender by projectURI
         Project storage project = projects[projectURI];
-        require(project.creator == msg.sender, "You are not the creator of this project");
-        require(project.tokenID == 0, "tokenID already set");
-        console.log("Owner of token", hypercertToken.ownerOf(tokenID));
-        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not owner of tokenID or the tokenID does not exists");
+        // Check that typeID has been stored (must be non-zero)
+        require(project.typeID != 0, "Project typeID not set"); 
+        // Check if tokenID already stored to prevent overwriting
+        for (uint256 i = 0; i < project.tokenIDs.length; i++) {
+            require(project.tokenIDs[i] != tokenID, "Token ID already stored for this project");
+        }
+        // Check if the user is actually the owner of the tokenID
+        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not the owner of this tokenID");
+        // Check if tokenID have the same typeID as the project
+        require(tokenID >> 128 << 128 == project.typeID, "Token ID type does not match project typeID");
+        
+        // Check if the user has set allowance for transfer of the impact assets
+        require(hypercertToken.isApprovedForAll(msg.sender, address(this)), "You must set allowance for transfer of impact assets");
 
-        project.tokenID = tokenID;
-
-        emit ProjectRegistered(msg.sender, tokenID, projectURI);
+        // Store the tokenID
+        project.tokenIDs.push(tokenID);
     }
+
 
     /// @notice Store the outputs of a project identified by projectURI
     function recordOutputs(string memory projectURI, string memory outputsURI) external {
@@ -149,8 +176,8 @@ contract Cairn is Ownable {
         // Access the project of msg.sender by projectURI
         Project storage project = projects[projectURI];
         require(project.creator == msg.sender, "You are not the creator of this project");
-        // Check that tokenID has been stored (must be non-zero)
-        require(project.tokenID != 0, "Project tokenID not set");
+        // Check that typeID has been stored (must be non-zero)
+        require(project.typeID != 0, "Project typeID not set");
 
         // Check if outputs already stored to prevent overwriting
         require(bytes(project.outputsURI).length == 0, "Outputs already recorded");
@@ -158,7 +185,7 @@ contract Cairn is Ownable {
         // Record the outputs URI
         project.outputsURI = outputsURI;
 
-        emit OutputsRecorded(msg.sender, project.tokenID, projectURI, outputsURI);
+        emit OutputsRecorded(msg.sender, project.typeID, projectURI, outputsURI);
     }
 
     /// @notice Store the PoR of a project identified by projectURI
@@ -188,7 +215,7 @@ contract Cairn is Ownable {
         _proofURIsUsed[proofURI] = true;
         hasRecordedProof[projectURI][msg.sender] = true;
 
-        emit ProofRecorded(msg.sender, project.tokenID, projectURI, proofURI);
+        emit ProofRecorded(msg.sender, project.typeID, projectURI, proofURI);
     }
 
     /// @notice Dispute the PoR
@@ -221,11 +248,11 @@ contract Cairn is Ownable {
     }
 
     /// @notice Set impact level for a project; only if minimum PoRs reached
-    function setProjectImpact(string memory projectURI, ImpactLevel impactLevel) external onlyOwner {
+    function setProjectImpact(string memory projectURI, Impact impactLevel) external onlyOwner {
         require(_projectURIsUsed[projectURI], "Project does not exist");
-        require(impactLevel != ImpactLevel.NONE, "Impact cannot be NONE");
+        require(impactLevel != Impact.NONE, "Impact cannot be NONE");
         Project storage project = projects[projectURI];
-        require(project.impact == ImpactLevel.NONE, "Impact already set");
+        require(project.impact == Impact.NONE, "Impact already set");
 
         // Count valid PoRs for this project
         uint256 validPoRs = 0;
@@ -236,38 +263,68 @@ contract Cairn is Ownable {
             }
         }
 
-        require(validPoRs >= minRequiredPoR, "Not enough valid PoRs to set impact");        
+        require(validPoRs >= minRequiredPoR, "Not enough valid PoRs to set impact");
 
         project.impact = impactLevel;
+        if (project.fundingGoal > maxFundingForImpact[impactLevel]) {
+            project.fundingGoal = maxFundingForImpact[impactLevel];
+        }
     }
 
-    
-    /// @notice Claim ownership of impact assets for a project
-    function claimImpactAssetsOwnership(string memory projectURI) external {
+    /// @notice Fund a project with a specific funding ID
+    function fundProject(uint256 amount, string memory projectURI) external {
         require(_projectURIsUsed[projectURI], "Project does not exist");
+        require(amount > 0, "Funding amount must be greater than zero");
+        require(paymentToken.allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
 
         Project storage project = projects[projectURI];
+        require(project.proofs.length >= minRequiredPoR, "Not enough PoRs for funding");
+        require(project.impact != Impact.NONE, "Impact must be set");
+        require(project.funder == address(0), "Project already funded by another user");
+        require(maxFundingForImpact[project.impact] >= amount, "Funding amount exceeds the allowed");
+        require(project.fundingGoal > 0, "Funding goal must be set for the project");
+        require(amount == project.fundingGoal, "Funding amount must equal funding goal");
 
-        // Check if the user is already an owner
-        for (uint256 i = 0; i < project.impactAssetsOwners.length; i++) {
-            if (project.impactAssetsOwners[i] == msg.sender) {
-                revert("You already own impact assets for this project");
+        // Calculate total units
+        uint256 totalUnits = 0;
+        for (uint256 i = 0; i < project.tokenIDs.length; i++) {
+            uint256 tokenID = project.tokenIDs[i];
+            totalUnits += hypercertToken.unitsOf(tokenID);
+        }
+        require(totalUnits > 0, "No units in project");       
+
+        // Transfer the full amount to the contract first
+        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Distribute funds to each impact asset owner proportionally
+        uint256 distributed = 0;
+        uint256 actuallyDistributed = 0;
+        for (uint256 i = 0; i < project.tokenIDs.length; i++) {
+            uint256 tokenID = project.tokenIDs[i];
+            address owner = hypercertToken.ownerOf(tokenID);
+            uint256 units = hypercertToken.unitsOf(tokenID);
+
+            uint256 share = (amount * units) / totalUnits;
+
+            // For the last owner, send the remainder to avoid rounding issues
+            if (i == project.tokenIDs.length - 1) {
+                share = amount - distributed;
+            }
+
+            if (share > 0) {
+                if (hypercertToken.isApprovedForAll(owner, address(this))) {
+                    hypercertToken.safeTransferFrom(owner, msg.sender, tokenID, 1, ""); 
+                    paymentToken.safeTransfer(owner, share);                    
+                    actuallyDistributed += share;
+                }   
+                distributed += share;             
             }
         }
-
-        // Check if the user owns the impact asset token
-        uint256 tokenID = project.tokenID;
-        require(tokenID != 0, "Token ID not set for this project");
-        require(hypercertToken.ownerOf(tokenID) == msg.sender, "You are not the owner of the impact asset token");
-
-        // Check if the user has set allowance for transfer of the impact assets
-        require(hypercertToken.isApprovedForAll(msg.sender, address(this)), "You must set allowance for transfer of impact assets");
-
-        // Add user to impact assets owners
-        project.impactAssetsOwners.push(msg.sender);
+        if (amount - actuallyDistributed > 0) {
+            paymentToken.safeTransfer(msg.sender, amount - actuallyDistributed);
+        }
+        project.funder = msg.sender;
     }
-
-    /// TODO Fund project function - Funder must set allowance for transfer of USDFC token to transfer the funding amount. 
 
     /// ---------------- GETTER FUNCTIONS ----------------------
 
@@ -330,5 +387,6 @@ contract Cairn is Ownable {
                 count++;
             }
         }
+        return count;
     }
 }
