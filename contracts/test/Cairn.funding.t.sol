@@ -51,7 +51,9 @@ contract CairnFundingFractionTest is Test {
         paymentToken.mint(funder, 100 ether);
 
         // Fork Sepolia and select (replace YOUR_ALCHEMY_KEY)
-        uint256 forkId = vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/OvsCjNyvn_J3SUk56PTqNzojA_uI0ba1");
+        string memory alchemyKey = vm.envString("ALCHEMY_KEY");
+        string memory rpcUrl = string.concat("https://eth-sepolia.g.alchemy.com/v2/", alchemyKey);
+        uint256 forkId = vm.createSelectFork(rpcUrl);
         vm.selectFork(forkId);
 
         hypercert = IHypercertToken(0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941);
