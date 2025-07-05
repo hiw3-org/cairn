@@ -57,6 +57,7 @@ interface AppContextType {
   isOnboardingModalOpen: boolean;
   completeOnboarding: () => void;
   closeOnboardingModal: () => void;
+  setFundingHistory: React.Dispatch<React.SetStateAction<FundingEvent[]>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -280,6 +281,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticated,
     connectedWallet,
     setConnectedWallet,
+    setFundingHistory,
   };
 
   return (

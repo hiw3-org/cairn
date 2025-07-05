@@ -191,7 +191,18 @@ export const ProjectDetailView = ({
       </button>
 
       <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg overflow-hidden border border-border dark:border-border-dark">
-        <GenerativePlaceholder projectId={project.id} className="w-full h-64" />
+        {project.image_url ? (
+          <img
+            src={project.image_url}
+            alt={project.title}
+            className="w-full h-40 object-cover rounded-md"
+          />
+        ) : (
+          <GenerativePlaceholder
+            projectId={project.id}
+            className="w-full h-40"
+          />
+        )}
         <div className="p-8">
           <div className="flex justify-between items-start">
             <div>

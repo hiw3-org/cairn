@@ -1,8 +1,11 @@
 "use client";
 
-import { Reproducibility, PoRStatus } from "../../lib/types";
+import { Reproducibility, PoRStatus, DisputeData } from "../../lib/types";
 import { Modal } from "../ui/modal";
 import { EyeIcon, FlagIcon, ClockIcon, CheckCircleIcon } from "../ui/icons";
+import { useIpfsService } from "../../ipfs/ipfsService";
+import { useContract } from "../../context/contract-context";
+import { useAppContext } from "@/context/app-provider";
 
 const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
   let status: PoRStatus;
@@ -58,6 +61,14 @@ export const ReproducibilityDetailModal = ({
   onDispute: () => void;
   isOwner: boolean;
 }) => {
+  const { uploadDispute } = useIpfsService();
+  const { contractDisputeProof } = useContract();
+
+  const handleDispute = async () => {
+    if (onDispute) {
+      onDispute();
+    }
+  };
   return (
     <Modal onClose={onClose} title="Submission Details">
       <div className="space-y-6">
@@ -158,7 +169,7 @@ export const ReproducibilityDetailModal = ({
                 made shorter for the hackathon demo
               </p>
               <button
-                onClick={onDispute}
+                onClick={handleDispute}
                 className="w-full sm:w-auto flex items-center justify-center space-x-2 border-2 border-status-danger bg-transparent text-status-danger font-semibold py-2 px-4 rounded-lg hover:bg-status-danger/10 transition-colors"
               >
                 <FlagIcon className="w-5 h-5" />

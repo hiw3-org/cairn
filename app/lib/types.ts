@@ -37,6 +37,9 @@ export interface Project {
   output: ProjectOutput[];
   reproducibilities: ProofOfReproducibility[];
   image_url?: string;
+  tags?: string[];
+  domain?: ResearchDomain;
+  impact?: "None" | "Low" | "Medium" | "High";
 }
 
 export const TOOL_OPTIONS = [
@@ -103,6 +106,7 @@ export interface FundingEvent {
   projectTitle: string;
   amount: number;
   timestamp: string;
+  funderWallet: string;
 }
 
 export interface ProjectRegistration {
@@ -113,6 +117,8 @@ export interface ProjectRegistration {
   organization: string;
   url: string;
   image_url?: string;
+  tags?: string[];
+  domain?: ResearchDomain;
 }
 
 export type Tools =
@@ -150,4 +156,9 @@ export interface ProofOfReproducibility {
 
 export interface IpfsClient extends Client {
   isInitialized: boolean;
+}
+
+export interface DisputeData {
+  proofId: string;
+  description: string;
 }

@@ -86,9 +86,9 @@ const DiscoverProjectCard = ({
       <h3 className="text-lg font-semibold text-text dark:text-text-dark group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
         {project.title}
       </h3>
-      {/* <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
+      <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
         {project.domain}
-      </p> */}
+      </p>
       <p
         className="text-xs text-text-secondary dark:text-text-dark-secondary mt-2 font-mono truncate"
         title={project.ownerId}
@@ -127,9 +127,9 @@ const MyProjectCard = ({
         </h3>
         {/* <StatusBadge status={project.status} /> */}
       </div>
-      {/* <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+      <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
         {project.domain}
-      </p> */}
+      </p>
 
       <div className="mt-4 flex items-center space-x-8 text-sm">
         <div className="flex items-center space-x-2">

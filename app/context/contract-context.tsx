@@ -7,6 +7,7 @@ import { sign } from "crypto";
 
 const CONTRACT_ADDRESS = "0xe5C345683E892416a0B7674651AA5f57ffF820da"; // Replace with real one
 const HYPERCERT_ADDRESS = "0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941";
+const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Replace with real one
 const RPC_URL = "http://127.0.0.1:8545";
 
 interface ContractContextType {
@@ -31,6 +32,10 @@ interface ContractContextType {
   getUserPoRCount: (userAddress: string) => Promise<number>;
   recordPoR: (projectCID: string, proofCID: string) => Promise<any>;
   isProofValid: (proofCID: string) => Promise<boolean>;
+  contractDisputeProof: (proofCID: string, disputeCID: string) => Promise<void>;
+  fundProject: (amount: bigint, projectId: string) => Promise<any>;
+  approveUSDCTransfer: (amount: bigint) => Promise<boolean>;
+  setProjectImpact: (projectId: string, impact: number) => Promise<void>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(
@@ -217,6 +222,22 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const contractDisputeProof = async (
+    proofCID: string,
+    disputeCID: string
+  ): Promise<void> => {
+    if (!signer || !cairnContract) return;
+
+    try {
+      const tx = await cairnContract.disputeProof(proofCID, disputeCID);
+      await tx.wait();
+      console.log("Proof disputed successfully:", proofCID);
+    } catch (error) {
+      console.error("Failed to dispute proof:", error);
+      throw error;
+    }
+  };
+
   const getProof = async (proofCID: string): Promise<any> => {
     if (!signer || !cairnContract) return;
 
@@ -270,6 +291,58 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fundProject = async (amount: bigint, projectId: string) => {
+    if (!signer || !cairnContract) {
+      console.error("Signer or cairnContract is not initialized");
+      return;
+    }
+
+    try {
+      const tx = await cairnContract.fundProject(amount, projectId);
+      console.log(`Project ${projectId} funded with ${amount} wei`);
+      const receipt = await tx.wait();
+      return receipt;
+    } catch (error) {
+      console.error("Failed to fund project:", error);
+    }
+  };
+
+  const approveUSDCTransfer = async (amount: bigint) => {
+    if (!signer) {
+      console.error("Signer is not initialized");
+      return false;
+    }
+
+    try {
+      const usdcAbi = [
+        "function approve(address spender, uint256 amount) returns (bool)",
+      ];
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, usdcAbi, signer);
+      const tx = await usdcContract.approve(CONTRACT_ADDRESS, amount);
+      await tx.wait();
+      console.log("USDC approved for transfer:", tx.hash);
+      return true;
+    } catch (error) {
+      console.error("Failed to approve USDC transfer:", error);
+      return false;
+    }
+  };
+
+  const setProjectImpact = async (projectId: string, impact: number) => {
+    if (!signer || !cairnContract) {
+      console.error("Signer or cairnContract is not initialized");
+      return;
+    }
+
+    try {
+      const tx = await cairnContract.setProjectImpact(projectId, impact);
+      await tx.wait();
+      console.log(`Project ${projectId} impact set to ${impact}`);
+    } catch (error) {
+      console.error("Failed to set project impact:", error);
+    }
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -286,6 +359,10 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
         getUserPoRCount,
         recordPoR,
         isProofValid,
+        contractDisputeProof,
+        fundProject,
+        approveUSDCTransfer,
+        setProjectImpact,
       }}
     >
       {children}

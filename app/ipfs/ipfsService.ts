@@ -2,6 +2,7 @@ import type {
   ProjectRegistration,
   ProjectOutput,
   ProofOfReproducibility,
+  DisputeData,
 } from "../lib/types";
 import { useIpfs } from "../context/ipfsContext";
 
@@ -46,10 +47,23 @@ export const useIpfsService = () => {
     return ipfsClient.uploadFile(file);
   };
 
+  const uploadDispute = async (disputeData: DisputeData) => {
+    if (!ipfsClient) {
+      throw new Error("IPFS client not initialized");
+    }
+    const bytes = new TextEncoder().encode(JSON.stringify(disputeData));
+    const file = new File([bytes], `proof_${Date.now()}.json`, {
+      type: "application/json",
+    });
+    console.log("Uploading proof of reproducibility to IPFS:", file);
+    return ipfsClient.uploadFile(file);
+  };
+
   return {
     registerProject,
     uploadProjectOutput,
     uploadProofOfReproducibility,
+    uploadDispute,
     uploadFile: ipfsClient?.uploadFile.bind(ipfsClient),
     uploadDirectory: ipfsClient?.uploadDirectory.bind(ipfsClient),
     isInitialized: !!ipfsClient,

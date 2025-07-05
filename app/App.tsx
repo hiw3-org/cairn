@@ -186,12 +186,6 @@ export function App() {
     setIsPorModalOpen(false);
   };
 
-  const handleDisputeAndClose = (reproducibilityId: string) => {
-    if (!reproducibilityModalData) return;
-    handleDispute(reproducibilityModalData.projectId, reproducibilityId);
-    handleCloseReproducibilityModal();
-  };
-
   const handleDashboardNavigation = (page: string) => {
     setSelectedProject(null);
     setActiveDashboardPage(page);
@@ -289,6 +283,8 @@ export function App() {
                 output: outputs,
                 reproducibilities,
                 image_url: data.image_url ?? undefined,
+                tags: data.tags ?? [],
+                domain: data.domain ?? undefined,
               } as Project;
             } catch (e) {
               console.error("Failed to fetch metadata for project", cid, e);

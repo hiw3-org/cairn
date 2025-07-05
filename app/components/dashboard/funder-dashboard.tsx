@@ -1,31 +1,20 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import {
-  Project,
-  ProjectStatus,
-  FundingEvent,
-  PoRStatus,
-} from "../../lib/types";
+import { Project, ProjectStatus, FundingEvent } from "../../lib/types";
 import {
   CheckIcon,
   ScaleIcon,
   UsersGroupIcon,
   GavelIcon,
-  BeakerIcon,
-  ChartBarIcon,
-  SearchIcon,
-  ChevronRightIcon,
   CopyIcon,
-  FlagIcon,
-  ClockIcon,
-  CheckCircleIcon,
   FileTextIcon,
 } from "../ui/icons";
 import { GenerativePlaceholder } from "../ui/generative-placeholder";
 import { useAppContext } from "../../context/app-provider";
 import { useClipboard } from "../../hooks/use-clipboard";
 import { ImpactLevelBadge } from "../ui/impact-level-badge";
+import { useContract } from "@/context/contract-context";
 
 const StatCard = ({
   icon: Icon,
@@ -71,12 +60,12 @@ const FundingHistoryWidget = ({
     return (
       <div className="flex items-center space-x-2">
         <a
-          href="#"
+          href="cairn/app/components/dashboard#"
           onClick={(e) => e.stopPropagation()}
           className="font-mono text-xs text-primary hover:underline"
           title={hash}
         >
-          {hash.substring(0, 8)}...{hash.substring(hash.length - 6)}
+          {/* {hash.substring(0, 8)}...{hash.substring(hash.length - 6)} */}
         </a>
         <button
           onClick={(e) => {
@@ -106,7 +95,7 @@ const FundingHistoryWidget = ({
             <thead className="text-left">
               <tr className="text-xs text-text-secondary dark:text-text-dark-secondary uppercase">
                 <th className="p-2 font-semibold">Project</th>
-                <th className="p-2 font-semibold">Asset Impact</th>
+                <th className="p-2 font-semibold">Impact assets</th>
                 <th className="p-2 font-semibold">TX Hash</th>
                 <th className="p-2 font-semibold text-right">Amount</th>
                 <th className="p-2 font-semibold text-right">Action</th>
@@ -116,7 +105,7 @@ const FundingHistoryWidget = ({
               {history.map((event) => {
                 const project = projects.find((p) => p.id === event.projectId);
                 if (!project) return null;
-                // const impactLevel = getImpactLevel(project.hypercertFraction);
+                const impactLevel = getImpactLevel(project.hypercertFraction);
 
                 return (
                   <tr
@@ -131,14 +120,16 @@ const FundingHistoryWidget = ({
                         {new Date(event.timestamp).toLocaleDateString()}
                       </p>
                     </td>
-                    {/* <td className="p-3">
-                      <ImpactLevelBadge level={impactLevel} />
-                    </td> */}
+                    <td className="p-3">
+                      <span className="font-bold px-2 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        100%
+                      </span>
+                    </td>
                     <td className="p-3">
                       <TxHash hash={event.txHash} />
                     </td>
                     <td className="p-3 font-semibold text-right text-status-success">
-                      ${event.amount.toLocaleString()}
+                      ${(event.amount / 1_00).toLocaleString()}
                     </td>
                     <td className="p-3 text-right">
                       <button
@@ -171,110 +162,132 @@ const FunderProjectCard = ({
   project: Project;
   onSelectProject: (p: Project) => void;
 }) => {
-  const { handleInstantFund } = useAppContext();
-  const [fundAmount, setFundAmount] = useState("");
+  const { setFundingHistory, currentUser } = useAppContext();
+  const { fundProject, approveUSDCTransfer } = useContract();
+  const [isFunded, setIsFunded] = useState(false);
+  const [fundingInProgress, setFundingInProgress] = useState(false);
+  const [isImpactOwner, setIsImpactOwner] = useState(false);
 
-  const onFund = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const onFund = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    const amount = parseInt(fundAmount, 10);
-    if (!isNaN(amount) && amount > 0) {
-      handleInstantFund(project.id, amount);
-      setFundAmount("");
+
+    if (!project.fundingGoal || project.fundingGoal <= 0) return;
+
+    try {
+      setFundingInProgress(true);
+      const amount = BigInt(1000000); // Convert to smallest unit (e.g., cents for USDC)
+      // Approve USDC transfer
+      const approved = await approveUSDCTransfer(amount);
+      if (!approved) {
+        console.error("USDC approval failed");
+        alert("USDC approval failed. Check console.");
+        return;
+      }
+      console.log("USDC approved for funding");
+
+      // Fund project
+      await fundProject(amount, project.id);
+      console.log("Funding successful");
+      setFundingInProgress(false);
+      setIsFunded(true);
+      const newEvent: FundingEvent = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        amount: Number(amount),
+        funderWallet: currentUser?.walletAddress ?? "0x0",
+        projectId: project.id,
+        projectTitle: project.title,
+      };
+      setFundingHistory((prev) => [...prev, newEvent]);
+    } catch (err) {
+      console.error("Funding failed:", err);
+      alert("Funding failed. Check console.");
     }
   };
 
-  const impactAssets = useMemo(() => {
-    const porCounts = project.reproducibilities.reduce((acc, r) => {
-      acc[r.status] = (acc[r.status] || 0) + 1;
-      return acc;
-    }, {} as Record<PoRStatus, number>);
-    return {
-      high: porCounts[PoRStatus.Success] || 0,
-      medium: porCounts[PoRStatus.Waiting] || 0,
-      low: porCounts[PoRStatus.Disputed] || 0,
-    };
-  }, [project.reproducibilities]);
+  const impactLevel = getImpactLevel(project.hypercertFraction);
 
   return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-border dark:border-border-dark hover:border-primary/30 dark:hover:border-primary/70 overflow-hidden flex flex-col">
-      <div
-        onClick={() => onSelectProject(project)}
-        className="cursor-pointer group/card flex-grow"
-      >
+    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-border dark:border-border-dark overflow-hidden flex flex-col">
+      {project.image_url ? (
+        <img
+          src={project.image_url}
+          alt={project.title}
+          className="w-full h-40 object-cover rounded-md"
+        />
+      ) : (
         <GenerativePlaceholder projectId={project.id} className="w-full h-40" />
-        <div className="p-5">
-          <div className="flex justify-between items-start gap-2">
-            <h3 className="text-lg font-semibold text-text dark:text-text-dark group-hover/card:text-primary dark:group-hover/card:text-primary-light transition-colors">
-              {project.title}
-            </h3>
-            <div className="flex-shrink-0 mt-0.5">
-              <ImpactLevelBadge
-                level={getImpactLevel(project.hypercertFraction)}
-              />
-            </div>
-          </div>
-          {/* <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
-            {project.domain}
-          </p> */}
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-2 line-clamp-2">
-            {project.description}
-          </p>
+      )}
+      <div className="p-5 flex-grow">
+        <h3 className="text-lg font-semibold text-text dark:text-text-dark">
+          {project.title}
+        </h3>
+        <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
+          {project.domain}
+        </p>
+        <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-2 line-clamp-2">
+          {project.description}
+        </p>
+        <div className="mt-3">
+          <ImpactLevelBadge level={"Medium"} />
         </div>
       </div>
-      <div className="px-5 py-3 bg-cairn-gray-50 dark:bg-cairn-gray-800/50 border-t border-border dark:border-border-dark mt-auto">
-        <div className="flex justify-around items-center text-sm text-center">
-          <div title="High-Impact: Successful Reproductions">
-            <CheckCircleIcon className="w-5 h-5 text-status-success mx-auto" />
-            <span className="font-bold text-text dark:text-text-dark">
-              {impactAssets.high}
-            </span>
-            <span className="text-xs block text-text-secondary dark:text-text-dark-secondary">
-              High
-            </span>
-          </div>
-          <div title="Medium-Impact: Awaiting Verification">
-            <ClockIcon className="w-5 h-5 text-status-warning mx-auto" />
-            <span className="font-bold text-text dark:text-text-dark">
-              {impactAssets.medium}
-            </span>
-            <span className="text-xs block text-text-secondary dark:text-text-dark-secondary">
-              Medium
-            </span>
-          </div>
-          <div title="Low-Impact: Disputed Submissions">
-            <FlagIcon className="w-5 h-5 text-status-danger mx-auto" />
-            <span className="font-bold text-text dark:text-text-dark">
-              {impactAssets.low}
-            </span>
-            <span className="text-xs block text-text-secondary dark:text-text-dark-secondary">
-              Low
-            </span>
-          </div>
+      <div className="px-5 py-4 bg-cairn-gray-50 dark:bg-cairn-gray-800/50 border-t border-border dark:border-border-dark mt-auto">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm text-text-secondary dark:text-text-dark-secondary font-semibold">
+            Funding Amount
+          </span>
+          <span className="text-lg font-bold text-text dark:text-text-dark">
+            {project.fundingGoal
+              ? `$${(project.fundingGoal / 1_00000).toLocaleString()}`
+              : "Not Set"}
+          </span>
         </div>
-      </div>
-      <div className="p-4 bg-cairn-gray-100 dark:bg-cairn-gray-900/70 border-t border-border dark:border-border-dark space-y-2">
-        <label className="text-xs font-semibold text-text-secondary dark:text-text-dark-secondary">
-          Amount (USD)
-        </label>
         <div className="flex space-x-2">
-          <input
-            type="number"
-            value={fundAmount}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setFundAmount(e.target.value)}
-            placeholder="e.g., 500"
-            className="flex-grow w-full p-2 border border-border dark:border-border-dark rounded-md bg-background-light dark:bg-background-dark-light font-mono text-sm focus:ring-primary focus:border-primary"
-          />
+          <button
+            onClick={() => onSelectProject(project)}
+            className="w-full bg-cairn-gray-200 dark:bg-cairn-gray-700 text-text-secondary dark:text-text-dark-secondary font-semibold py-2 px-4 rounded-lg hover:bg-cairn-gray-300 dark:hover:bg-cairn-gray-600 transition-colors text-sm"
+          >
+            View Detail
+          </button>
           <button
             onClick={onFund}
             disabled={
-              !fundAmount ||
-              parseInt(fundAmount, 10) <= 0 ||
+              fundingInProgress ||
+              isFunded ||
+              !project.fundingGoal ||
+              project.fundingGoal <= 0 ||
               project.status === ProjectStatus.Archived
             }
-            className="bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors disabled:bg-cairn-gray-400 dark:disabled:bg-cairn-gray-600 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            className={`w-full font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg text-sm transition-colors flex items-center justify-center ${
+              isFunded
+                ? "bg-status-success text-white cursor-default"
+                : "bg-primary text-primary-text hover:bg-primary-hover"
+            }`}
           >
-            Fund
+            {fundingInProgress ? (
+              <svg
+                className="animate-spin h-5 w-5 mr-2 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            ) : null}
+            {isFunded ? "Funded!" : fundingInProgress ? "Funding..." : "Fund"}
           </button>
         </div>
       </div>
@@ -387,9 +400,7 @@ export const FunderDashboard = ({
         {activeFundMode === "instant" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {projects
-              .filter(
-                (p) => p.output.length > 0 || p.status === ProjectStatus.Funded
-              )
+              .filter((p) => p.output.length > 0)
               .map((p) => (
                 <FunderProjectCard
                   key={p.id}
@@ -429,7 +440,7 @@ export const FunderDashboard = ({
             <StatCard
               icon={ScaleIcon}
               title="Total Funding Deployed"
-              value={`$${totalFundingDeployed.toLocaleString()}`}
+              value={`$${(totalFundingDeployed / 1_00).toLocaleString()}`}
             />
             <StatCard
               icon={FileTextIcon}

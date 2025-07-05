@@ -175,6 +175,8 @@ export const NewProjectModal = ({
         organization: organization || undefined,
         url: additionalInfoUrl || undefined,
         image_url: imageUrl || undefined,
+        tags: tags,
+        domain: domain,
       };
 
       const cid = await registerProject(projectData);
@@ -255,7 +257,7 @@ export const NewProjectModal = ({
       await registerProjectCairn(
         cid.toString(),
         hypercertTokenId,
-        BigInt(funduingGoal * 1e6) // Convert to smallest unit (e.g., USDC)
+        BigInt(funduingGoal) // Convert to smallest unit (e.g., USDC)
       );
       console.log(
         "Project registered successfully with Hypercert token ID and IPFS CID."
