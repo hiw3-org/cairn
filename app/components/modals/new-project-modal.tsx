@@ -15,6 +15,7 @@ import {
   AlertTriangleIcon,
 } from "../ui/icons";
 import { useIpfsService } from "../../ipfs/ipfsService";
+import { useContract } from "../../context/contract-context";
 
 // Types for creation process
 type CreationStatus = "form" | "creating" | "success" | "error";
@@ -115,14 +116,18 @@ export const NewProjectModal = ({
   onAddProject: (p: Project) => void;
 }) => {
   const { registerProject } = useIpfsService();
+  const { mintHypercert, approveHypercertTransfer, registerProjectCairn } =
+    useContract();
 
-  const { currentUser } = useAppContext();
+  const { currentUser, handleAddProject } = useAppContext();
   const [title, setTitle] = useState("");
   const [domain, setDomain] = useState<ResearchDomain>(ResearchDomain.Robotics);
   const [description, setDescription] = useState("");
   const [organization, setOrganization] = useState("");
   const [additionalInfoUrl, setAdditionalInfoUrl] = useState("");
+  const [funduingGoal, setFundingGoal] = useState(100);
   const [tags, setTags] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
   const [creationStatus, setCreationStatus] = useState<CreationStatus>("form");
   const [steps, setSteps] = useState<Step[]>([]);
@@ -134,26 +139,33 @@ export const NewProjectModal = ({
 
     const initialSteps: Step[] = [
       {
-        name: "1. Create Project Metadata",
-        description: "Storing project details on the smart contract.",
+        name: "1. Uploading project metadata to IPFS",
+        description: "Storing project details on IPFS.",
         status: "active",
       },
       {
-        name: "2. Mint Hypercert",
-        description: "Generating the fractionalized impact certificate.",
+        name: "2. Minting Hypercert",
+        description:
+          "Generating the fractionalized impact certificate. Please confirm the transaction in your wallet.",
         status: "pending",
       },
       {
-        name: "3. Link Impact Assets",
-        description: "Connecting the project and Hypercert token ID.",
+        name: "3. Setting hypercert approval",
+        description: "Please confirm the transaction in your wallet.",
+        status: "pending",
+      },
+      {
+        name: "4. Linking Impact Assets",
+        description:
+          "Connecting the project and Hypercert token ID. Please confirm the transaction in your wallet.",
         status: "pending",
       },
     ];
     setSteps(initialSteps);
 
     try {
-      console.log("Creating project metadata...");
-      console.log("Current user wallet address:", currentUser.walletAddress);
+      console.log("Starting project creation process...");
+
       console.log("User ", currentUser, "is creating a new project");
       const projectData = {
         title: title,
@@ -162,70 +174,120 @@ export const NewProjectModal = ({
         owner_address: currentUser.walletAddress,
         organization: organization || undefined,
         url: additionalInfoUrl || undefined,
+        image_url: imageUrl || undefined,
       };
 
       const cid = await registerProject(projectData);
+
       if (!cid) {
         throw new Error("Failed to register project on IPFS.");
       }
       console.log("Project metadata stored with CID:", cid.toString());
-      setSteps((currentSteps) =>
-        currentSteps.map((step, index) =>
+      setSteps((steps) =>
+        steps.map((step, index) =>
           index === 0
-            ? { ...step, status: "success" }
+            ? {
+                ...step,
+                status: "success",
+                description: `Metadata stored IPFS CID: ${cid.toString()}`,
+              }
             : index === 1
             ? { ...step, status: "active" }
             : step
         )
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      setSteps((currentSteps) =>
-        currentSteps.map((step, index) =>
+      console.log("Minting Hypercert for project...");
+      const hypercertUnits = 1000; // Example units, adjust as needed
+      const restrictions = 0;
+      const hypercerUrl = cid.toString();
+      const hypercertTokenId = await mintHypercert(
+        hypercertUnits,
+        hypercerUrl,
+        restrictions
+      );
+      if (!hypercertTokenId) {
+        throw new Error("Failed to mint Hypercert.");
+      }
+      console.log(
+        "Hypercert minted with token ID:",
+        hypercertTokenId.toString()
+      );
+
+      setSteps((steps) =>
+        steps.map((step, index) =>
           index === 1
-            ? { ...step, status: "success" }
+            ? {
+                ...step,
+                status: "success",
+                description: `Hypercert Token ID: ${hypercertTokenId.toString()}`,
+              }
             : index === 2
             ? { ...step, status: "active" }
             : step
         )
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setSteps((currentSteps) =>
-        currentSteps.map((step) => ({ ...step, status: "success" }))
+      // Approve Hypercert transfer
+      console.log("Approving Hypercert transfer...");
+      const approvalSuccess = await approveHypercertTransfer();
+      console.log("Hypercert transfer approval status:", approvalSuccess);
+
+      if (!approvalSuccess) {
+        throw new Error("Failed to approve Hypercert transfer.");
+      }
+
+      setSteps((steps) =>
+        steps.map((step, index) =>
+          index === 2
+            ? {
+                ...step,
+                status: "success",
+              }
+            : index === 3
+            ? { ...step, status: "active" }
+            : step
+        )
+      );
+
+      // Register project with Hypercert token ID
+      console.log("Registering project with Hypercert token ID...");
+      await registerProjectCairn(
+        cid.toString(),
+        hypercertTokenId,
+        BigInt(funduingGoal * 1e6) // Convert to smallest unit (e.g., USDC)
+      );
+      console.log(
+        "Project registered successfully with Hypercert token ID and IPFS CID."
+      );
+      setSteps((steps) =>
+        steps.map((step, index) =>
+          index === 3
+            ? {
+                ...step,
+                status: "success",
+                description: `Project linked with Hypercert Token ID: ${hypercertTokenId.toString()} add IPFS CID: ${cid.toString()}`,
+              }
+            : step
+        )
       );
 
       setCreationStatus("success");
 
-      const newProject: Project = {
-        id: `proj-${Date.now()}`,
-        ownerId: currentUser.walletAddress,
+      handleAddProject({
+        id: cid.toString(),
+        cid: cid.toString(),
         title,
         description,
         organization: organization || undefined,
         additionalInfoUrl: additionalInfoUrl || undefined,
-        tags: tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        domain,
-        status: ProjectStatus.Draft,
-        cid: `Qm...${Date.now().toString().slice(-4)}`,
-        hypercertFraction: 0,
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-          .toISOString()
-          .split("T")[0],
-        lastOutputDate: "",
+        fundingGoal: funduingGoal,
+        createdAt: new Date().toISOString(),
+        ownerId: currentUser.walletAddress,
+        output: [],
         reproducibilities: [],
-        fundingGoal: 15000,
-        fundingPool: 0,
-        impactScore: 0,
-        outputs: [],
-        reproducibilityRequirements: REPRODUCIBILITY_TEMPLATES[domain],
-        impactAssetOwners: [],
-      };
-      onAddProject(newProject);
+        image_url: imageUrl || undefined,
+      });
     } catch (error) {
       setCreationStatus("error");
       setSteps((currentSteps) =>
@@ -310,6 +372,28 @@ export const NewProjectModal = ({
                 placeholder="AI, Robotics, SLAM (comma-separated)"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
+                Funding Goal (USD)
+              </label>
+              <FormInput
+                type="number"
+                placeholder="100"
+                value={funduingGoal}
+                onChange={(e) => setFundingGoal(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
+                Image url (tested only with imgur links)
+              </label>
+              <FormInput
+                type="string"
+                placeholder="imgur link"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
               />
             </div>
           </div>

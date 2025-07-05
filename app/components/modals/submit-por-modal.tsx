@@ -6,6 +6,7 @@ import { Modal } from "../ui/modal";
 import { CheckCircleIcon } from "../ui/icons";
 import { useIpfsService } from "../../ipfs/ipfsService";
 import { useAppContext } from "../../context/app-provider";
+import { useContract } from "../../context/contract-context";
 
 const FormInput = memo((props: ComponentProps<"input">) => (
   <input
@@ -30,6 +31,7 @@ export const SubmitPorModal = ({
   onSubmit: (data: ProofOfReproducibility) => void;
 }) => {
   const { handlePorSubmit } = useAppContext();
+  const { recordPoR } = useContract();
   const { uploadProofOfReproducibility } = useIpfsService();
   const [description, setDescription] = useState("");
   const [code_url, setCodeUrl] = useState("");
@@ -54,7 +56,14 @@ export const SubmitPorModal = ({
       console.log("Submitting PoR data:", proofData);
       // let cid = await uploadProofOfReproducibility(proofData); // Upload to IPFS
       // console.log("PoR uploaded to IPFS with CID:", cid.toString());
-      handlePorSubmit(project.id, proofData);
+      let cid = "bafkreicu2no6ohbofsa3fsr7m3bz3q5se3kx2ozuyku576mtwwrcdcdexa";
+
+      // Record the PoR on the blockchain
+      console.log("Recording PoR on blockchain for project:", project.id);
+      await recordPoR(project.id, cid.toString());
+      console.log("PoR recorded on blockchain for project:", project.id);
+
+      // handlePorSubmit(project.id, proofData);
     } catch (err) {
       console.error("Failed to submit PoR:", err);
       alert("Failed to submit PoR. See console for details.");

@@ -1,0 +1,302 @@
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { ethers, JsonRpcProvider } from "ethers";
+import CairnAbi from "../abi/Cairn.json";
+import HypercertAbi from "../abi/IHypercertToken.json";
+import { claim } from "@web3-storage/w3up-client/capability/access";
+import { sign } from "crypto";
+
+const CONTRACT_ADDRESS = "0xe5C345683E892416a0B7674651AA5f57ffF820da"; // Replace with real one
+const HYPERCERT_ADDRESS = "0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941";
+const RPC_URL = "http://127.0.0.1:8545";
+
+interface ContractContextType {
+  cairnContract: ethers.Contract | null;
+  hypercertContract: ethers.Contract | null;
+  signer: ethers.JsonRpcSigner | null;
+  getAllProjects: (start: number, count: number) => Promise<any[]>;
+  initWithWallet: (address: string) => Promise<void>;
+  mintHypercert: (
+    units: number,
+    uri: string,
+    restrictions?: number
+  ) => Promise<bigint | null>;
+  registerProjectCairn: (
+    projectURI: string,
+    tokenID: bigint,
+    unitPrice: bigint
+  ) => Promise<void>;
+  approveHypercertTransfer: () => Promise<boolean>;
+  addOutput: (projectURI: string, outputsURI: string) => Promise<void>;
+  getProof: (proofCID: string) => Promise<any>;
+  getUserPoRCount: (userAddress: string) => Promise<number>;
+  recordPoR: (projectCID: string, proofCID: string) => Promise<any>;
+  isProofValid: (proofCID: string) => Promise<boolean>;
+}
+
+const ContractContext = createContext<ContractContextType | undefined>(
+  undefined
+);
+
+export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [cairnContract, setCairnContract] = useState<ethers.Contract | null>(
+    null
+  );
+  const [hypercertContract, setHypercertContract] =
+    useState<ethers.Contract | null>(null);
+
+  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
+
+  const initWithWallet = async (address: string) => {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner(address);
+    setSigner(signer);
+    console.log("Signer initialized:", signer);
+
+    const cairn = new ethers.Contract(CONTRACT_ADDRESS, CairnAbi.abi, signer);
+    setCairnContract(cairn);
+    console.log("Cairn contract initialized:", cairn);
+
+    const hypercert = new ethers.Contract(
+      HYPERCERT_ADDRESS,
+      HypercertAbi.abi,
+      signer
+    );
+    setHypercertContract(hypercert);
+    console.log("Hypercert contract initialized:", hypercert);
+  };
+
+  const parseProjectFromContract = (p: any) => ({
+    creator: p[0],
+    typeID: BigInt(p[1]).toString(), // or Number(...) if safe
+    tokenIDs: p[2].map((t: any) => BigInt(t).toString()),
+    projectURI: p[3],
+    outputsURI: p[4],
+    proofs: p[5], // string[]
+    impact: Number(p[6]), // assuming Impact is an enum
+    funder: p[7],
+    fundingGoal: BigInt(p[8]).toString(),
+  });
+
+  useEffect(() => {
+    const provider = new JsonRpcProvider(RPC_URL);
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      CairnAbi.abi,
+      provider
+    );
+    setCairnContract(contract);
+    console.log("Cairn contract initialized:", contract);
+  }, []);
+
+  const getAllProjects = async (start: number, count: number) => {
+    if (!cairnContract) return [];
+    try {
+      const projects = await cairnContract.getAllProjects(start, count);
+      const parsedProjects = projects.map(parseProjectFromContract);
+      return parsedProjects;
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+      return [];
+    }
+  };
+
+  const mintHypercert = async (
+    units: number,
+    uri: string,
+    restrictions: number = 0
+  ): Promise<bigint | null> => {
+    if (!signer || !hypercertContract) {
+      console.error("Signer or hypercertContract is not initialized");
+      return null;
+    }
+
+    try {
+      const to = await signer.getAddress();
+
+      console.log("Sending mintClaim transaction...");
+      const tx = await hypercertContract.mintClaim(
+        to,
+        units,
+        uri,
+        restrictions
+      );
+      console.log("Transaction hash:", tx.hash);
+
+      const receipt = await tx.wait();
+      console.log("Transaction mined in block", receipt.blockNumber);
+
+      // Parse the event logs
+      const iface = new ethers.Interface([
+        "event ClaimStored(uint256 indexed claimID, string uri, uint256 units)",
+      ]);
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = iface.parseLog(log);
+          if (parsedLog && parsedLog.name === "ClaimStored") {
+            let claimID = parsedLog.args.claimID as bigint;
+            console.log(
+              `ClaimStored event found - claimID: ${claimID.toString()}, uri: ${
+                parsedLog.args.uri
+              }, units: ${parsedLog.args.units.toString()}`
+            ); // Add BigInt(1) to claimID
+            claimID = BigInt(claimID) + BigInt(1);
+            console.log(
+              `Adjusted claimID: ${claimID.toString()} (added 1 to original)`
+            );
+            return claimID;
+          }
+        } catch {
+          // Not a ClaimStored event, ignore
+        }
+      }
+
+      console.warn("No ClaimStored event found in logs.");
+      return null;
+    } catch (error) {
+      console.error("Failed to mint Hypercert:", error);
+      return null;
+    }
+  };
+
+  const approveHypercertTransfer = async (): Promise<boolean> => {
+    if (!signer || !hypercertContract) {
+      console.error("Signer or Hypercert contract not initialized");
+      return false;
+    }
+
+    try {
+      const tx = await hypercertContract.setApprovalForAll(
+        CONTRACT_ADDRESS,
+        true
+      ); // ✅ Allow Cairn to transfer tokens
+      console.log("Approval tx sent:", tx.hash);
+      await tx.wait();
+      console.log("Approval transaction confirmed.");
+      return true;
+    } catch (err) {
+      console.error("Approval transaction failed:", err);
+      return false;
+    }
+  };
+
+  const registerProjectCairn = async (
+    projectURI: string,
+    tokenID: bigint,
+    unitPrice: bigint
+  ): Promise<void> => {
+    if (!signer || !cairnContract) return;
+
+    try {
+      const tx = await cairnContract.registerProject(
+        projectURI,
+        tokenID,
+        unitPrice
+      );
+      await tx.wait();
+    } catch (err) {
+      console.error("Failed to register project:", err);
+      throw err;
+    }
+  };
+
+  const addOutput = async (
+    projectURI: string,
+    outputsURI: string
+  ): Promise<void> => {
+    if (!signer || !cairnContract) return;
+
+    try {
+      const tx = await cairnContract.recordOutputs(projectURI, outputsURI);
+      await tx.wait();
+    } catch (err) {
+      console.error("Failed to record outputs:", err);
+      throw err;
+    }
+  };
+
+  const getProof = async (proofCID: string): Promise<any> => {
+    if (!signer || !cairnContract) return;
+
+    try {
+      const proof = await cairnContract.getProof(proofCID);
+      console.log("Proof retrieved:", proof);
+      return proof;
+    } catch (error) {
+      console.error("Failed to get proof:", error);
+      return null;
+    }
+  };
+
+  const getUserPoRCount = async (userAddress: string): Promise<number> => {
+    if (!signer || !cairnContract) return 0;
+
+    try {
+      const count = await cairnContract.getUserAvailablePoRCount(userAddress);
+      return count.toNumber();
+    } catch (error) {
+      console.error("Failed to get PoR count:", error);
+      return 0;
+    }
+  };
+
+  const recordPoR = async (
+    projectCID: string,
+    proofCID: string
+  ): Promise<any> => {
+    if (!signer || !cairnContract) return;
+
+    try {
+      const tx = await cairnContract.recordProof(projectCID, proofCID);
+      const receipt = await tx.wait();
+      console.log("PoR recorded in transaction:", receipt.transactionHash);
+      return receipt;
+    } catch (error) {
+      console.error("Failed to record PoR:", error);
+      throw error;
+    }
+  };
+
+  const isProofValid = async (proofCID: string): Promise<boolean> => {
+    if (!signer || !cairnContract) return false;
+    try {
+      const isValid = await cairnContract.isProofValid(proofCID);
+      return isValid;
+    } catch (error) {
+      console.error("Failed to validate proof:", error);
+      return false;
+    }
+  };
+
+  return (
+    <ContractContext.Provider
+      value={{
+        cairnContract,
+        hypercertContract,
+        signer,
+        getAllProjects,
+        initWithWallet,
+        mintHypercert,
+        registerProjectCairn,
+        approveHypercertTransfer,
+        addOutput,
+        getProof,
+        getUserPoRCount,
+        recordPoR,
+        isProofValid,
+      }}
+    >
+      {children}
+    </ContractContext.Provider>
+  );
+};
+
+export const useContract = () => {
+  const context = useContext(ContractContext);
+  if (!context) {
+    throw new Error("useContract must be used within a ContractProvider");
+  }
+  return context;
+};

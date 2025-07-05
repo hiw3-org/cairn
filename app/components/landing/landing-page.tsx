@@ -18,6 +18,7 @@ import {
 import { LandingHeaderLogo, AppLogo } from "../ui/logo";
 import React from "react";
 import { useAppContext } from "../../context/app-provider";
+import { useContract } from "../../context/contract-context";
 import { UserRole } from "../../lib/types";
 
 const LandingHeader = ({
@@ -47,21 +48,11 @@ const LandingHeader = ({
           method: "eth_requestAccounts",
         });
         const address = accounts[0];
-
-        // Prompt for name/org
-        const name = window.prompt("Enter your full name");
-        if (!name) return;
-
-        const organization = window.prompt(
-          "Enter your organization (optional)"
-        );
-
         // Update global context
         setCurrentUser({
           walletAddress: address,
-          name,
-          organization,
           porContributedCount: 3, // or fetch actual data if available
+          role: UserRole.Scientist, // Default to Researcher if not specified
         });
 
         setUserRole(UserRole.Scientist); // Default to Researcher role
@@ -198,6 +189,8 @@ const LandingHeader = ({
 
 const HeroSection = () => {
   const { setCurrentUser, setUserRole, setConnectedWallet } = useAppContext();
+  const { initWithWallet, getUserPoRCount } = useContract();
+
   const handleConnectWallet = async (role: UserRole) => {
     if (typeof window.ethereum !== "undefined") {
       try {
@@ -206,21 +199,20 @@ const HeroSection = () => {
         });
         const address = accounts[0];
 
-        // // Prompt for name/org
-        // const name = window.prompt("Enter your full name");
-        // if (!name) return;
+        // ✅ Initialize contract context with signer
+        await initWithWallet(address);
 
-        // const organization = window.prompt(
-        //   "Enter your organization (optional)"
-        // );
+        const porCount = await getUserPoRCount(address);
 
-        // Update global context
+        // ✅ Set user globally
         setCurrentUser({
           walletAddress: address,
-          porContributedCount: 3, // or fetch actual data if available
-          role: role || UserRole.Scientist, // Default to Researcher if not specified
+          porContributedCount: porCount,
+          role: role || UserRole.Scientist,
         });
 
+        console.log("User connected:", address, "Role:", role);
+        console.log("PoR Count:", porCount);
         setUserRole(role);
         setConnectedWallet(address);
       } catch (err) {

@@ -64,7 +64,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDarkMode, setIsDarkModeState] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>(UserRole.Scientist);
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [fundingHistory, setFundingHistory] =
     useState<FundingEvent[]>(MOCK_FUNDING_HISTORY);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);

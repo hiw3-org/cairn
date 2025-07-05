@@ -27,25 +27,16 @@ export enum PoRStatus {
 export interface Project {
   id: string;
   ownerId: string;
+  createdAt: string;
   title: string;
   description: string;
-  tags: string[];
-  status: ProjectStatus;
-  domain: ResearchDomain;
-  coverImageUrl?: string;
-  cid: string;
-  hypercertFraction: number;
-  startDate: string;
-  endDate: string;
-  lastOutputDate: string;
-  reproducibilities: ProofOfReproducibility[];
-  fundingGoal?: number;
-  fundingPool: number;
-  impactScore: number;
-  outputs: Output[];
-  reproducibilityRequirements: string[];
   organization?: string;
   additionalInfoUrl?: string;
+  cid: string;
+  fundingGoal?: number;
+  output: ProjectOutput[];
+  reproducibilities: ProofOfReproducibility[];
+  image_url?: string;
 }
 
 export const TOOL_OPTIONS = [
@@ -80,6 +71,20 @@ export interface Output {
   };
 }
 
+export interface Reproducibility {
+  proof_id: string;
+  project_id: string;
+  recorder: string;
+  timestamp: string;
+  description: string;
+  code_url: string;
+  output_url: string;
+  video_url?: string;
+  dispute?: boolean;
+  valid?: boolean;
+  dispute_uri?: string;
+}
+
 export interface ToastInfo {
   id: number;
   message: string;
@@ -107,6 +112,7 @@ export interface ProjectRegistration {
   owner_address: string;
   organization: string;
   url: string;
+  image_url?: string;
 }
 
 export type Tools =

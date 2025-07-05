@@ -6,9 +6,18 @@ import {
   PoRStatus,
 } from "../../lib/types";
 import { EyeIcon, FlagIcon, ClockIcon, CheckCircleIcon } from "../ui/icons";
-import { MOCK_USERS } from "../../lib/constants";
 
-const PoRStatusBadge = ({ status }: { status: PoRStatus }) => {
+const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
+  let status: PoRStatus;
+
+  if (rep.valid === true) {
+    status = PoRStatus.Success;
+  } else if (rep.dispute === true) {
+    status = PoRStatus.Disputed;
+  } else {
+    status = PoRStatus.Waiting;
+  }
+
   const statusConfig = {
     [PoRStatus.Success]: {
       icon: CheckCircleIcon,
@@ -26,6 +35,7 @@ const PoRStatusBadge = ({ status }: { status: PoRStatus }) => {
       text: "Disputed: This submission has been flagged and is under review.",
     },
   };
+
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -59,7 +69,7 @@ export default function PoRModule({
         Reproducibility
       </h3>
 
-      {!isOwner && project.status === ProjectStatus.Active && (
+      {!isOwner && (
         <button
           onClick={onPorSubmitClick}
           className="w-full bg-primary text-primary-text font-semibold py-2.5 px-4 rounded-lg hover:bg-primary-hover transition-colors shadow-md hover:shadow-lg"
@@ -85,17 +95,18 @@ export default function PoRModule({
               {project.reproducibilities.map((rep) => {
                 return (
                   <tr
-                    key={rep.id}
+                    key={rep.proof_id}
                     className="hover:bg-cairn-gray-50 dark:hover:bg-cairn-gray-800/50 transition-colors"
                   >
                     <td className="p-3 text-center">
-                      <PoRStatusBadge status={rep.status} />
+                      <PoRStatusBadge rep={rep} />
                     </td>
-                    <td className="p-3" title={rep.verifier}>
+                    <td className="p-3" title={rep.recorder}>
                       <span className="font-semibold text-text dark:text-text-dark font-mono">
-                        ...{rep.verifier.slice(-3)}
+                        ...{rep.recorder.slice(-3)}
                       </span>
-                    </td>{" "}
+                    </td>
+                    <td className="p-3 text-text-secondary ...">...</td>
                     <td className="p-3 text-text-secondary dark:text-text-dark-secondary whitespace-nowrap">
                       {rep.timestamp}
                     </td>

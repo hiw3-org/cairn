@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import { AppProvider } from "./context/app-provider";
 import { IpfsProvider } from "./context/ipfsContext";
+import { ContractProvider } from "./context/contract-context";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -17,7 +18,9 @@ root.render(
   <React.StrictMode>
     <AppProvider>
       <IpfsProvider agentKey={agentKey} proof={proof}>
-        <App />
+        <ContractProvider>
+          <App />
+        </ContractProvider>
       </IpfsProvider>
     </AppProvider>
   </React.StrictMode>

@@ -11,11 +11,21 @@ import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { OnboardingModal } from "./components/modals/onboarding-modal";
 import { useAppContext } from "./context/app-provider";
-import { UserRole, Project, Reproducibility, Output } from "./lib/types";
+import {
+  UserRole,
+  Project,
+  Reproducibility,
+  Output,
+  ProjectOutput,
+  ProjectRegistration,
+  Project as ParsedProject,
+  ProofOfReproducibility,
+} from "./lib/types";
 import { AppLogo } from "./components/ui/logo";
 import { FileTextIcon, ChartBarIcon, SearchIcon } from "./components/ui/icons";
 import { AppFooter } from "./components/landing/landing-page";
 import { BottomNavBar } from "./components/layout/bottom-nav-bar";
+import { useContract } from "./context/contract-context";
 
 const Sidebar = ({
   activePage,
@@ -92,6 +102,7 @@ const AppLayout = ({
 export function App() {
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = useState<StaticPage>("landing");
+  const { getAllProjects, getProof, isProofValid } = useContract();
 
   const {
     userRole,
@@ -103,6 +114,7 @@ export function App() {
     handleDispute,
     isAuthenticated,
     isOnboardingModalOpen,
+    setProjects,
   } = useAppContext();
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -191,6 +203,114 @@ export function App() {
       userRole === UserRole.Scientist ? "projects" : "portfolio"
     );
   }, [userRole]);
+
+  React.useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const rawProjects = await getAllProjects(0, 100);
+        console.log("Fetched projects from contract:", rawProjects);
+
+        const parsedProjects = await Promise.all(
+          rawProjects.map(async (p: any) => {
+            const cid = p.projectURI;
+            const metadataUrl = `https://${cid}.ipfs.w3s.link/`;
+
+            try {
+              const res = await fetch(metadataUrl);
+              const data: ProjectRegistration = await res.json();
+
+              // Fetch Outputs
+              let outputs: ProjectOutput[] = [];
+              if (p.outputsURI) {
+                const outputUrl = `https://${p.outputsURI}.ipfs.w3s.link/`;
+                try {
+                  const outputRes = await fetch(outputUrl);
+                  const outputData = await outputRes.json();
+                  outputs = Array.isArray(outputData)
+                    ? outputData
+                    : [outputData];
+                } catch (err) {
+                  console.warn(
+                    "Failed to fetch outputs for",
+                    p.outputsURI,
+                    err
+                  );
+                }
+              }
+
+              // Fetch Proofs (Reproducibilities)
+              const reproducibilities: Reproducibility[] = [];
+
+              if (Array.isArray(p.proofs)) {
+                for (const proofCID of p.proofs) {
+                  try {
+                    const [res, onchainProof] = await Promise.all([
+                      fetch(`https://${proofCID}.ipfs.w3s.link/`),
+                      getProof(proofCID),
+                    ]);
+
+                    const validity = await isProofValid(proofCID);
+
+                    const data = await res.json();
+
+                    reproducibilities.push({
+                      proof_id: proofCID,
+                      project_id: cid,
+                      recorder: onchainProof.recorder,
+                      timestamp: String(onchainProof.recordedAt),
+                      description: data.description,
+                      code_url: data.code_url,
+                      output_url: data.output_url,
+                      video_url: data.video_url ?? undefined,
+                      dispute: onchainProof.dispute,
+                      dispute_uri: onchainProof.disputeURI,
+                      valid: validity,
+                    });
+                  } catch (err) {
+                    console.warn(
+                      "Failed to fetch or combine proof",
+                      proofCID,
+                      err
+                    );
+                  }
+                }
+              }
+
+              return {
+                id: p.projectURI,
+                ownerId: p.creator,
+                title: data.title,
+                createdAt: String(data.created_at ?? ""),
+                description: data.description,
+                organization: data.organization ?? undefined,
+                additionalInfoUrl: data.url ?? undefined,
+                cid,
+                fundingGoal: Number(p.fundingGoal ?? 0),
+                output: outputs,
+                reproducibilities,
+                image_url: data.image_url ?? undefined,
+              } as Project;
+            } catch (e) {
+              console.error("Failed to fetch metadata for project", cid, e);
+              return null;
+            }
+          })
+        );
+
+        const validProjects = parsedProjects.filter(
+          (p): p is Project => p !== null
+        );
+        console.log("Valid projects:", validProjects);
+        setProjects(validProjects);
+      } catch (err) {
+        console.error("Error fetching projects from contract:", err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchProjects();
+    }
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     if (staticPage === "howitworks") {
@@ -288,7 +408,9 @@ export function App() {
           reproducibility={reproducibilityModalData.reproducibility}
           onClose={handleCloseReproducibilityModal}
           onDispute={() =>
-            handleDisputeAndClose(reproducibilityModalData.reproducibility.id)
+            handleDisputeAndClose(
+              reproducibilityModalData.reproducibility.proof_id
+            )
           }
           isOwner={reproducibilityModalData.isOwner}
         />
