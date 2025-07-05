@@ -10,7 +10,7 @@ contract DeployCairn is Script {
         address hypercertTokenAddress = vm.envAddress("SEPOLIA_HYPERCERT");
         address paymentTokenAddress = vm.envAddress("SEPOLIA_USDC");
 
-        uint8 minRequiredPoR = 3;
+        uint8 minRequiredPoR = 0; // Minimum required proof of relevance (PoR) for a project
         uint8 maxPoRProject = 10;
         uint256 disputeWindowPoR = 7 days;
         uint256 maxFundingLow = 1e9;    // 1000 USDC (6 decimals)
