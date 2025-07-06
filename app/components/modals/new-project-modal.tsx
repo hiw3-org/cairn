@@ -179,7 +179,8 @@ export const NewProjectModal = ({
         domain: domain,
       };
 
-      const cid = await registerProject(projectData);
+      // const cid = await registerProject(projectData);
+      const cid = "bafkreibiqtsxeh2csqsn7ziea5y6lzzu5coh2ix6rttb7qra25rc3ym5a4";
 
       if (!cid) {
         throw new Error("Failed to register project on IPFS.");
@@ -216,6 +217,9 @@ export const NewProjectModal = ({
         hypercertTokenId.toString()
       );
 
+      // 15 sec delay
+      await new Promise((resolve) => setTimeout(resolve, 30000));
+
       setSteps((steps) =>
         steps.map((step, index) =>
           index === 1
@@ -238,6 +242,8 @@ export const NewProjectModal = ({
       if (!approvalSuccess) {
         throw new Error("Failed to approve Hypercert transfer.");
       }
+
+      await new Promise((resolve) => setTimeout(resolve, 30000));
 
       setSteps((steps) =>
         steps.map((step, index) =>
@@ -289,6 +295,7 @@ export const NewProjectModal = ({
         output: [],
         reproducibilities: [],
         image_url: imageUrl || undefined,
+        funder: "0x0000000000000000000000000000000000000",
       });
     } catch (error) {
       setCreationStatus("error");

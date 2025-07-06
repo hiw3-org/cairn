@@ -8,7 +8,7 @@ import { sign } from "crypto";
 const CONTRACT_ADDRESS = "0xdbe926f96e2250d7C4901f118225566Dc654B969";
 const HYPERCERT_ADDRESS = "0x822f17a9a5eecfd66dbaff7946a8071c265d1d07";
 const USDC_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0";
-const RPC_URL = "https://filecoin-calibration.chainup.net/rpc/v1";
+const RPC_URL = "https://rpc.ankr.com/filecoin_testnet";
 
 interface ContractContextType {
   cairnContract: ethers.Contract | null;
@@ -180,7 +180,7 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
       const tx = await hypercertContract.setApprovalForAll(
         CONTRACT_ADDRESS,
         true
-      ); // ✅ Allow Cairn to transfer tokens
+      );
       console.log("Approval tx sent:", tx.hash);
       await tx.wait();
       console.log("Approval transaction confirmed.");
