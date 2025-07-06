@@ -78,13 +78,36 @@ This is meant to be a quick start guide for users who want to quickly try out th
         - **Network Name**: Filecoin Calibration Testnet
         - **New RPC URL**: https://rpc.ankr.com/filecoin_testnet
         - Other data should be filled automatically.
+
 #### Getting Testnet tFIL and USDFC
 1. **Get tFIL**:  
-   Use the [Filecoin Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/) to request testnet FIL (tFIL) for gas fees.
-2. **Get USDFC**:
+   Use the [Filecoin Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/) to request testnet FIL (tFIL) for gas fees.\
+   Enter your wallet address in the input field and send 100 tFIL to your wallet.
+3. **Get USDFC**:
     Use the [USDFC Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) to request USDFC tokens for funding projects.
 
-#### Submiting a Proof of Reproducibility
-Before you can register a project, you need to submit a minimum of one Proof of Reproducibility (PoR) and that PoR need to get verified. The demo app takes 5 minutes.
+#### Choosing a role
+To switch between Scientist and Funder dashboard head over to the top right corner, where you see your profile and wallet address. 
 
-To submit a PoR, you need to select a project with a register output
+#### Register a New Project - Scientist role
+Before you can register a new project, you need to submit a minimum of one Proof of Reproducibility (PoR) and that PoR needs to get verified on-chain. The demo app is currently running on the testnet and it takes ~2 minutes to do that:
+ 1. Click on the button or card "New project" and fill out the form. In this step you must also define your Funding Goal.
+ 2. Click on the button "Create Project". This starts a 3 step process of the project being created on-chain:
+  - Confirm the transaction request in the Metamask wallet. The app is uploading the project metadata to IPFS. Then it starts minting the Hypercert.
+  - Confirm the withdrawal request for the Hypercert approval.
+  - Confirm the transaction request. The app is connecting the project and Hypercert token ID.
+    
+ #### Submitting Record Outputs - Scientist role
+ 1. Click on "View Project" and head over to Research Outputs section and add fill out the Output fields
+ 2. Confirm the transaction request in Metamask to record the outputs on-chain. 
+
+#### Submiting a Proof of Reproducibility - Scientist role
+To submit a PoR, you need to select a project with a registered output. Click On "Submit Reproducibility", provide the requested repruducibility proof and submit.
+The verification of the PoR for this demo takes about 5 minutes. In the meantime, other users can dispute on your PoR if they find it not suitable. The timespan of this action would normally be a couple of days.
+
+#### Fund a project - Funder role
+To fund a project you simply select a project in the Discovery tab, where you can see the funding amount and the impact score of each project. 
+For now the funding is only possible for the whole amount of the project's funding goal. Just clisk on the button "Fund" and you will see the project in your portfolio.
+
+
+
