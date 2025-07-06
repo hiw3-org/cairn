@@ -125,9 +125,8 @@ export default function PoRModule({
                         ...{rep.recorder.slice(-3)}
                       </span>
                     </td>
-                    <td className="p-3 text-text-secondary ...">...</td>
                     <td className="p-3 text-text-secondary dark:text-text-dark-secondary whitespace-nowrap">
-                      {rep.timestamp}
+                      {new Date(rep.timestamp * 1000).toLocaleDateString()}
                     </td>
                     <td className="p-3">
                       <div className="flex justify-end items-center space-x-2">

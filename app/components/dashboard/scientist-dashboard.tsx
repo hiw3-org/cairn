@@ -1060,7 +1060,7 @@ export function ScientistDashboard({
   ) => void;
   activePage: string;
 }) {
-  const { projects } = useAppContext();
+  const { projects, setCurrentUser } = useAppContext();
 
   const [sortOrder, setSortOrder] = useState<
     "newest" | "oldest" | "mostPors" | "leastPors"
@@ -1078,7 +1078,24 @@ export function ScientistDashboard({
   );
 
   React.useEffect(() => {
-    console.log("Filtered My Projects:", myProjects);
+    // Count the number of PoRs contributed by the current user and update the user profile - setCurrentUser
+    const totalPors = projects.reduce((count, project) => {
+      return (
+        count +
+        project.reproducibilities.filter(
+          (r) => r.recorder?.toLowerCase() === currentUser.walletAddress
+        ).length
+      );
+    }, 0);
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        porContributedCount: totalPors,
+        walletAddress: prev.walletAddress, // ensure required fields are present
+        role: prev.role, // ensure required fields are present
+      };
+    });
   }, [myProjects, projects]);
 
   const totalPorsContributed = useMemo(() => {
