@@ -23,13 +23,13 @@ contract InitProjectsPostMint is Script {
     function run() external {
         creator = vm.envAddress("ADDRESS");
 
-        cairn = Cairn(vm.envAddress("SEPOLIA_CAIRN"));
-        hypercert = IHypercertToken(vm.envAddress("SEPOLIA_HYPERCERT"));
+        cairn = Cairn(vm.envAddress("CALIBRATION_CAIRN"));
+        hypercert = IHypercertToken(vm.envAddress("CALIBRATION_HYPERCERT"));
 
         // Populate projects with known token IDs (obtained off-chain)
-        projects.push(ProjectData("bafkreiexm3ucspjmnxdzveyrjja4dix6wkbccnyrfcg6b6xmpssdpvjzii", 324289095675654355680596000882475105517569)); // REPLACE WITH ACTUAL DATA
-        projects.push(ProjectData("bafkreiglyhylhdt3ubx7gz3liq6kydqnwtwgo73dculocyr2xsq5kasmsu", 324629378042575294144059375489906873729025)); // REPLACE WITH ACTUAL DATA
-        projects.push(ProjectData("bafkreiaenpoakoscko62a7djexn7rg5xhsameyemqoz765p45ckwltqd2a", 324969660409496232607522750097338641940481)); // REPLACE WITH ACTUAL DATA
+        // projects.push(ProjectData("bafkreiatyux6u4o5zknwsv32e6xtcu4le2rrhycy2c5njdljnhyiq3ctpq", 7826494439181584659657615970930668863489)); // REPLACE WITH ACTUAL DATA
+        // projects.push(ProjectData("bafkreibo7enuw6dd62xp5elizajsldh5bhcxektewtntaqovdrc2uhwht4", 8166776806102523123120990578362437074945)); // REPLACE WITH ACTUAL DATA
+        projects.push(ProjectData("bafkreiefc5d7wnyxbxlcmql454brn4gppfw6hn4cdakqslocrcbp5bkbvy", 8507059173023461586584365185794205286401)); // REPLACE WITH ACTUAL DATA
 
         // Populate outputs with known data (obtained off-chain)
         // outputs.push("ipfs://outputs-0"); // REPLACE WITH ACTUAL DATA
@@ -40,7 +40,7 @@ contract InitProjectsPostMint is Script {
         hypercert.setApprovalForAll(address(cairn), true);
         for (uint256 i = 0; i < projects.length; i++) {  
             cairn.initProject(projects[i].uri, creator);          
-            cairn.storeTokenIDInit(projects[i].uri, projects[i].tokenId, 1e6);
+            cairn.storeTokenIDInit(projects[i].uri, projects[i].tokenId, 5e6 * (i+1));
             // cairn.recordOutputs(projects[i].uri, outputs[i]);
         } 
         vm.stopBroadcast();      

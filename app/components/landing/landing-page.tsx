@@ -45,29 +45,75 @@ const LandingHeader = ({
   const handleConnectWallet = async () => {
     if (typeof window.ethereum !== "undefined") {
       try {
+        const TARGET_CHAIN_ID = "0x4cb2f"; // Filecoin Calibration = 0x13a (decimal 314159)
+
+        const currentChainId = await window.ethereum.request({
+          method: "eth_chainId",
+        });
+
+        console.log("Current chain ID:", currentChainId);
+
+        if (currentChainId !== TARGET_CHAIN_ID) {
+          try {
+            // Try to switch to Filecoin Calibration
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN_ID }],
+            });
+          } catch (switchError: any) {
+            // If the chain is not added to MetaMask, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: "wallet_addEthereumChain",
+                  params: [
+                    {
+                      chainId: TARGET_CHAIN_ID,
+                      chainName: "Filecoin Calibration",
+                      nativeCurrency: {
+                        name: "tFIL",
+                        symbol: "tFIL",
+                        decimals: 18,
+                      },
+                      rpcUrls: [
+                        "https://filecoin-calibration.chainup.net/rpc/v1",
+                      ],
+                      blockExplorerUrls: ["https://calibration.filfox.info/en"],
+                    },
+                  ],
+                });
+              } catch (addError) {
+                console.error("Failed to add chain:", addError);
+                return;
+              }
+            } else {
+              console.error("Failed to switch chain:", switchError);
+              return;
+            }
+          }
+        }
+
+        // ✅ Connect wallet
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
         const address = accounts[0];
 
-        // ✅ Initialize contract context with signer
         await initWithWallet(address);
-
         const porCount = await getUserPoRCount(address);
 
-        // ✅ Set user globally
         setCurrentUser({
           walletAddress: address,
           porContributedCount: porCount,
           role: UserRole.Scientist,
         });
 
-        console.log("User connected:", address, "Role:", UserRole.Scientist);
-        console.log("PoR Count:", porCount);
         setUserRole(UserRole.Scientist);
         setConnectedWallet(address);
+        console.log("User connected:", address, "Role:", UserRole.Scientist);
+        console.log("PoR Count:", porCount);
       } catch (err) {
-        console.error("User rejected wallet connection", err);
+        console.error("User rejected wallet connection or chain switch:", err);
       }
     } else {
       alert("Please install MetaMask.");
@@ -202,29 +248,75 @@ const HeroSection = () => {
   const handleConnectWallet = async (role: UserRole) => {
     if (typeof window.ethereum !== "undefined") {
       try {
+        const TARGET_CHAIN_ID = "0x4cb2f"; // Filecoin Calibration = 0x13a (decimal 314159)
+
+        const currentChainId = await window.ethereum.request({
+          method: "eth_chainId",
+        });
+
+        console.log("Current chain ID:", currentChainId);
+
+        if (currentChainId !== TARGET_CHAIN_ID) {
+          try {
+            // Try to switch to Filecoin Calibration
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN_ID }],
+            });
+          } catch (switchError: any) {
+            // If the chain is not added to MetaMask, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: "wallet_addEthereumChain",
+                  params: [
+                    {
+                      chainId: TARGET_CHAIN_ID,
+                      chainName: "Filecoin Calibration",
+                      nativeCurrency: {
+                        name: "tFIL",
+                        symbol: "tFIL",
+                        decimals: 18,
+                      },
+                      rpcUrls: [
+                        "https://filecoin-calibration.chainup.net/rpc/v1",
+                      ],
+                      blockExplorerUrls: ["https://calibration.filfox.info/en"],
+                    },
+                  ],
+                });
+              } catch (addError) {
+                console.error("Failed to add chain:", addError);
+                return;
+              }
+            } else {
+              console.error("Failed to switch chain:", switchError);
+              return;
+            }
+          }
+        }
+
+        // ✅ Connect wallet
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
         const address = accounts[0];
 
-        // ✅ Initialize contract context with signer
         await initWithWallet(address);
-
         const porCount = await getUserPoRCount(address);
 
-        // ✅ Set user globally
         setCurrentUser({
           walletAddress: address,
           porContributedCount: porCount,
-          role: role || UserRole.Scientist,
+          role: role,
         });
 
-        console.log("User connected:", address, "Role:", role);
-        console.log("PoR Count:", porCount);
         setUserRole(role);
         setConnectedWallet(address);
+        console.log("User connected:", address, "Role:", role);
+        console.log("PoR Count:", porCount);
       } catch (err) {
-        console.error("User rejected wallet connection", err);
+        console.error("User rejected wallet connection or chain switch:", err);
       }
     } else {
       alert("Please install MetaMask.");
