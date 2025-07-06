@@ -5,10 +5,10 @@ import HypercertAbi from "../abi/IHypercertToken.json";
 import { claim } from "@web3-storage/w3up-client/capability/access";
 import { sign } from "crypto";
 
-const CONTRACT_ADDRESS = "0xdbe926f96e2250d7C4901f118225566Dc654B969"; // Replace with real one
+const CONTRACT_ADDRESS = "0xdbe926f96e2250d7C4901f118225566Dc654B969";
 const HYPERCERT_ADDRESS = "0x822f17a9a5eecfd66dbaff7946a8071c265d1d07";
-const USDC_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // Replace with real one
-const RPC_URL = "http://127.0.0.1:8545";
+const USDC_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0";
+const RPC_URL = "https://filecoin-calibration.chainup.net/rpc/v1";
 
 interface ContractContextType {
   cairnContract: ethers.Contract | null;
@@ -101,8 +101,10 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   const getAllProjects = async (start: number, count: number) => {
     if (!cairnContract) return [];
     try {
+      console.log("Fetching projects from contract...");
       const projects = await cairnContract.getAllProjects(start, count);
       const parsedProjects = projects.map(parseProjectFromContract);
+      console.log("Projects fetched and parsed:", parsedProjects);
       return parsedProjects;
     } catch (error) {
       console.error("Failed to fetch projects:", error);
