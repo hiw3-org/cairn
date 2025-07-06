@@ -89,7 +89,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set initial theme to light mode by default.
     // The toggle in the header will still allow users to switch.
-    setIsDarkMode(false);
+    setIsDarkMode(true);
   }, []);
 
   const dismissToast = useCallback((id: number) => {

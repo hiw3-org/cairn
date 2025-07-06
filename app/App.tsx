@@ -217,7 +217,9 @@ export function App() {
             // If project cid equals bafkreieft5kh227lbenhz23f6jk2pc6z3tnegpxzvstsvgjzzpnp7b3cii, ignore it
             if (
               cid ===
-              "bafkreieft5kh227lbenhz23f6jk2pc6z3tnegpxzvstsvgjzzpnp7b3cii"
+                "bafkreieft5kh227lbenhz23f6jk2pc6z3tnegpxzvstsvgjzzpnp7b3cii" ||
+              cid ===
+                "bafkreifkaav5hqvg65aw7q2zvyab727p2drqpyoykyz7nzgghigpuopfki"
             ) {
               return null;
             }

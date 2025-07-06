@@ -242,22 +242,12 @@ export const ProjectDetailView = ({
               <ScaleIcon className="w-5 h-5" />
               <span>View Ownership & Funding</span>
             </button>
-            {/* {(project.status === ProjectStatus.Active ||
-              project.status === ProjectStatus.Funded) && (
-              <button
-                onClick={() => setIsFundingModalOpen(true)}
-                className="flex items-center space-x-2 bg-primary-light text-primary font-semibold py-2 px-4 rounded-lg hover:bg-blue-200/50 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 transition-colors text-sm shadow-sm"
-              >
-                <ScaleIcon className="w-5 h-5" />
-                <span>View Ownership & Funding</span>
-              </button>
-            )} */}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg p-8 border border-border dark:border-border-dark h-full">
+        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg p-8 border border-border dark:border-border-dark h-full w-full break-words">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold text-text dark:text-text-dark">
               Research Outputs
