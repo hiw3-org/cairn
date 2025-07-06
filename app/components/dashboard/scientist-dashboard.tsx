@@ -680,7 +680,7 @@ const MyMetricsWidget = ({
                 <p className="text-sm font-medium text-text-secondary dark:text-text-dark-secondary">
                   PoR Quota
                 </p>
-                <Tooltip text="Review projects and submit enough Proof Of Reproducibility to create new projects.">
+                <Tooltip text="Review projects and submit enough Proof Of Reproducibility to create new projects. Made 1 only for this hackathon demo. Should be 3 in production.">
                   <InfoIcon className="w-4 h-4 text-text-secondary/70 dark:text-text-dark-secondary/70 cursor-help" />
                 </Tooltip>
               </div>
@@ -1066,7 +1066,7 @@ export function ScientistDashboard({
     "newest" | "oldest" | "mostPors" | "leastPors"
   >("newest");
 
-  const porRequirement = 0;
+  const porRequirement = 1;
   const isEligibleToCreate = currentUser.porContributedCount >= porRequirement;
 
   const myProjects = useMemo(

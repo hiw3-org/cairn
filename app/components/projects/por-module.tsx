@@ -65,17 +65,36 @@ export default function PoRModule({
 }) {
   return (
     <div className={`space-y-6 ${className || ""}`}>
-      <h3 className="text-xl font-semibold text-text dark:text-text-dark">
+      <h3
+        className={`text-xl font-semibold ${
+          project.output.length === 0
+            ? "text-text-secondary dark:text-text-dark-secondary opacity-60"
+            : "text-text dark:text-text-dark"
+        }`}
+      >
         Reproducibility
       </h3>
 
       {!isOwner && (
-        <button
-          onClick={onPorSubmitClick}
-          className="w-full bg-primary text-primary-text font-semibold py-2.5 px-4 rounded-lg hover:bg-primary-hover transition-colors shadow-md hover:shadow-lg"
-        >
-          Submit for Reproducibility
-        </button>
+        <div className="relative group w-full">
+          <button
+            onClick={onPorSubmitClick}
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg ${
+              project.output.length === 0
+                ? "bg-cairn-gray-200 text-text-secondary cursor-not-allowed opacity-60"
+                : "bg-primary text-primary-text hover:bg-primary-hover"
+            }`}
+            disabled={project.output.length === 0}
+          >
+            Submit for Reproducibility
+          </button>
+          {project.output.length === 0 && (
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-xs px-2 py-1 bg-text text-background-light text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+              Project needs to register outputs first
+              <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-text"></div>
+            </span>
+          )}
+        </div>
       )}
       <div>
         <h4 className="font-semibold mb-2 text-text dark:text-text-dark">

@@ -27,6 +27,7 @@ const LandingHeader = ({
   onNavigate: (page: "howitworks") => void;
 }) => {
   const { setCurrentUser, setUserRole, setConnectedWallet } = useAppContext();
+  const { initWithWallet, getUserPoRCount } = useContract();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const scrollToSection = (sectionId: string) => {
@@ -48,15 +49,22 @@ const LandingHeader = ({
           method: "eth_requestAccounts",
         });
         const address = accounts[0];
-        // Update global context
+
+        // ✅ Initialize contract context with signer
+        await initWithWallet(address);
+
+        const porCount = await getUserPoRCount(address);
+
+        // ✅ Set user globally
         setCurrentUser({
           walletAddress: address,
-          porContributedCount: 3, // or fetch actual data if available
-          role: UserRole.Scientist, // Default to Researcher if not specified
+          porContributedCount: porCount,
+          role: UserRole.Scientist,
         });
 
-        setUserRole(UserRole.Scientist); // Default to Researcher role
-
+        console.log("User connected:", address, "Role:", UserRole.Scientist);
+        console.log("PoR Count:", porCount);
+        setUserRole(UserRole.Scientist);
         setConnectedWallet(address);
       } catch (err) {
         console.error("User rejected wallet connection", err);
