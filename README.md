@@ -2,9 +2,6 @@
 
 ![image](https://github.com/user-attachments/assets/03c61a16-7669-44ec-8280-617f433ad560)
 
-## 🎈Live app: https://octopus-app-5rjoy.ondigitalocean.app/ 
-* See [Quick Start](#quick-start) below to help you get started.
-
 ##  What is Cairn?
 
 **Cairn** is a protocol and platform for **tracking the reuse and reproduction of scientific outputs in embodied AI, and for retroactively rewarding impactful, reproducible research**.
@@ -18,7 +15,6 @@
   - 🏆 Retroactively rewards impactful work  
   - 🔍 Ensures transparency and data integrity  
 ---
-
 
 ## Project Motivation 
 
@@ -70,67 +66,35 @@ Cairn integrates Filecoin technology as a foundational layer to ensure decentral
 
 ---
 
-## Platform Features:
-
-- **Create Projects**  
-  Register new research efforts on-chain, minting Hypercert impact assets to represent contributions
-- **Record Outputs**  
-  Publish models, datasets, benchmarks, and Proofs of Reproducibility (PoRs) on IPFS, linked via smart contracts.
-- **Verify Reproducibility**  
-  Submit PoRs—cryptographically hashed experiment logs, video proofs, and receipts—stored on IPFS and immortalized on-chain.
-- **Dispute PoRs**  
-  Allow community members to challenge PoRs, with a dispute resolution mechanism to ensure integrity.
-- **Evaluate Impact**  
-  Designated scientists, funders, and evaluators vote on each project’s impact tier. In the future implementations there will be an option of DAO voting.
-- **Retroactive Funding**  
-  Distribute USDFC funds proportionally to impact-asset holders based on verified impact.
-  
----
-
 ## How Cairn Works
 
+Cairn provides a transparent, decentralized workflow for tracking, verifying, and rewarding impactful scientific research:
+
 1. **Project Creation:**  
-   Scientists register new research projects. Project metadata and outputs are stored on IPFS and it's CID is registered on-chain.
+  Scientists register new research projects on-chain, minting Hypercert impact assets to represent contributions. Project metadata and outputs are stored on IPFS, with their CIDs registered on the Cairn smart contract.
 
 2. **Recording Outputs:**  
-   Models, datasets, and results are published and linked to the project. Again the CID is stored on-chain on the Cairn smart contract.
+  Models, datasets, benchmarks, and results are published to IPFS and linked to the project via smart contracts. This ensures all research outputs are verifiable and permanently available.
 
 3. **Proof of Reproducibility (PoR):**  
-   Third parties submit cryptographically-secured evidence of successful experiment replication. All PoR data (outputs, logs, receipts, video) is stored on IPFS and linked via our smart contract.
+  Third parties independently replicate experiments and submit cryptographically-secured PoRs—experiment logs, video proofs, and receipts—stored on IPFS and linked on-chain. This provides verifiable evidence of reproducibility.
 
 4. **Impact Evaluation:**  
-  Currently, designated scientists evaluate and vote on the impact of each project, determining eligibility and tier for retroactive funding. In future implementations, this process will transition to DAO-based voting.
+  Designated scientists, funders, and evaluators vote on each project’s impact tier, determining eligibility for retroactive funding. Future implementations will introduce DAO-based community voting.
 
 5. **Retroactive Funding:**  
-   Once a project meets criteria (outputs, PoRs, impact evaluation), funds are distributed to contributors based on verified impact.
+  Once a project meets the required criteria (outputs, PoRs, impact evaluation), USDFC funds are distributed proportionally to impact-asset holders based on verified impact.
+
+**Dispute Resolution:**  
+Community members can challenge submitted PoRs through a dispute mechanism, ensuring the integrity and trustworthiness of reproducibility claims.
+
+---
 
 See the [whitepaper folder](../whitepaper/) in the project root for a more detalied overview of the protocol. 
 
 ![Concept](assets/Cairn.png)
 
-
 ---
-
-### Quick Start
-This is meant to be a quick start guide for users who want to quickly try out the Cairn protocol and platform.
 
 > **Note:** For detailed setup instructions for smart contracts, frontend, and other modules, see the respective subdirectory README files.
 
-#### Wallet Setup
-1. **Install MetaMask**:  
-   Download and install the [MetaMask browser extension](https://metamask.io/).
-2. **Create a Wallet**:
-    Follow the instructions to create a new wallet. Make sure to securely store your seed phrase.
-3. **Connect to Filecoin Calibration Testnet**:
-    - **Cairn app should prompt the user with correct chain data**
-    - If not, you can manually add the network:
-      - Open MetaMask and click on the network dropdown.
-      - Select "Add Network" and enter the following details:
-        - **Network Name**: Filecoin Calibration Testnet
-        - **New RPC URL**: https://rpc.ankr.com/filecoin_testnet
-        - Other data should be filled automatically.
-#### Getting Testnet tFIL and USDFC
-1. **Get tFIL**:  
-   Use the [Filecoin Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/) to request testnet FIL (tFIL) for gas fees.
-2. **Get USDFC**:
-    Use the [USDFC Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) to request USDFC tokens for funding projects.

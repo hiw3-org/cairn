@@ -2,7 +2,8 @@
 
 ![image](https://github.com/user-attachments/assets/03c61a16-7669-44ec-8280-617f433ad560)
 
-## Live app: https://octopus-app-5rjoy.ondigitalocean.app/
+## 🎈Live app: https://octopus-app-5rjoy.ondigitalocean.app/ 
+* See [Quick Start](#quick-start) below to help you get started.
 
 ![Cairn Front End App](public/scientistImage.png)
 
@@ -60,3 +61,27 @@
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Vite Guide](https://vitejs.dev/guide/)
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
+
+### Quick Start
+This is meant to be a quick start guide for users who want to quickly try out the Cairn protocol and platform.
+
+#### Wallet Setup
+1. **Install MetaMask**:  
+   Download and install the [MetaMask browser extension](https://metamask.io/).
+2. **Create a Wallet**:
+    Follow the instructions to create a new wallet. Make sure to securely store your seed phrase.
+3. **Connect to Filecoin Calibration Testnet**:
+    - **Cairn app should prompt the user with correct chain data**
+    - If not, you can manually add the network:
+      - Open MetaMask and click on the network dropdown.
+      - Select "Add Network" and enter the following details:
+        - **Network Name**: Filecoin Calibration Testnet
+        - **New RPC URL**: https://rpc.ankr.com/filecoin_testnet
+        - Other data should be filled automatically.
+#### Getting Testnet tFIL and USDFC
+1. **Get tFIL**:  
+   Use the [Filecoin Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/) to request testnet FIL (tFIL) for gas fees.
+2. **Get USDFC**:
+    Use the [USDFC Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) to request USDFC tokens for funding projects.
+
+#### Registering a Project
