@@ -90,7 +90,7 @@ Community members can challenge submitted PoRs through a dispute mechanism, ensu
 
 ---
 
-See the [whitepaper folder](../whitepaper/) in the project root for a more detalied overview of the protocol. 
+See the whitepaper in the whitepaper folder for a more detalied overview of the protocol. 
 
 ![Concept](assets/Cairn.png)
 

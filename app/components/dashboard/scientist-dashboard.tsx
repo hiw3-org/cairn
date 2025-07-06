@@ -538,7 +538,6 @@ const ActivityFeedWidget = ({
 
 const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
   let status: PoRStatus;
-  console.log("PoRStatusBadge rep:", rep);
   if (rep.valid === true) {
     status = PoRStatus.Success;
   } else if (rep.dispute === true) {

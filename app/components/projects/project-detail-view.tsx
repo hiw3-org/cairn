@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Project, Reproducibility, ProjectStatus } from "../../lib/types";
+import { Project, Reproducibility } from "../../lib/types";
 import {
   ChevronLeftIcon,
   PlusIcon,
@@ -11,13 +11,11 @@ import {
   ChartBarIcon,
   ScaleIcon,
 } from "../ui/icons";
-import { StatusBadge } from "../ui/status-badge";
 import PoRModule from "./por-module";
 import { OutputListItem } from "./output-list-item";
 import { useAppContext } from "../../context/app-provider";
 import { GenerativePlaceholder } from "../ui/generative-placeholder";
 import { AddressDisplay } from "../ui/address-display";
-import { TxHashDisplay } from "../ui/tx-hash-display";
 import { ImpactLevelBadge } from "../ui/impact-level-badge";
 import { Modal } from "../ui/modal";
 

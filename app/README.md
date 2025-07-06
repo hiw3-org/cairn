@@ -84,4 +84,7 @@ This is meant to be a quick start guide for users who want to quickly try out th
 2. **Get USDFC**:
     Use the [USDFC Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) to request USDFC tokens for funding projects.
 
-#### Registering a Project
+#### Submiting a Proof of Reproducibility
+Before you can register a project, you need to submit a minimum of one Proof of Reproducibility (PoR) and that PoR need to get verified. The demo app takes 5 minutes.
+
+To submit a PoR, you need to select a project with a register output

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Modal } from "../ui/modal";
 import {
   UploadCloudIcon,
@@ -12,7 +12,6 @@ import { useIpfsService } from "../../ipfs/ipfsService";
 import { useContract } from "../../context/contract-context";
 
 // Types for creation process
-type CreationStatus = "form" | "creating" | "success" | "error";
 type StepStatus = "pending" | "active" | "success" | "error";
 interface Step {
   name: string;
@@ -194,13 +193,28 @@ export const AddOutputModal = ({
 
   const renderSteps = () => <StepTracker steps={steps} />;
 
+  const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
+
+  // Update isSubmitDisabled whenever relevant fields change
+  React.useEffect(() => {
+    setIsSubmitDisabled(
+      !description.trim() || !paperUrl.trim() || !codeOutputUrl.trim()
+    );
+  }, [description, paperUrl, codeOutputUrl]);
+
   const renderFooter = () => {
     if (status === "form") {
       return (
         <button
           form="output-form"
           type="submit"
-          className="flex items-center space-x-2 bg-primary text-primary-text font-semibold py-2.5 px-6 rounded-lg hover:bg-primary-hover transition-colors"
+          disabled={isSubmitDisabled}
+          className={`flex items-center space-x-2 font-semibold py-2.5 px-6 rounded-lg transition-colors
+            ${
+              isSubmitDisabled
+                ? "bg-cairn-gray-300 text-cairn-gray-500 cursor-not-allowed"
+                : "bg-primary text-primary-text hover:bg-primary-hover"
+            }`}
         >
           <UploadCloudIcon className="w-5 h-5" />
           <span>Save Output</span>

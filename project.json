@@ -1,16 +1,16 @@
 {
   "name": "Cairn",
 
-  "tagline": "Cairn is a protocol and platform for tracking the reuse and reproduction of scientific outputs in embodied AI, and for retroactively rewarding impactful, reproducible research",
-  "description": "What it does, how it works, and the tech used.",
+"tagline": "Reproducible Research, Retroactively Rewarded",
+  "description": "Cairn is a protocol and platform for tracking the reuse and reproduction of scientific outputs in embodied AI, and for retroactively rewarding impactful, reproducible research.",
   "team": [
     {
       "name": "Nejc Rozman",
-      "email": "youremail@example.com"
+      "email": "nejc.ro.sca@gmail.com"
     },
      {
       "name": "Anja Jurisevic",
-      "email": "youremail@example.com"
+      "email": "anja.jurisevic1@gmail.com"
     },
      {
       "name": "Luka Levac",
@@ -19,5 +19,5 @@
   ],
   "demo_url": "https://octopus-app-5rjoy.ondigitalocean.app/",
   "video_url": "https://www.youtube.com/watch?v=aHEJTJmeWjM",
-  "technologies": ["React", "Ethers.js", "IPFS", "Solidity", "Next.js", "Tailwind CSS", "TypeScript", "Foundry"]
+"technologies": ["IPFS", "Ethers", "Foundry", "React", "Vite", "Solidity", "Tailwind", "w3up-client", "Git", "Filecoin", "Metamask", "Typescript"]
 }
