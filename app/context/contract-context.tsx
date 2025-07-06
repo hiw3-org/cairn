@@ -5,9 +5,9 @@ import HypercertAbi from "../abi/IHypercertToken.json";
 import { claim } from "@web3-storage/w3up-client/capability/access";
 import { sign } from "crypto";
 
-const CONTRACT_ADDRESS = "0xe5C345683E892416a0B7674651AA5f57ffF820da"; // Replace with real one
-const HYPERCERT_ADDRESS = "0xa16DFb32Eb140a6f3F2AC68f41dAd8c7e83C4941";
-const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Replace with real one
+const CONTRACT_ADDRESS = "0xdbe926f96e2250d7C4901f118225566Dc654B969"; // Replace with real one
+const HYPERCERT_ADDRESS = "0x822f17a9a5eecfd66dbaff7946a8071c265d1d07";
+const USDC_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // Replace with real one
 const RPC_URL = "http://127.0.0.1:8545";
 
 interface ContractContextType {
