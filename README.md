@@ -1,14 +1,14 @@
 # Cairn
 
-![image](https://github.com/user-attachments/assets/03c61a16-7669-44ec-8280-617f433ad560)
+![header](assets/header.png)
 
 ##  What is Cairn?
 
-**Cairn** is a protocol and platform for **tracking the reuse and reproduction of scientific outputs in embodied AI, and for retroactively rewarding impactful, reproducible research**.
+**Cairn** is protocol and platform that tracks the reuse and reproduction of scientific outputs in the field of embodied AI, and retroactively rewards impactful work (both scientific and supporting).
  
  > By leveraging decentralized storage, smart contracts, and tokenized impact assets, Cairn creates a transparent, incentive-aligned ecosystem for scientists, funders, and the broader research community.
 
-![image](https://github.com/user-attachments/assets/434b93dd-dc2e-4e3f-8c3e-6675f94f93d6)
+![desci](assets/filecoin.png)
 
 ## **Core Features:**  
   - 🔄 Tracks reuse and reproduction of scientific outputs  
@@ -24,7 +24,7 @@ Scientific research, especially in embodied AI, faces systemic challenges:
 - **Poor incentives** for long-term, impactful work: Academic recognition and funding systems tend to reward novelty and publication volume over real-world usability, long-term impact, and reproducibility.
 - **Centralized funding**: Funding decisions are concentrated in a few institutions, which can limit diversity in research agendas and hinder innovation from underrepresented contributors.
 
-![image](https://github.com/user-attachments/assets/4ea511fe-d537-448a-839d-b90f58030858)
+![problem](assets/problem.png)
 
 ---
 ## How Cairn solves these problems
@@ -39,8 +39,16 @@ We combined established concepts with a new system (Proof of Reproducibility) de
 - **DAO Governance:** Community-driven evaluation and funding decisions.
 
 
-![image](https://github.com/user-attachments/assets/f5b31236-e306-4ef6-a37f-c5e832c3da3b)
+![PoR](assets/PoR.png)
 
+
+The system is designed to incentivize and validate impactful, reproducible scientific research by connecting scientists, funders, and decentralized infrastructure via a Web3-native workflow. It is built around the
+Cairn platform, with various stakeholders and components described below:
+
+![Concept](assets/Cairn.png)
+
+> See [whitepaper](whitepaper/Cairn_whitepaper.pdf) for a detailed technical and conceptual overview. 
+---
 
 ## Filecoin integration
 Cairn integrates Filecoin technology as a foundational layer to ensure decentralized, secure, and verifiable storage of scientific research data and metadata:
@@ -92,7 +100,6 @@ Community members can challenge submitted PoRs through a dispute mechanism, ensu
 
 See the whitepaper in the whitepaper folder for a more detalied overview of the protocol. 
 
-![Concept](assets/Cairn.png)
 
 ---
 
