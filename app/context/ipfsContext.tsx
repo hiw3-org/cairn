@@ -21,7 +21,6 @@ export const IpfsProvider = ({
   agentKey,
   proof,
 }: IpfsProviderProps) => {
-  console.log("Initializing IPFS client with agentKey:", agentKey);
   const [ipfsClient, setIpfsClient] = useState<IpfsClient | null>(null);
 
   useEffect(() => {

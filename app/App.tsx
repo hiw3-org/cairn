@@ -220,6 +220,15 @@ export function App() {
               const res = await fetch(metadataUrl);
               const data = await res.json();
 
+              // DEV: Temporary fix for a specific image URL, because the url was incorrectly set in the metadata. Only for the hackathon c:
+              if (
+                data.image_url ===
+                "https://unsplash.com/photos/a-toy-car-is-sitting-on-a-table-cWSPyP6wtMQ"
+              ) {
+                data.image_url =
+                  "https://images.unsplash.com/photo-1719620551574-fc920479a6f2?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+              }
+
               // Fetch Outputs
               let outputs: ProjectOutput[] = [];
               if (p.outputsURI) {

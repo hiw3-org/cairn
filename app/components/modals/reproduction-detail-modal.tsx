@@ -27,7 +27,7 @@ const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
     [PoRStatus.Waiting]: {
       icon: ClockIcon,
       color: "text-status-warning",
-      text: "Waiting: This submission is in a 7-day dispute window.",
+      text: "Waiting: This submission is in 5 minute dispute window. 7 days in production app",
     },
     [PoRStatus.Disputed]: {
       icon: FlagIcon,
@@ -164,9 +164,9 @@ export const ReproducibilityDetailModal = ({
                 This Submission is under review
               </h4>
               <p className="text-sm text-status-warning/80">
-                There is a 7-day waiting period during which any community
-                member can dispute the validity of this submission. ** It was
-                made shorter for the hackathon demo
+                There is a 7-day (5 minutes in this demo version) waiting period
+                during which any community member can dispute the validity of
+                this submission. ** It was made shorter for the hackathon demo
               </p>
               <button
                 onClick={handleDispute}

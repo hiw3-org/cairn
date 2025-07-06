@@ -15,16 +15,13 @@ export async function createIpfsClient(
   agentKey: string,
   proof: string
 ): Promise<IpfsClient> {
-  console.log("Creating IPFS client with agentKey:", agentKey);
   const principal = Signer.parse(agentKey);
   const store = new StoreMemory();
   const client = await Client.create({ principal, store });
-  console.log("IPFS client created:", client);
   // Parse and add the proof
   const parsedProof = await parseProof(proof);
   const space = await client.addSpace(parsedProof);
   await client.setCurrentSpace(space.did());
-  console.log("Space added and current space set:", space.did());
 
   // Cast to our extended interface
   return Object.assign(client, {

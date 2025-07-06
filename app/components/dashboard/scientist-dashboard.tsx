@@ -100,7 +100,7 @@ const DiscoverProjectCard = ({
       <div className="flex items-center space-x-2 text-status-success font-medium">
         <CheckCircleIcon className="w-5 h-5" />
         <span>
-          {project.reproducibilities.filter((r) => r.valid === 0).length}{" "}
+          {project.reproducibilities.filter((r) => r.valid == true).length}{" "}
           Verified PoRs
         </span>
       </div>
@@ -556,7 +556,7 @@ const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
     [PoRStatus.Waiting]: {
       icon: ClockIcon,
       color: "text-status-warning",
-      text: "Waiting: This submission is in a 7-day dispute window.",
+      text: "Waiting: This submission is in a 5 minute dispute window. (7 days for production app)",
     },
     [PoRStatus.Disputed]: {
       icon: FlagIcon,

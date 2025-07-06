@@ -54,6 +54,17 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     useState<ethers.Contract | null>(null);
 
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
+  const staticProvider = new ethers.JsonRpcProvider(RPC_URL);
+  const readOnlyCairn = new ethers.Contract(
+    CONTRACT_ADDRESS,
+    CairnAbi.abi,
+    staticProvider
+  );
+  const readOnlyHypercert = new ethers.Contract(
+    HYPERCERT_ADDRESS,
+    HypercertAbi.abi,
+    staticProvider
+  );
 
   const initWithWallet = async (address: string) => {
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -102,7 +113,7 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!cairnContract) return [];
     try {
       console.log("Fetching projects from contract...");
-      const projects = await cairnContract.getAllProjects(start, count);
+      const projects = await readOnlyCairn.getAllProjects(start, count);
       const parsedProjects = projects.map(parseProjectFromContract);
       console.log("Projects fetched and parsed:", parsedProjects);
       return parsedProjects;
@@ -243,10 +254,10 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getProof = async (proofCID: string): Promise<any> => {
-    if (!signer || !cairnContract) return;
+    if (!signer || !readOnlyCairn) return;
 
     try {
-      const proof = await cairnContract.getProof(proofCID);
+      const proof = await readOnlyCairn.getProof(proofCID);
       console.log("Proof retrieved:", proof);
       return proof;
     } catch (error) {
@@ -256,10 +267,10 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getUserPoRCount = async (userAddress: string): Promise<number> => {
-    if (!signer || !cairnContract) return 0;
+    if (!signer || !readOnlyCairn) return 0;
 
     try {
-      const count = await cairnContract.getUserAvailablePoRCount(userAddress);
+      const count = await readOnlyCairn.getUserAvailablePoRCount(userAddress);
       return count.toNumber();
     } catch (error) {
       console.error("Failed to get PoR count:", error);
@@ -285,9 +296,9 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const isProofValid = async (proofCID: string): Promise<boolean> => {
-    if (!signer || !cairnContract) return false;
+    if (!signer || !readOnlyCairn) return false;
     try {
-      const isValid = await cairnContract.isProofValid(proofCID);
+      const isValid = await readOnlyCairn.isProofValid(proofCID);
       return isValid;
     } catch (error) {
       console.error("Failed to validate proof:", error);
@@ -348,13 +359,13 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getTokenOwner = async (tokenId: bigint): Promise<string | null> => {
-    if (!signer || !hypercertContract) {
+    if (!signer || !readOnlyHypercert) {
       console.error("Signer or hypercertContract is not initialized");
       return null;
     }
 
     try {
-      const owner = await hypercertContract.ownerOf(tokenId);
+      const owner = await readOnlyHypercert.ownerOf(tokenId);
       return owner;
     } catch (error) {
       console.error("Failed to get token owner:", error);
@@ -363,13 +374,13 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getTokenUnits = async (tokenId: bigint): Promise<number | null> => {
-    if (!signer || !hypercertContract) {
+    if (!signer || !readOnlyHypercert) {
       console.error("Signer or hypercertContract is not initialized");
       return null;
     }
 
     try {
-      const units = await hypercertContract.unitsOf(tokenId);
+      const units = await readOnlyHypercert.unitsOf(tokenId);
       return Number(units);
     } catch (error) {
       console.error("Failed to get token units:", error);

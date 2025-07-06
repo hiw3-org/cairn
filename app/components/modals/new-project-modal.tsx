@@ -54,6 +54,13 @@ const StepTracker = ({ steps }: { steps: Step[] }) => (
     <p className="text-sm text-text-secondary dark:text-text-dark-secondary text-center mb-8">
       Please approve the transactions in your wallet when prompted.
     </p>
+    <p className="text-sm text-text-secondary dark:text-text-dark-secondary text-center mb-4">
+      Note: Deployment may take ~2 minutes due to Calibration Testnet RPC
+      latency.
+    </p>
+    <p className="text-xs text-amber-600 dark:text-amber-400 text-center mb-8">
+      Do not close this window or refresh until the transaction completes.
+    </p>
     <ol className="relative border-l-2 border-border dark:border-border-dark ml-4">
       {steps.map((step, index) => (
         <li key={index} className="mb-10 ml-8 last:mb-0">

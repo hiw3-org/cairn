@@ -27,7 +27,7 @@ const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
     [PoRStatus.Waiting]: {
       icon: ClockIcon,
       color: "text-status-warning",
-      text: "Waiting: This submission is in a 7-day dispute window.",
+      text: "Waiting: This submission is in 5 minute dispute window. / days in production app.",
     },
     [PoRStatus.Disputed]: {
       icon: FlagIcon,
