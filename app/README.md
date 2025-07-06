@@ -1,8 +1,6 @@
-<p align="center">
-    <img src="public/logo.svg" alt="Cairn Logo" width="200" />
-</p>
-
 # Cairn Front End App
+
+![image](https://github.com/user-attachments/assets/03c61a16-7669-44ec-8280-617f433ad560)
 
 ## Live app: https://octopus-app-5rjoy.ondigitalocean.app/
 
