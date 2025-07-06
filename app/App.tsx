@@ -102,7 +102,13 @@ const AppLayout = ({
 export function App() {
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = useState<StaticPage>("landing");
-  const { getAllProjects, getProof, isProofValid } = useContract();
+  const {
+    getAllProjects,
+    getProof,
+    isProofValid,
+    getTokenOwner,
+    getTokenUnits,
+  } = useContract();
 
   const {
     userRole,
@@ -201,6 +207,7 @@ export function App() {
   React.useEffect(() => {
     const fetchProjects = async () => {
       try {
+        console.log("Fetching projects from contract...");
         const rawProjects = await getAllProjects(0, 100);
         console.log("Fetched projects from contract:", rawProjects);
 
@@ -211,7 +218,7 @@ export function App() {
 
             try {
               const res = await fetch(metadataUrl);
-              const data: ProjectRegistration = await res.json();
+              const data = await res.json();
 
               // Fetch Outputs
               let outputs: ProjectOutput[] = [];
@@ -270,6 +277,33 @@ export function App() {
                 }
               }
 
+              const tokenIds: bigint[] = p.tokenIDs.map((id: string) =>
+                BigInt(id)
+              );
+              const tokenOwners: string[] = [];
+              const tokenUnits: number[] = [];
+              console.log("Token IDs for project:", tokenIds);
+              for (const tokenId of tokenIds) {
+                try {
+                  const [owner, units] = await Promise.all([
+                    getTokenOwner(tokenId),
+                    getTokenUnits(tokenId),
+                  ]);
+                  tokenOwners.push(owner ?? "0x0");
+                  tokenUnits.push(units ?? 0);
+                } catch (err) {
+                  console.warn(
+                    `Failed to fetch token data for ${tokenId}`,
+                    err
+                  );
+                  tokenOwners.push("0x0");
+                  tokenUnits.push(0);
+                }
+              }
+
+              console.log("Token owners:", tokenOwners);
+              console.log("Token units:", tokenUnits);
+
               return {
                 id: p.projectURI,
                 ownerId: p.creator,
@@ -279,12 +313,17 @@ export function App() {
                 organization: data.organization ?? undefined,
                 additionalInfoUrl: data.url ?? undefined,
                 cid,
+                funder: p.funder,
                 fundingGoal: Number(p.fundingGoal ?? 0),
                 output: outputs,
                 reproducibilities,
                 image_url: data.image_url ?? undefined,
                 tags: data.tags ?? [],
                 domain: data.domain ?? undefined,
+                tokenIds: tokenIds,
+                tokenUnits: tokenUnits,
+                tokenOwners: tokenOwners,
+                impact: Number(p.impact),
               } as Project;
             } catch (e) {
               console.error("Failed to fetch metadata for project", cid, e);

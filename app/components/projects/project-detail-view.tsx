@@ -23,14 +23,25 @@ import { Modal } from "../ui/modal";
 
 // --- Start of components moved into this file for locality ---
 
-const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {
-  if (fraction >= 0.75) return "High";
-  if (fraction >= 0.3) return "Medium";
-  return "Low";
+const getImpactLevel = (
+  level: number
+): "Undefined" | "Low" | "Medium" | "High" => {
+  switch (level) {
+    case 0:
+      return "Undefined";
+    case 1:
+      return "Low";
+    case 2:
+      return "Medium";
+    case 3:
+      return "High";
+    default:
+      return "Undefined";
+  }
 };
 
 const ImpactAssetOwnershipWidget = ({ project }: { project: Project }) => {
-  const impactLevel = getImpactLevel(project.hypercertFraction);
+  const impactLevel = getImpactLevel(project.impact);
   return (
     <div className="bg-primary-light/40 dark:bg-primary/10 rounded-xl p-6 border border-primary/30 dark:border-primary/50">
       <div className="flex items-center">
@@ -40,20 +51,20 @@ const ImpactAssetOwnershipWidget = ({ project }: { project: Project }) => {
         </h3>
       </div>
       <div className="my-4">
-        <ImpactLevelBadge level={impactLevel} />
+        <ImpactLevelBadge level={impactLevel as any} />
       </div>
       <ul className="divide-y divide-border dark:divide-primary/20">
-        {project.impactAssetOwners.map((owner, index) => (
+        {project.tokenOwners.map((owner, index) => (
           <li key={index} className="py-4">
             <div className="flex justify-between items-start">
               <p className="text-md font-semibold text-text dark:text-text-dark">
-                {owner.contribution}
+                {project.tokenUnits[index] > 1}
               </p>
               <span className="text-lg font-bold text-primary flex-shrink-0 ml-4">
-                {owner.ownershipPercentage.toFixed(1)}%
+                {(project.tokenUnits[index] / 10).toFixed(1)}%
               </span>
             </div>
-            <AddressDisplay address={owner.walletAddress} />
+            <AddressDisplay address={owner} />
           </li>
         ))}
       </ul>
@@ -94,40 +105,14 @@ const FundingDetailsWidget = ({ project }: { project: Project }) => {
             Total Raised
           </p>
           <p className="text-2xl font-bold text-status-success mt-1">
-            ${numberFormatter.format(project.fundingGoal)}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary">
-            First Funded
-          </p>
-          <p className="text-md font-mono text-text dark:text-text-dark mt-1">
-            {firstFundedDate}
+            ${numberFormatter.format(project.fundingGoal / 1_000_000)}
           </p>
         </div>
         <div>
           <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary mb-2">
-            Funders ({funders.length})
+            Funder
           </p>
-          <ul className="space-y-2">
-            {funders.map((funder) => (
-              <li key={funder}>
-                <AddressDisplay address={funder} />
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary mb-2">
-            Transactions ({projectFundingEvents.length})
-          </p>
-          <ul className="space-y-2">
-            {projectFundingEvents.map((tx) => (
-              <li key={tx.id}>
-                <TxHashDisplay hash={tx.txHash} />
-              </li>
-            ))}
-          </ul>
+          <ul className="space-y-2">{project.funder}</ul>
         </div>
       </div>
     </div>
@@ -147,13 +132,10 @@ const ProjectFundingModal = ({
       title={`Impact & Funding Details for "${project.title}"`}
     >
       <div className="space-y-6">
-        {(project.status === ProjectStatus.Active ||
-          project.status === ProjectStatus.Funded) &&
-          project.impactAssetOwners &&
-          project.impactAssetOwners.length > 0 && (
-            <ImpactAssetOwnershipWidget project={project} />
-          )}
-        {project.status === ProjectStatus.Funded && (
+        {project.tokenOwners && project.tokenOwners.length > 0 && (
+          <ImpactAssetOwnershipWidget project={project} />
+        )}
+        {project.funder != "0x0000000000000000000000000000000000000000" && (
           <FundingDetailsWidget project={project} />
         )}
       </div>

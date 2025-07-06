@@ -36,6 +36,8 @@ interface ContractContextType {
   fundProject: (amount: bigint, projectId: string) => Promise<any>;
   approveUSDCTransfer: (amount: bigint) => Promise<boolean>;
   setProjectImpact: (projectId: string, impact: number) => Promise<void>;
+  getTokenOwner: (tokenId: bigint) => Promise<string | null>;
+  getTokenUnits: (tokenId: bigint) => Promise<number | null>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(
@@ -343,6 +345,36 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const getTokenOwner = async (tokenId: bigint): Promise<string | null> => {
+    if (!signer || !hypercertContract) {
+      console.error("Signer or hypercertContract is not initialized");
+      return null;
+    }
+
+    try {
+      const owner = await hypercertContract.ownerOf(tokenId);
+      return owner;
+    } catch (error) {
+      console.error("Failed to get token owner:", error);
+      return null;
+    }
+  };
+
+  const getTokenUnits = async (tokenId: bigint): Promise<number | null> => {
+    if (!signer || !hypercertContract) {
+      console.error("Signer or hypercertContract is not initialized");
+      return null;
+    }
+
+    try {
+      const units = await hypercertContract.unitsOf(tokenId);
+      return Number(units);
+    } catch (error) {
+      console.error("Failed to get token units:", error);
+      return null;
+    }
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -363,6 +395,8 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
         fundProject,
         approveUSDCTransfer,
         setProjectImpact,
+        getTokenOwner,
+        getTokenUnits,
       }}
     >
       {children}

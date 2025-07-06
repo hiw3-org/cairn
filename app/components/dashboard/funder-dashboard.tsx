@@ -40,12 +40,22 @@ const StatCard = ({
   </div>
 );
 
-const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {
-  if (fraction >= 0.75) return "High";
-  if (fraction >= 0.3) return "Medium";
-  return "Low";
+const getImpactLevel = (
+  level: number
+): "Undefined" | "Low" | "Medium" | "High" => {
+  switch (level) {
+    case 0:
+      return "Undefined";
+    case 1:
+      return "Low";
+    case 2:
+      return "Medium";
+    case 3:
+      return "High";
+    default:
+      return "Undefined";
+  }
 };
-
 const FundingHistoryWidget = ({
   history,
   projects,
@@ -96,6 +106,7 @@ const FundingHistoryWidget = ({
               <tr className="text-xs text-text-secondary dark:text-text-dark-secondary uppercase">
                 <th className="p-2 font-semibold">Project</th>
                 <th className="p-2 font-semibold">Impact assets</th>
+                <th className="p-2 font-semibold">Impact level</th>
                 <th className="p-2 font-semibold">TX Hash</th>
                 <th className="p-2 font-semibold text-right">Amount</th>
                 <th className="p-2 font-semibold text-right">Action</th>
@@ -105,7 +116,7 @@ const FundingHistoryWidget = ({
               {history.map((event) => {
                 const project = projects.find((p) => p.id === event.projectId);
                 if (!project) return null;
-                const impactLevel = getImpactLevel(project.hypercertFraction);
+                const impactLevel = getImpactLevel(project.impact);
 
                 return (
                   <tr
@@ -126,10 +137,13 @@ const FundingHistoryWidget = ({
                       </span>
                     </td>
                     <td className="p-3">
+                      <ImpactLevelBadge level={impactLevel as any} />
+                    </td>
+                    <td className="p-3">
                       <TxHash hash={event.txHash} />
                     </td>
                     <td className="p-3 font-semibold text-right text-status-success">
-                      ${(event.amount / 1_00).toLocaleString()}
+                      ${(event.amount / 1_000000).toLocaleString()}
                     </td>
                     <td className="p-3 text-right">
                       <button
@@ -166,7 +180,6 @@ const FunderProjectCard = ({
   const { fundProject, approveUSDCTransfer } = useContract();
   const [isFunded, setIsFunded] = useState(false);
   const [fundingInProgress, setFundingInProgress] = useState(false);
-  const [isImpactOwner, setIsImpactOwner] = useState(false);
 
   const onFund = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -205,7 +218,7 @@ const FunderProjectCard = ({
     }
   };
 
-  const impactLevel = getImpactLevel(project.hypercertFraction);
+  const impactLevel = getImpactLevel(project.impact);
 
   return (
     <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-border dark:border-border-dark overflow-hidden flex flex-col">
@@ -229,7 +242,7 @@ const FunderProjectCard = ({
           {project.description}
         </p>
         <div className="mt-3">
-          <ImpactLevelBadge level={"Medium"} />
+          <ImpactLevelBadge level={impactLevel as any} />
         </div>
       </div>
       <div className="px-5 py-4 bg-cairn-gray-50 dark:bg-cairn-gray-800/50 border-t border-border dark:border-border-dark mt-auto">
@@ -239,7 +252,7 @@ const FunderProjectCard = ({
           </span>
           <span className="text-lg font-bold text-text dark:text-text-dark">
             {project.fundingGoal
-              ? `$${(project.fundingGoal / 1_00000).toLocaleString()}`
+              ? `$${(project.fundingGoal / 1_000_000).toLocaleString()}`
               : "Not Set"}
           </span>
         </div>
@@ -324,43 +337,46 @@ export const FunderDashboard = ({
   const [activeFundMode, setActiveFundMode] = useState<"instant" | "dao">(
     "instant"
   );
-  const { fundingHistory, currentUser, projects } = useAppContext();
+  const { currentUser, projects } = useAppContext();
 
   const myFundingHistory = useMemo(() => {
     if (!currentUser) return [];
-    return fundingHistory.filter(
-      (event) => event.funderWallet === currentUser.walletAddress
-    );
-  }, [fundingHistory, currentUser]);
+
+    return projects
+      .filter(
+        (p) =>
+          p.funder?.toLowerCase() === currentUser.walletAddress.toLowerCase()
+      )
+      .map((p) => ({
+        projectId: p.id,
+        funderWallet: p.funder!,
+        amount: p.fundingGoal ?? 0,
+      }));
+  }, [projects, currentUser]);
 
   const totalFundingDeployed = useMemo(
     () => myFundingHistory.reduce((sum, e) => sum + e.amount, 0),
     [myFundingHistory]
   );
+
   const totalProjectsFunded = useMemo(
-    () => new Set(myFundingHistory.map((f) => f.projectId)).size,
+    () => myFundingHistory.length,
     [myFundingHistory]
   );
 
   const sharedFundingProjectsCount = useMemo(() => {
     if (!currentUser) return 0;
-    const myFundedProjectIds = new Set(
-      myFundingHistory.map((f) => f.projectId)
-    );
 
-    const sharedProjects = Array.from(myFundedProjectIds).filter(
-      (projectId) => {
-        const fundersForProject = new Set(
-          fundingHistory
-            .filter((event) => event.projectId === projectId)
-            .map((event) => event.funderWallet)
-        );
-        return fundersForProject.size > 1;
-      }
-    );
+    const userFundedIds = new Set(myFundingHistory.map((f) => f.projectId));
+
+    const sharedProjects = projects.filter((project) => {
+      if (!userFundedIds.has(project.id)) return false;
+      const funders = new Set(project.tokenOwners ?? []);
+      return funders.size > 1;
+    });
 
     return sharedProjects.length;
-  }, [myFundingHistory, fundingHistory, currentUser]);
+  }, [projects, myFundingHistory, currentUser]);
 
   let content;
 
@@ -400,7 +416,12 @@ export const FunderDashboard = ({
         {activeFundMode === "instant" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {projects
-              .filter((p) => p.output.length > 0)
+              .filter(
+                (p) =>
+                  p.output.length > 0 &&
+                  p.impact > 0 &&
+                  p.funder == "0x0000000000000000000000000000000000000000"
+              )
               .map((p) => (
                 <FunderProjectCard
                   key={p.id}
@@ -440,7 +461,7 @@ export const FunderDashboard = ({
             <StatCard
               icon={ScaleIcon}
               title="Total Funding Deployed"
-              value={`$${(totalFundingDeployed / 1_00).toLocaleString()}`}
+              value={`$${(totalFundingDeployed / 1_000_000).toLocaleString()}`}
             />
             <StatCard
               icon={FileTextIcon}

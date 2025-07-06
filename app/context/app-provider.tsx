@@ -63,7 +63,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isDarkMode, setIsDarkModeState] = useState(false);
+  const [isDarkMode, setIsDarkModeState] = useState("dark");
   const [userRole, setUserRole] = useState<UserRole>(UserRole.Scientist);
   const [projects, setProjects] = useState<Project[]>([]);
   const [fundingHistory, setFundingHistory] =

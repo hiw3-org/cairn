@@ -33,13 +33,17 @@ export interface Project {
   organization?: string;
   additionalInfoUrl?: string;
   cid: string;
-  fundingGoal?: number;
+  fundingGoal: number;
   output: ProjectOutput[];
   reproducibilities: ProofOfReproducibility[];
+  funder: string;
   image_url?: string;
   tags?: string[];
   domain?: ResearchDomain;
-  impact?: "None" | "Low" | "Medium" | "High";
+  impact: number; // Impact level as a number (0-3)
+  tokenIds: bigint[];
+  tokenUnits: number[];
+  tokenOwners: string[];
 }
 
 export const TOOL_OPTIONS = [
