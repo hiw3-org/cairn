@@ -1,3 +1,8 @@
+<p align="center">
+    <img src="assets/logo.svg" alt="Cairn Logo" width="200" />
+</p>
+
+
 # Cairn
 > Deployed at: https://octopus-app-5rjoy.ondigitalocean.app/ 
 

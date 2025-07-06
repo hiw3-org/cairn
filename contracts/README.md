@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="../assets/logo.svg" alt="Cairn Logo" width="200" />
+</p>
+
 # Cairn Contracts
 
 This folder contains the smart contracts and scripts for the **Cairn** protocol, a reproducibility and funding platform built on Ethereum. The contracts are written in Solidity and use [Foundry](https://book.getfoundry.sh/) for development, testing, and deployment.
