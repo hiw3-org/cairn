@@ -24,9 +24,9 @@ contract InitProjectsPostMint is Script {
     function run() external {
         creator = vm.envAddress("ADDRESS");
 
-        cairn = Cairn(vm.envAddress("SEPOLIA_CAIRN"));
+        cairn = Cairn(vm.envAddress("CALIBRATION_CAIRN"));
         vm.startBroadcast();
-        cairn.setProjectImpact("bafkreiatyux6u4o5zknwsv32e6xtcu4le2rrhycy2c5njdljnhyiq3ctpq", Cairn.Impact.MEDIUM);
+        cairn.setProjectImpact("bafkreib35d7b5xbsf36kmocxs2ju5ftgcstujqgj4aawiz56gvhxlyjklm", Cairn.Impact.MEDIUM);
         vm.stopBroadcast();      
     }
 }

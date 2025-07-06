@@ -55,8 +55,7 @@ const StepTracker = ({ steps }: { steps: Step[] }) => (
       Please approve the transactions in your wallet when prompted.
     </p>
     <p className="text-sm text-text-secondary dark:text-text-dark-secondary text-center mb-4">
-      Note: Deployment may take ~2 minutes due to Calibration Testnet RPC
-      latency.
+      Note: Process may take ~2 minutes due to Calibration Testnet RPC latency.
     </p>
     <p className="text-xs text-amber-600 dark:text-amber-400 text-center mb-8">
       Do not close this window or refresh until the transaction completes.
@@ -269,7 +268,7 @@ export const NewProjectModal = ({
       await registerProjectCairn(
         cid.toString(),
         hypercertTokenId,
-        BigInt(funduingGoal) // Convert to smallest unit (e.g., USDC)
+        BigInt(Math.floor(Number(funduingGoal) * 1e6)) // Convert to smallest unit (e.g., USDC)
       );
       console.log(
         "Project registered successfully with Hypercert token ID and IPFS CID."

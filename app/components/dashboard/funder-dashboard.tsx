@@ -188,7 +188,7 @@ const FunderProjectCard = ({
 
     try {
       setFundingInProgress(true);
-      const amount = BigInt(1000000); // Convert to smallest unit (e.g., cents for USDC)
+      const amount = BigInt(project.fundingGoal); // Convert to smallest unit (e.g., cents for USDC)
       // Approve USDC transfer
       const approved = await approveUSDCTransfer(amount);
       if (!approved) {
@@ -198,6 +198,8 @@ const FunderProjectCard = ({
       }
       console.log("USDC approved for funding");
 
+      // Add 30 seconds delay
+      await new Promise((resolve) => setTimeout(resolve, 35000));
       // Fund project
       await fundProject(amount, project.id);
       console.log("Funding successful");

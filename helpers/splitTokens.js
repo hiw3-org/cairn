@@ -6,7 +6,7 @@ async function main() {
   // Load environment variables
   const privateKey = process.env.PRIVATE_KEY;
   const rpcUrl = process.env.RPC_URL;
-  const hypercertAddress = process.env.HYPERCERT_ADDRESS;
+  const hypercertAddress = process.env.CALIBRATION_HYPERCERT;
 
   if (!privateKey || !rpcUrl || !hypercertAddress) {
     throw new Error(
@@ -31,7 +31,7 @@ async function main() {
 
   // Parameters for minting - adjust as needed
   const to = "0x168030E5694dCC51C15116994F0A98C0Bd03c5F1";
-  const tokenID = "324289095675654355680596000882475105517569";
+  const tokenID = "8166776806102523123120990578362437074945";
   const units = [700, 300];
 
   console.log("Splitting fractions of hypercert.");
