@@ -179,8 +179,7 @@ export const NewProjectModal = ({
         domain: domain,
       };
 
-      // const cid = await registerProject(projectData);
-      const cid = "bafkreibiqtsxeh2csqsn7ziea5y6lzzu5coh2ix6rttb7qra25rc3ym5a4";
+      const cid = await registerProject(projectData);
 
       if (!cid) {
         throw new Error("Failed to register project on IPFS.");
