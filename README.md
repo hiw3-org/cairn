@@ -8,7 +8,7 @@
  
  > By leveraging decentralized storage, smart contracts, and tokenized impact assets, Cairn creates a transparent, incentive-aligned ecosystem for scientists, funders, and the broader research community.
 
-![desci](assets/filecoin)
+![desci](assets/filecoin.png)
 
 ## **Core Features:**  
   - 🔄 Tracks reuse and reproduction of scientific outputs  
