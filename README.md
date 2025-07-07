@@ -18,7 +18,7 @@
 
 ## Challenges in Scientific Research
 
-Scientific research, especially in embodied AI, faces systemic challenges: 
+Scientific research, especially in **embodied AI**, faces systemic challenges: 
 
 - **Poor incentives for long-term, impactful work:** \
 Academic recognition and funding systems tend to reward novelty and publication volume over real-world usability, long-term impact, and reproducibility.
