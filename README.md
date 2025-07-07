@@ -118,7 +118,7 @@ Community members can challenge submitted PoRs through a dispute mechanism, ensu
 - Foundry – Ethereum toolkit (forge, anvil, cast)
 - Node.js – Backend runtime (optional for scripting/frontend)
   
-**Note:** For detailed setup instructions for smart contracts, frontend, and other modules, see the respective subdirectory README files.
+👉 **Note:** For detailed setup instructions for smart contracts, frontend, and other modules, see the respective subdirectory README files.
 
 ---
 ## Live Demo ##
