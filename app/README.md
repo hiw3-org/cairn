@@ -1,9 +1,14 @@
-# Cairn Front End App
+# Cairn - Front End App
 
-![image](https://github.com/user-attachments/assets/03c61a16-7669-44ec-8280-617f433ad560)
+![header](/assets/header.png)
 
-## 🎈Live app: https://octopus-app-5rjoy.ondigitalocean.app/ 
-* See [Quick Start](#quick-start) below to help you get started.
+## Live demo
+
+Visit: https://octopus-app-5rjoy.ondigitalocean.app/ <br>
+
+
+> See [Quick Start](#quick-start) below to help you get started.
+<br>
 
 ![Cairn Front End App](public/scientistImage.png)
 
@@ -27,6 +32,8 @@
 - **Blockchain Integration**: Interact with smart contracts on Filecoin Calibration test network.
 - **Responsive Design**: Mobile-friendly layouts powered by Tailwind CSS.
 - **Type-Safe Codebase**: Enhanced reliability and developer experience with TypeScript.
+
+---
 
 ## Usage 
 - Register project:
@@ -61,11 +68,13 @@
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Vite Guide](https://vitejs.dev/guide/)
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
+  
+---
 
-### Quick Start
+###  Quick Start
 This is meant to be a quick start guide for users who want to quickly try out the Cairn protocol and platform.
 
-#### Wallet Setup
+#### 🔵 Wallet Setup
 1. **Install MetaMask**:  
    Download and install the [MetaMask browser extension](https://metamask.io/).
 2. **Create a Wallet**:
@@ -79,17 +88,17 @@ This is meant to be a quick start guide for users who want to quickly try out th
         - **New RPC URL**: https://rpc.ankr.com/filecoin_testnet
         - Other data should be filled automatically.
 
-#### Getting Testnet tFIL and USDFC
+#### 🔵 Getting Testnet tFIL and USDFC
 1. **Get tFIL**:  
    Use the [Filecoin Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/) to request testnet FIL (tFIL) for gas fees.\
    Enter your wallet address in the input field and send 100 tFIL to your wallet.
 3. **Get USDFC**:
     Use the [USDFC Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) to request USDFC tokens for funding projects.
 
-#### Choosing a role
+#### 🔵 Choosing a role
 To switch between Scientist and Funder dashboard head over to the top right corner, where you see your profile and wallet address. 
 
-#### Register a New Project - Scientist role
+#### 🔵 Register a New Project - Scientist role
 Before you can register a new project, you need to submit a minimum of one Proof of Reproducibility (PoR) and that PoR needs to get verified on-chain. The demo app is currently running on the testnet and it takes ~2 minutes to do that:
  1. Click on the button or card "New project" and fill out the form. In this step you must also define your Funding Goal.
  2. Click on the button "Create Project". This starts a 3 step process of the project being created on-chain:
@@ -97,15 +106,15 @@ Before you can register a new project, you need to submit a minimum of one Proof
   - Confirm the withdrawal request for the Hypercert approval.
   - Confirm the transaction request. The app is connecting the project and Hypercert token ID.
     
- #### Submitting Record Outputs - Scientist role
+ #### 🔵 Submitting Record Outputs - Scientist role
  1. Click on "View Project" and head over to Research Outputs section and add fill out the Output fields
  2. Confirm the transaction request in Metamask to record the outputs on-chain. 
 
-#### Submiting a Proof of Reproducibility - Scientist role
+#### 🔵 Submiting a Proof of Reproducibility - Scientist role
 To submit a PoR, you need to select a project with a registered output. Click On "Submit Reproducibility", provide the requested repruducibility proof and submit.
 The verification of the PoR for this demo takes about 5 minutes. In the meantime, other users can dispute on your PoR if they find it not suitable. The timespan of this action would normally be a couple of days.
 
-#### Fund a project - Funder role
+#### 🔵 Fund a project - Funder role
 To fund a project you simply select a project in the Discovery tab, where you can see the funding amount and the impact score of each project. 
 For now the funding is only possible for the whole amount of the project's funding goal. Just clisk on the button "Fund" and you will see the project in your portfolio.
 
