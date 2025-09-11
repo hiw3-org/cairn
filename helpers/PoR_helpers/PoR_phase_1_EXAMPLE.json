@@ -512,7 +512,7 @@
     "stdout": "",
     "stderr": ""
   },
-  "cryptographic_signature": {
+  "signature": {
     "content_hash": "899e2185c8a61844a66931965d04a2a1e744079e72afe5fcd03bf9e7b3868157",
     "signature": "8b1a63dafd96609db55ee3e2ea75ac50fded1d34ce86bb8f94a987928594e4531218d068b09ad82550dd03a85a6a0f413637265753f27e914d89fce32bf876611b",
     "signer_address": "0x2C8B40214769572FeE1E3eb8498a86fc8E06045E",

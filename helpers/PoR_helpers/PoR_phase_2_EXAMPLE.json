@@ -27,7 +27,7 @@
       "overall_pass": true
     }
   },
-  "cryptographic_signature": {
+  "signature": {
     "content_hash": "3cc1b6bcac577f7bf4270dbf9fed2bbbcd214fa5fbe1ff4fe71e5683bbeddcf2",
     "signature": "db0bb9a401b0c32cffe3a153c6607891d8932eb4c178e6c35a4ccef9fcf154473db2ab1e0276059f0cb6793b4bd76ee844badaf8ec5c963472d47bd251d14eb41b",
     "signer_address": "0x2C8B40214769572FeE1E3eb8498a86fc8E06045E",

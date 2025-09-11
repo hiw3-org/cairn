@@ -346,7 +346,7 @@ class PoRGenerator:
 
         return {
             "proof_data": proof_data,
-            "cryptographic_signature": {
+            "signature": {
                 "content_hash": proof_hash,
                 "signature": signature.signature.hex(),
                 "signer_address": account.address,
