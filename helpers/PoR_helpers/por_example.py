@@ -1,6 +1,6 @@
 # validation_script.py
 """
-This script validates a model implementation using the PoRGenerator framework.
+This script creates and saves a proof of validation (PoR) for a model implementation.
 Workflow:
 1. Loads or creates a PoRGenerator instance for the specified model ("depth_anything_v2" in this example).
 2. Executes a target script ("model_script.py") as a subprocess, monitoring and saving execution information in the format of a json file.
