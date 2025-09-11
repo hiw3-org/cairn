@@ -299,7 +299,7 @@ class PoRGenerator:
             try:
                 while not self.resource_queue.empty():
                     resource_history.append(self.resource_queue.get_nowait())
-            except:
+            except Exception:
                 pass
 
         # Read captured output
@@ -311,7 +311,7 @@ class PoRGenerator:
                 with open(stdout_file.name, "r") as f:
                     stdout_content = f.read()
                 os.unlink(stdout_file.name)  # Clean up temp file
-            except:
+            except Exception:
                 pass
 
         if stderr_file:
@@ -319,7 +319,7 @@ class PoRGenerator:
                 with open(stderr_file.name, "r") as f:
                     stderr_content = f.read()
                 os.unlink(stderr_file.name)  # Clean up temp file
-            except:
+            except Exception:
                 pass
 
         # Save everything
@@ -358,7 +358,7 @@ class PoRGenerator:
     def save_proof(self, proof, proof_phase="phase_1") -> str:
         """Save complete proof to file"""
         filename = f"PoR_{proof_phase}_{self.project_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        if self.eth_private_key == None:
+        if self.eth_private_key is None:
             raise ValueError("ETH_PRIVATE_KEY not set. Cannot sign the proof.")
 
         signed_proof = self._sign_proof(proof)
@@ -367,6 +367,53 @@ class PoRGenerator:
         print(f"Signed complete proof saved: {filename}")
 
         return filename
+
+    def add_validation_test(self, test_name: str, paper_claims: str, my_result: str, matches: bool, notes: str = ""):
+        """Add a validation test result"""
+        test = {
+            "test_name": test_name,
+            "paper_claims": paper_claims,
+            "my_result": my_result,
+            "matches": matches,
+            "notes": notes,
+            "tested_at": datetime.datetime.now().timestamp(),
+        }
+
+        self.validation_tests.append(test)
+        print(f"Added validation test: {test_name} - {'PASS' if matches else 'FAIL'}")
+        return test
+
+    def save_validation_proof(self):
+        """Save validation tests as separate signed log"""
+        validation_data = {
+            "project_id": self.project_id,
+            "phase": "validation",
+            "created_at": datetime.datetime.now().timestamp(),
+            "tests": self.validation_tests,
+            "summary": {
+                "total_tests": len(self.validation_tests),
+                "passed_tests": sum(1 for t in self.validation_tests if t["matches"]),
+                "overall_pass": all(t["matches"] for t in self.validation_tests),
+            },
+        }
+
+        filename = f"PoR_phase_2_{self.project_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        if self.eth_private_key:
+            signed_entry = self._sign_proof(validation_data)
+            with open(filename, "w") as f:
+                json.dump(signed_entry, f, indent=2, default=str)
+        else:
+            with open(filename, "w") as f:
+                json.dump(validation_data, f, indent=2, default=str)
+
+        print(f"Validation proof saved to {filename}")
+        return filename
+
+    def add_and_save_validation_test(self, test_name: str, paper_claims: str, my_result: str, matches: bool, notes: str = ""):
+        """Add a validation test and immediately save the proof"""
+        self.add_validation_test(test_name, paper_claims, my_result, matches, notes)
+        self.save_validation_proof()
 
 
 if __name__ == "__main__":
