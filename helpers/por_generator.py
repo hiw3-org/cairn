@@ -46,7 +46,7 @@ class PoRGenerator:
             # Package versions (more robust)
             "package_environment": self._get_package_versions(),
             "git_info": self._get_git_info(),
-            "script_info": self._get_script_content_hash(script_path) if script_path else None,
+            "script_info": self._generate_content_hash(script_path) if script_path else None,
             # Hardware
             "Hardware": {
                 "gpu_info": self._get_gpu_info(),
@@ -146,17 +146,17 @@ class PoRGenerator:
         except Exception as e:
             return f"Failed to get CUDA version: {str(e)}"
 
-    def _get_script_content_hash(self, script_path):
+    def _generate_content_hash(self, path):
         """Get SHA-256 hash of the script content"""
         try:
-            with open(script_path, "rb") as f:
+            with open(path, "rb") as f:
                 content = f.read()
             return {
                 "content_sha256": hashlib.sha256(content).hexdigest(),
                 "file_size_bytes": len(content),
             }
         except Exception as e:
-            return {"error": f"Failed to hash script: {str(e)}"}
+            return {"error": f"Failed to hash script: {str(e)}"}¸
 
     @contextmanager
     def monitor_and_save_execution_info(self, entry_point):
@@ -387,7 +387,8 @@ class PoRGenerator:
         """Save validation tests as separate signed log"""
         validation_data = {
             "project_id": self.project_id,
-            "phase": "validation",
+            "phase": "validation/phase_2",
+            "phase_1_content_hash": hashlib.sha256(self.execution_logs[-1]).hexdigest(),
             "created_at": datetime.datetime.now().timestamp(),
             "tests": self.validation_tests,
             "summary": {
