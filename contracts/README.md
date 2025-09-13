@@ -4,9 +4,6 @@
 
 This folder contains the smart contracts and scripts for the **Cairn** protocol, a reproducibility and funding platform built on Ethereum. The contracts are written in Solidity and use [Foundry](https://book.getfoundry.sh/) for development, testing, and deployment.
 
----
-
-## Contract deployed on Filecoin Calibration Testnet: [0xdbe926f96e2250d7C4901f118225566Dc654B969](https://beryx.io/fil/calibration/address/t410f3pusn6loejinpreqd4iyejkwnxdfjoljesihg5i)
 
 ## Overview
 
