@@ -139,16 +139,12 @@ RPC_URL_SEPOLIA=https://eth-sepolia.g.alchemy.com/v2/your_api_key
 RPC_URL_FILECOIN=https://api.node.glif.io/rpc/v1
 ETHERSCAN_API_KEY=your_etherscan_api_key
 
-# Contract Addresses
-PAYMENT_TOKEN_ADDRESS=0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8  # USDC on Sepolia
+# Contract Addresses (SET THESE BEFORE DEPLOYMENT)
+PAYMENT_TOKEN_ADDRESS=0x65432109876543210987654321098765432109876
 FUNDER_ADDRESS=0x1234567890123456789012345678901234567890
 CAIRN_DAO_ADDRESS=0x2345678901234567890123456789012345678901
 
-# ImpactAssetToken Configuration
-TOKEN_NAME="Cairn Impact Asset"
-TOKEN_SYMBOL="CIA"
-
-# Timing Configuration (optional - defaults provided)
+# Timing Configuration (SET THESE BEFORE DEPLOYMENT)
 SUBMISSION_PERIOD_DAYS=30   # Project submission window
 EVALUATION_PERIOD_DAYS=14   # DAO evaluation period
 DISTRIBUTION_PERIOD_DAYS=7  # Fund distribution period
@@ -183,12 +179,6 @@ forge script script/Cairn.deploy.s.sol:CairnDeploy \
   --broadcast
 ```
 
-### Supported Networks
-
-- **Ethereum Sepolia Testnet** (primary testing environment)
-- **Filecoin Network** (for IPFS metadata storage)
-- **Local Development** (Anvil/Hardhat Network)
-
 ## Contract Interaction
 
 ### Using Cast (Foundry CLI)
@@ -206,63 +196,6 @@ cast send <contract_address> "fundRound(uint256,uint256)" 1000000000000000000 5 
 cast call <contract_address> "getProject(string)" "QmExampleCID123" \
   --rpc-url $RPC_URL_SEPOLIA
 ```
-
-### Integration Examples
-
-The contracts are designed to integrate with:
-- **Frontend Applications**: React/TypeScript apps using ethers.js or viem
-- **IPFS Storage**: Project metadata and PoR documents stored on IPFS
-- **DAO Governance**: Multi-signature wallets or governance contracts
-- **Analytics Dashboards**: Event indexing for funding metrics
-
-## Security Features
-
-The contracts implement multiple security layers:
-
-- **OpenZeppelin Standards**: Battle-tested ERC20/ERC721 implementations
-- **Access Control**: Role-based permissions with Ownable pattern
-- **Time-based Phases**: Deadline enforcement prevents manipulation
-- **Input Validation**: Comprehensive bounds checking and validation
-- **Reentrancy Protection**: SafeERC20 for secure token transfers
-- **Emergency Functions**: Owner-controlled emergency withdrawal capabilities
-
-## Gas Optimization
-
-Contracts are optimized for gas efficiency:
-- Minimal storage operations
-- Efficient data structures (mappings vs arrays)
-- Batch operations where possible
-- Events for off-chain indexing instead of storage
-
-## Testing Strategy
-
-The 36-test suite covers:
-
-**Happy Path Testing:**
-- Normal funding flows
-- Complete project lifecycle
-- Standard user interactions
-
-**Edge Case Testing:**  
-- Boundary conditions
-- Invalid inputs
-- Unauthorized access attempts
-
-**Security Testing:**
-- Access control validation
-- Deadline enforcement
-- Fund safety mechanisms
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write comprehensive tests for new functionality
-4. Ensure all existing tests pass (`forge test`)
-5. Follow Solidity style guidelines (`forge fmt`)
-6. Commit changes (`git commit -m 'Add amazing feature'`)
-7. Push to branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
 
 ## Additional Resources
 
