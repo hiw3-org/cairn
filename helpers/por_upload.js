@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import archiver from "archiver";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +15,6 @@ class PorUploader {
   }
 
   async initialize() {
-    // Check for private key in environment
     const privateKey = process.env.PRIVATE_KEY;
     if (!privateKey) {
       console.error("❌ PRIVATE_KEY not found in environment variables");
@@ -24,7 +24,6 @@ class PorUploader {
     }
 
     console.log("Initializing Synapse SDK...");
-    // Use RPC_URL from environment if provided, otherwise default to calibration
     const rpcURL = process.env.RPC_URL || RPC_URLS.calibration.http;
     this.synapse = await Synapse.create({
       privateKey: privateKey,
@@ -37,21 +36,18 @@ class PorUploader {
     console.log("💰 Checking payment setup...");
 
     try {
-      // Check current balance
       const balance = await this.synapse.payments.balance();
       const balanceFormatted = ethers.formatUnits(balance, 18);
       console.log(`Current USDFC balance: ${balanceFormatted}`);
 
-      // Check if we need to deposit
-      const requiredBalance = ethers.parseUnits("2", 18); // 5 USDFC minimum
+      const requiredBalance = ethers.parseUnits("2", 18);
       if (balance < requiredBalance) {
         console.log("💳 Depositing USDFC tokens...");
-        const depositAmount = ethers.parseUnits("5", 18); // 5 USDFC
+        const depositAmount = ethers.parseUnits("5", 18);
         await this.synapse.payments.deposit(depositAmount);
         console.log("✅ Deposit complete");
       }
 
-      // Check service approval
       const warmStorageAddress = this.synapse.getWarmStorageAddress();
       const serviceStatus = await this.synapse.payments.serviceApproval(warmStorageAddress);
 
@@ -59,9 +55,9 @@ class PorUploader {
         console.log("🔐 Approving Warm Storage service...");
         await this.synapse.payments.approveService(
           warmStorageAddress,
-          ethers.parseUnits("10", 18), // Rate allowance: 10 USDFC per epoch
-          ethers.parseUnits("1000", 18), // Lockup allowance: 1000 USDFC total
-          7776000n // Max lockup period: 90 days
+          ethers.parseUnits("10", 18),
+          ethers.parseUnits("1000", 18),
+          7776000n
         );
         console.log("✅ Service approval complete");
       } else {
@@ -74,92 +70,83 @@ class PorUploader {
     }
   }
 
-  async uploadFile(filePath, description) {
-    try {
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found: ${filePath}`);
+  async createZipBundle(por1Path, por2Path, scriptPath) {
+    const timestamp = Date.now();
+    const zipPath = path.join(__dirname, `por_bundle_${timestamp}.zip`);
+
+    const filePaths = [
+      { src: por1Path, desc: "Phase 1 PoR (Execution)" },
+      { src: por2Path, desc: "Phase 2 PoR (Validation)" },
+      { src: scriptPath, desc: "Model Script" },
+    ];
+
+    console.log("📦 Creating ZIP bundle...");
+
+    return new Promise((resolve, reject) => {
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver("zip", { zlib: { level: 9 } });
+
+      output.on("close", () => {
+        console.log(`✅ ZIP created: ${archive.pointer()} bytes`);
+        resolve(zipPath);
+      });
+
+      archive.on("error", (err) => reject(err));
+      archive.pipe(output);
+
+      // Add files to ZIP
+      for (const fileInfo of filePaths) {
+        if (!fs.existsSync(fileInfo.src)) {
+          reject(new Error(`File not found: ${fileInfo.src}`));
+          return;
+        }
+
+        const fileName = path.basename(fileInfo.src);
+        const cleanDesc = fileInfo.desc.replace(/[^a-zA-Z0-9]/g, "_");
+        const zipFileName = `${cleanDesc}_${fileName}`;
+
+        archive.file(fileInfo.src, { name: zipFileName });
+        console.log(`  📄 Added: ${fileName} → ${zipFileName}`);
       }
 
-      const fileData = fs.readFileSync(filePath);
-      const fileName = path.basename(filePath);
-      const fileSize = fileData.length;
-
-      console.log(`📤 Uploading ${fileName} (${fileSize} bytes)...`);
-
-      const uploadResult = await this.synapse.storage.upload(fileData);
-
-      console.log(`✅ ${description} uploaded!`);
-      console.log(`   PieceCID: ${uploadResult.pieceCid}`);
-
-      return {
-        fileName,
-        filePath,
-        pieceCid: uploadResult.pieceCid,
-        size: uploadResult.size,
-        description,
-      };
-    } catch (error) {
-      console.error(`❌ Failed to upload ${description}:`, error.message);
-      throw error;
-    }
+      archive.finalize();
+    });
   }
 
-  async uploadBundle(por1Path, por2Path, scriptPath) {
-    const results = [];
+  async uploadZipBundle(por1Path, por2Path, scriptPath) {
+    try {
+      // Create ZIP bundle
+      const zipPath = await this.createZipBundle(por1Path, por2Path, scriptPath);
 
-    // Upload each file
-    const por1Result = await this.uploadFile(por1Path, "Phase 1 PoR (Execution)");
-    results.push(por1Result);
+      // Upload the ZIP
+      console.log("📤 Uploading ZIP bundle to Filecoin...");
+      const zipData = fs.readFileSync(zipPath);
+      const zipSize = zipData.length;
 
-    const por2Result = await this.uploadFile(por2Path, "Phase 2 PoR (Validation)");
-    results.push(por2Result);
+      console.log(`📦 Uploading bundle (${zipSize} bytes)...`);
+      const uploadResult = await this.synapse.storage.upload(zipData);
 
-    const scriptResult = await this.uploadFile(scriptPath, "Model Script");
-    results.push(scriptResult);
+      // Clean up temporary ZIP
+      fs.unlinkSync(zipPath);
 
-    // Create and upload manifest
-    const manifest = {
-      bundle_type: "ai_reproducibility_proof",
-      created_at: new Date().toISOString(),
-      files: {
-        phase1_execution: por1Result,
-        phase2_validation: por2Result,
-        model_script: scriptResult,
-      },
-      verification_info: {
-        download_instructions: "Use PieceCID with Filecoin retrieval tools",
-        verification_steps: [
-          "Download files using their PieceCIDs",
-          "Verify cryptographic signatures in PoR files",
-          "Compare script hash with execution proof",
-        ],
-      },
-    };
+      console.log("✅ ZIP bundle uploaded successfully!");
 
-    const manifestPath = path.join(__dirname, `manifest_${Date.now()}.json`);
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
-    console.log("📋 Uploading bundle manifest...");
-    const manifestResult = await this.uploadFile(manifestPath, "Bundle Manifest");
-
-    // Clean up temporary manifest
-    fs.unlinkSync(manifestPath);
-
-    return {
-      manifest: manifestResult,
-      files: results,
-      summary: {
-        total_files: results.length + 1,
-        bundle_cid: manifestResult.pieceCid,
-      },
-    };
+      return {
+        bundleCid: uploadResult.pieceCid,
+        size: uploadResult.size,
+        compressionRatio: ((1 - uploadResult.size / zipSize) * 100).toFixed(1),
+      };
+    } catch (error) {
+      console.error("❌ Failed to create or upload ZIP bundle:", error.message);
+      throw error;
+    }
   }
 }
 
 // CLI handling
 async function main() {
-  console.log("Cairn PoR Bundle Uploader");
-  console.log("==========================================");
+  console.log("Cairn PoR ZIP Bundle Uploader");
+  console.log("==============================");
 
   const args = process.argv.slice(2);
 
@@ -168,20 +155,24 @@ async function main() {
 Usage Options:
 
 1. Command line arguments:
-   node upload_por_bundle.js <phase1_file> <phase2_file> <script_file>
+   node por_upload.js <phase1_file> <phase2_file> <script_file>
 
 2. Interactive mode (no arguments):
-   node upload_por_bundle.js
+   node por_upload.js
 
 Examples:
-   node upload_por_bundle.js ./PoR_phase_1_project.json ./PoR_phase_2_project.json ./model_script.py
-   node upload_por_bundle.js  # Interactive mode
+   node por_upload.js ./PoR_phase_1_project.json ./PoR_phase_2_project.json ./model_script.py
+   node por_upload.js  # Interactive mode
+
+Features:
+   - Creates a single ZIP containing all files + manifest
+   - One upload = One CID for the entire bundle
+   - Easy to download and extract later
 
 Environment Setup:
    Create a .env file with: PRIVATE_KEY=0x1234567890abcdef...
-        `);
+    `);
 
-    // Interactive mode
     const readline = await import("readline");
     const rl = readline.createInterface({
       input: process.stdin,
@@ -197,7 +188,6 @@ Environment Setup:
       const scriptPath = await question("Model script file path: ");
 
       rl.close();
-
       await runUpload(por1Path.trim(), por2Path.trim(), scriptPath.trim());
     } catch (error) {
       rl.close();
@@ -218,23 +208,26 @@ async function runUpload(por1Path, por2Path, scriptPath) {
   const uploader = new PorUploader();
 
   try {
-    // Initialize SDK
     await uploader.initialize();
-
-    // Setup payments (one-time setup)
     await uploader.ensurePaymentSetup();
 
-    // Upload bundle
-    console.log("\n📦 Starting bundle upload...");
-    const result = await uploader.uploadBundle(por1Path, por2Path, scriptPath);
+    console.log("\n📦 Starting ZIP bundle upload...");
+    const startTime = Date.now();
+
+    const result = await uploader.uploadZipBundle(por1Path, por2Path, scriptPath);
+
+    const endTime = Date.now();
+    const uploadDuration = (endTime - startTime) / 1000;
 
     console.log("\n🎉 Upload Complete!");
     console.log("===================");
-    console.log(`Bundle Manifest CID: ${result.manifest.pieceCid}`);
-    console.log("\nFile Details:");
-    result.files.forEach((file) => {
-      console.log(`  ${file.description}: ${file.pieceCid}`);
-    });
+    console.log(`📦 Bundle CID: ${result.bundleCid}`);
+    console.log(`📊 Bundle Size: ${result.size} bytes`);
+    console.log(`⏱️  Upload Time: ${uploadDuration.toFixed(2)} seconds`);
+
+    console.log("\n💾 Single CID for entire PoR bundle:");
+    console.log(`   ${result.bundleCid}`);
+    console.log("\n📥 To retrieve: Download this CID to get a ZIP with all files!");
   } catch (error) {
     console.error("\n❌ Upload failed:", error.message);
     process.exit(1);
