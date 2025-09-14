@@ -32,6 +32,20 @@ class PorUploader {
     console.log("✅ SDK initialized");
   }
 
+  /**
+   * Ensures that the payment setup for the Synapse service is complete.
+   *
+   * This method performs the following steps:
+   * 1. Checks the current USDFC token balance.
+   * 2. Deposits additional USDFC tokens if the balance is below the required threshold.
+   * 3. Checks if the Warm Storage service is approved.
+   * 4. Approves the Warm Storage service if not already approved.
+   *
+   * If any step fails, logs an error message and suggests obtaining testnet USDFC tokens.
+   *
+   * @async
+   * @throws {Error} If payment setup fails at any step.
+   */
   async ensurePaymentSetup() {
     console.log("💰 Checking payment setup...");
 
@@ -49,7 +63,9 @@ class PorUploader {
       }
 
       const warmStorageAddress = this.synapse.getWarmStorageAddress();
-      const serviceStatus = await this.synapse.payments.serviceApproval(warmStorageAddress);
+      const serviceStatus = await this.synapse.payments.serviceApproval(
+        warmStorageAddress
+      );
 
       if (!serviceStatus.isApproved) {
         console.log("🔐 Approving Warm Storage service...");
@@ -65,19 +81,31 @@ class PorUploader {
       }
     } catch (error) {
       console.error("❌ Payment setup failed:", error.message);
-      console.log("💡 You may need testnet USDFC tokens. Check the Filecoin Calibration faucet.");
+      console.log(
+        "💡 You may need testnet USDFC tokens. Check the Filecoin Calibration faucet."
+      );
       throw error;
     }
   }
 
+  /**
+   * Creates a ZIP archive containing the specified files and returns the path to the created ZIP file.
+   *
+   * @async
+   * @param {string} por1Path - Path to the first file to include in the ZIP.
+   * @param {string} por2Path - Path to the second file to include in the ZIP.
+   * @param {string} scriptPath - Path to the script file to include in the ZIP.
+   * @returns {Promise<string>} Resolves with the path to the created ZIP file.
+   * @throws {Error} If any of the specified files do not exist or if an error occurs during ZIP creation.
+   */
   async createZipBundle(por1Path, por2Path, scriptPath) {
     const timestamp = Date.now();
     const zipPath = path.join(__dirname, `por_bundle_${timestamp}.zip`);
 
     const filePaths = [
-      { src: por1Path, desc: "Phase 1 PoR (Execution)" },
-      { src: por2Path, desc: "Phase 2 PoR (Validation)" },
-      { src: scriptPath, desc: "Model Script" },
+      { src: por1Path },
+      { src: por2Path },
+      { src: scriptPath },
     ];
 
     console.log("📦 Creating ZIP bundle...");
@@ -102,8 +130,7 @@ class PorUploader {
         }
 
         const fileName = path.basename(fileInfo.src);
-        const cleanDesc = fileInfo.desc.replace(/[^a-zA-Z0-9]/g, "_");
-        const zipFileName = `${cleanDesc}_${fileName}`;
+        const zipFileName = `${fileName}`;
 
         archive.file(fileInfo.src, { name: zipFileName });
         console.log(`  📄 Added: ${fileName} → ${zipFileName}`);
@@ -113,10 +140,28 @@ class PorUploader {
     });
   }
 
+  /**
+   * Creates a ZIP bundle from the provided file paths, uploads it to Filecoin via Synapse storage,
+   * and returns the upload result including the bundle CID, size, and compression ratio.
+   *
+   * @async
+   * @param {string} por1Path - Path to the first POR file.
+   * @param {string} por2Path - Path to the second POR file.
+   * @param {string} scriptPath - Path to the script file to include in the bundle.
+   * @returns {Promise<Object>} Resolves with an object containing:
+   *   - {string} bundleCid - The CID of the uploaded bundle.
+   *   - {number} size - The size of the uploaded bundle in bytes.
+   *   - {string} compressionRatio - The compression ratio as a percentage string.
+   * @throws Will throw an error if ZIP creation or upload fails.
+   */
   async uploadZipBundle(por1Path, por2Path, scriptPath) {
     try {
       // Create ZIP bundle
-      const zipPath = await this.createZipBundle(por1Path, por2Path, scriptPath);
+      const zipPath = await this.createZipBundle(
+        por1Path,
+        por2Path,
+        scriptPath
+      );
 
       // Upload the ZIP
       console.log("📤 Uploading ZIP bundle to Filecoin...");
@@ -140,6 +185,54 @@ class PorUploader {
       console.error("❌ Failed to create or upload ZIP bundle:", error.message);
       throw error;
     }
+  }
+}
+
+/**
+ * Uploads a ZIP bundle containing the specified PoR files and script, and logs upload details.
+ * This function initializes the uploader, ensures payment setup, creates the ZIP bundle,
+ * and returns the upload result including the bundle CID, size, and compression ratio.
+ *
+ * @async
+ * @function runUpload
+ * @param {string} por1Path - Path to the first PoR file.
+ * @param {string} por2Path - Path to the second PoR file.
+ * @param {string} scriptPath - Path to the script file to include in the bundle.
+ * @returns {Promise<void>} Resolves when the upload process is complete.
+ */
+async function runUpload(por1Path, por2Path, scriptPath) {
+  const uploader = new PorUploader();
+
+  try {
+    await uploader.initialize();
+    await uploader.ensurePaymentSetup();
+
+    console.log("\n📦 Starting ZIP bundle upload...");
+    const startTime = Date.now();
+
+    const result = await uploader.uploadZipBundle(
+      por1Path,
+      por2Path,
+      scriptPath
+    );
+
+    const endTime = Date.now();
+    const uploadDuration = (endTime - startTime) / 1000;
+
+    console.log("\n🎉 Upload Complete!");
+    console.log("===================");
+    console.log(`📦 Bundle CID: ${result.bundleCid}`);
+    console.log(`📊 Bundle Size: ${result.size} bytes`);
+    console.log(`⏱️  Upload Time: ${uploadDuration.toFixed(2)} seconds`);
+
+    console.log("\n💾 Single CID for entire PoR bundle:");
+    console.log(`   ${result.bundleCid}`);
+    console.log(
+      "\n📥 To retrieve: Download this CID to get a ZIP with all files!"
+    );
+  } catch (error) {
+    console.error("\n❌ Upload failed:", error.message);
+    process.exit(1);
   }
 }
 
@@ -179,7 +272,8 @@ Environment Setup:
       output: process.stdout,
     });
 
-    const question = (prompt) => new Promise((resolve) => rl.question(prompt, resolve));
+    const question = (prompt) =>
+      new Promise((resolve) => rl.question(prompt, resolve));
 
     try {
       console.log("\n📝 Interactive Mode - Enter file paths:");
@@ -202,36 +296,6 @@ Environment Setup:
   }
 
   await runUpload(args[0], args[1], args[2]);
-}
-
-async function runUpload(por1Path, por2Path, scriptPath) {
-  const uploader = new PorUploader();
-
-  try {
-    await uploader.initialize();
-    await uploader.ensurePaymentSetup();
-
-    console.log("\n📦 Starting ZIP bundle upload...");
-    const startTime = Date.now();
-
-    const result = await uploader.uploadZipBundle(por1Path, por2Path, scriptPath);
-
-    const endTime = Date.now();
-    const uploadDuration = (endTime - startTime) / 1000;
-
-    console.log("\n🎉 Upload Complete!");
-    console.log("===================");
-    console.log(`📦 Bundle CID: ${result.bundleCid}`);
-    console.log(`📊 Bundle Size: ${result.size} bytes`);
-    console.log(`⏱️  Upload Time: ${uploadDuration.toFixed(2)} seconds`);
-
-    console.log("\n💾 Single CID for entire PoR bundle:");
-    console.log(`   ${result.bundleCid}`);
-    console.log("\n📥 To retrieve: Download this CID to get a ZIP with all files!");
-  } catch (error) {
-    console.error("\n❌ Upload failed:", error.message);
-    process.exit(1);
-  }
 }
 
 // Load environment variables
