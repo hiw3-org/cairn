@@ -21,7 +21,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
-class DataDownloader {
+export class DataDownloader {
   constructor() {
     this.synapse = null;
   }
