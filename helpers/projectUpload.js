@@ -1,4 +1,26 @@
-/*** Project Uploader
+/**
+ * This script uploads a Hugging Face repository to Filecoin via the Synapse SDK.
+ * It initializes the Synapse SDK, downloads the repository from hf, creates a ZIP bundle, estimates storage cost,
+ * ensures payment setup, uploads the ZIP to Filecoin, logs upload details, and cleans up local files.
+ * Supports both command-line and interactive modes for specifying the Hugging Face repo URL.
+ * Requires a .env file with your PRIVATE_KEY for authentication.
+ *
+ * Usage:
+ * node project_upload.js <hugging face repo url>
+ * or
+ * node project_upload.js (for interactive mode)
+ * or
+ * import { runUpload } from './projectUpload.js'; (for programmatic use)
+ *
+ * Features:
+ * - Creates a single ZIP containing all files in the repo
+ * - One upload = One CID for the entire repo
+ * - Easy to download and extract later
+ * - Cleans up local files after upload
+ *
+ * Environment Setup:
+ * Create a .env file with
+ * PRIVATE_KEY=0x1234567890abcdef...
  *
  */
 import { Synapse, RPC_URLS } from "@filoz/synapse-sdk";
