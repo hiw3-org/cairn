@@ -17,6 +17,14 @@ const userSchema = new mongoose.Schema({
     minlength: [3, 'Username must be at least 3 characters long'],
     maxlength: [30, 'Username cannot exceed 30 characters']
   },
+
+  address: {
+    type: String,
+    required: false,
+    unique: true,
+    lowercase: true,
+    match: [/^0x[a-fA-F0-9]{40}$/, 'Please provide a valid Ethereum address']
+  },
   
   // Profile information
   profile: {
@@ -27,7 +35,8 @@ const userSchema = new mongoose.Schema({
       maxlength: [500, 'Bio cannot exceed 500 characters']
     },
     website: String,
-    twitter: String
+    twitter: String,
+    orcid_id: String
   },
 
   // User roles and permissions

@@ -9,8 +9,12 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const logger = require('./utils/logger');
-const errorHandler = require('./middleware/errorHandler');
+const { errorHandler } = require('./middleware/errorHandler');
 const { connectDB } = require('./config/database');
+
+// Import Passport configuration
+require('./config/passport');
+const passport = require('passport');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
@@ -44,6 +48,9 @@ app.use(morgan('combined', { stream: { write: (message) => logger.info(message.t
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(mongoSanitize()); // Prevent NoSQL injection
+
+// Initialize Passport
+app.use(passport.initialize());
 app.use(xss()); // Clean user input from malicious HTML
 
 // Health check route
