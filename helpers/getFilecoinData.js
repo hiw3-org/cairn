@@ -115,14 +115,14 @@ async function main() {
 Usage Options:
 
 1. Command line arguments:
-   node project_upload.js <file CID>
+   node getFilecoinData.js <file CID>
 
 2. Interactive mode (no arguments):
-   node project_upload.js
+   node getFilecoinData.js
 
 Examples:
-   node project_upload.js bafkzcibd2yiqr75gfp657yak65bf42qesiy5vfmqjbl457qwrb7tfghij2hy4li3
-   node project_upload.js  # Interactive mode
+   node getFilecoinData.js bafkzcibd2yiqr75gfp657yak65bf42qesiy5vfmqjbl457qwrb7tfghij2hy4li3
+   node getFilecoinData.js  # Interactive mode
 
 Features:
    - Download files from Filecoin using their CID
