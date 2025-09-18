@@ -62,16 +62,14 @@ export class DataDownloader {
 }
 
 /**
- * Uploads a ZIP bundle containing the specified PoR files and script, and logs upload details.
- * This function initializes the uploader, ensures payment setup, creates the ZIP bundle,
- * and returns the upload result including the bundle CID, size, and compression ratio.
+ * Downloads a ZIP file from Filecoin given its CID, saves it locally, and logs download details.
+ * Initializes the Synapse SDK, downloads the file, and writes it to disk at the specified output path (or a default name).
  *
  * @async
- * @function runUpload
- * @param {string} por1Path - Path to the first PoR file.
- * @param {string} por2Path - Path to the second PoR file.
- * @param {string} scriptPath - Path to the script file to include in the bundle.
- * @returns {Promise<void>} Resolves when the upload process is complete.
+ * @function runDownload
+ * @param {string} cid - The Filecoin CID of the file to download.
+ * @param {string} [outputPath=null] - Optional path to save the downloaded file. Defaults to "downloaded_<cid>.zip".
+ * @returns {Promise<void>} Resolves when the download is complete. Exits the process on success or error.
  */
 async function runDownload(cid, outputPath = null) {
   const downloader = new DataDownloader();
