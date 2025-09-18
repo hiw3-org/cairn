@@ -138,7 +138,7 @@ class PorUploader {
         console.log("✅ Deposit complete");
       }
 
-      const warmStorageAddress = await this.synapse.getWarmStorageAddress();
+      const warmStorageAddress = this.synapse.getWarmStorageAddress();
       if (!warmStorageAddress) {
         throw new Error("Warm Storage service address not found");
       }
