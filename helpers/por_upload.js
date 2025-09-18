@@ -130,7 +130,7 @@ class PorUploader {
         }
 
         const fileName = path.basename(fileInfo.src);
-        const zipFileName = `${fileName}`;
+        const zipFileName = fileName;
 
         archive.file(fileInfo.src, { name: zipFileName });
         console.log(`  📄 Added: ${fileName} → ${zipFileName}`);
