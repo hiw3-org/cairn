@@ -6,9 +6,9 @@
  * Requires a .env file with your PRIVATE_KEY for authentication.
  *
  * Usage:
- * node project_upload.js <hugging face repo url>
+ * node projectUpload.js <hugging face repo url>
  * or
- * node project_upload.js (for interactive mode)
+ * node projectUpload.js (for interactive mode)
  * or
  * import { runUpload } from './projectUpload.js'; (for programmatic use)
  *
@@ -204,6 +204,10 @@ export class ProjectUploader {
    * @throws {Error} If any of the specified files do not exist or if an error occurs during ZIP creation.
    */
   async createZipFile(repoPath) {
+    if (!fs.existsSync(repoPath)) {
+      throw new Error(`Repo path does not exist: ${repoPath}`);
+    }
+
     const timestamp = Date.now();
     const repoName = path.basename(repoPath);
     const files = fs.readdirSync(repoPath);
@@ -255,6 +259,13 @@ export class ProjectUploader {
    */
   async uploadZipBundle(repoPath) {
     try {
+      if (!fs.existsSync(repoPath)) {
+        throw new Error(`Repo path does not exist: ${repoPath}`);
+      }
+
+      if (!this.synapse) {
+        throw new Error("SDK not initialized. Call initialize() first.");
+      }
       // Create ZIP bundle
       const zipPath = await this.createZipFile(repoPath);
 
@@ -293,6 +304,11 @@ export class ProjectUploader {
    * @returns {Promise<{ path: string, size: number }>} Resolves with the local path and size (in bytes) of the repository.
    */
   async dlHuggingFaceRepo(repoUrl, destDir = "./models") {
+    // Check if destDir exists, if not create it
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+
     const { exec } = await import("child_process");
     return new Promise((resolve, reject) => {
       console.log(`\n🔽 Cloning Hugging Face repo: ${repoUrl}`);
@@ -338,6 +354,10 @@ export class ProjectUploader {
    * @returns {number} The total size of all files in the directory and its subdirectories, in bytes.
    */
   getDirectorySize(dirPath) {
+    if (!fs.existsSync(dirPath)) {
+      throw new Error(`Directory does not exist: ${dirPath}`);
+    }
+
     let totalSize = 0;
 
     const walkDirectory = (currentPath) => {
@@ -406,6 +426,11 @@ export class ProjectUploader {
  * @throws Will log and exit the process if any step fails.
  */
 async function runUpload(repoUrl, dataDurationDays = 90) {
+  if (!repoUrl || !repoUrl.startsWith("http")) {
+    console.error("❌ Please provide a valid Hugging Face repo URL");
+    process.exit(1);
+  }
+
   const uploader = new ProjectUploader();
 
   try {
