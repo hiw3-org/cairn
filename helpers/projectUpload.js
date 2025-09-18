@@ -194,14 +194,12 @@ export class ProjectUploader {
   }
 
   /**
-   * Creates a ZIP archive containing the specified files and returns the path to the created ZIP file.
+   * Creates a ZIP archive containing all files and directories in the specified repository path and returns the path to the created ZIP file.
    *
    * @async
-   * @param {string} por1Path - Path to the first file to include in the ZIP.
-   * @param {string} por2Path - Path to the second file to include in the ZIP.
-   * @param {string} scriptPath - Path to the script file to include in the ZIP.
+   * @param {string} repoPath - Path to the repository directory to be zipped.
    * @returns {Promise<string>} Resolves with the path to the created ZIP file.
-   * @throws {Error} If any of the specified files do not exist or if an error occurs during ZIP creation.
+   * @throws {Error} If the specified repo path does not exist or if an error occurs during ZIP creation.
    */
   async createZipFile(repoPath) {
     if (!fs.existsSync(repoPath)) {
