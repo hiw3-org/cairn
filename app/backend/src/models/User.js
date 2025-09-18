@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
     unique: true,
+    sparse: true, // Allow null values to be non-unique
     lowercase: true,
     match: [/^0x[a-fA-F0-9]{40}$/, 'Please provide a valid Ethereum address']
   },

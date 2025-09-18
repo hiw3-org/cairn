@@ -35,11 +35,11 @@ const validateUserCreation = [
     }),
 
   body('address')
-    .optional()
+    .optional({ values: 'falsy' })
     .matches(/^0x[a-fA-F0-9]{40}$/)
     .withMessage('Please provide a valid Ethereum address')
     .custom(async (address) => {
-      if (address) {
+      if (address && address.trim() !== '') {
         const existingUser = await User.findOne({ address: address.toLowerCase() });
         if (existingUser) {
           throw new Error('Wallet address already registered');
@@ -109,11 +109,11 @@ const validateSignup = [
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
 
   body('address')
-    .optional()
+    .optional({ values: 'falsy' })
     .matches(/^0x[a-fA-F0-9]{40}$/)
     .withMessage('Please provide a valid Ethereum address')
     .custom(async (address) => {
-      if (address) {
+      if (address && address.trim() !== '') {
         const existingUser = await User.findOne({ address: address.toLowerCase() });
         if (existingUser) {
           throw new Error('Wallet address already registered');
