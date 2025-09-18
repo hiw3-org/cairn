@@ -380,7 +380,8 @@ export class ProjectUploader {
  * @function runUpload
  * @param {string} repoUrl - The URL of the Hugging Face repository to upload.
  * @param {number} [dataDurationDays=90] - The number of days to retain the uploaded data (default is 90).
- * @returns {Promise<void>} Resolves when the upload process is complete.
+ * @returns {Promise<string>} Resolves with a snapshot string of the uploaded repository's contents.
+ * The snapshot format is a textual summary, typically a newline-separated list of files and their sizes.
  * @throws Will log and exit the process if any step fails.
  */
 async function runUpload(repoUrl, dataDurationDays = 90) {
