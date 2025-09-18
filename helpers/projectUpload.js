@@ -495,14 +495,14 @@ async function main() {
 Usage Options:
 
 1. Command line arguments:
-   node project_upload.js <hugging face repo url>
+   node projectUpload.js <hugging face repo url>
 
 2. Interactive mode (no arguments):
-   node project_upload.js
+   node projectUpload.js
 
 Examples:
-   node project_upload.js https://huggingface.co/username/repo_name
-   node project_upload.js  # Interactive mode
+   node projectUpload.js https://huggingface.co/username/repo_name
+   node projectUpload.js  # Interactive mode
 
 Features:
    - Creates a single ZIP containing all files
