@@ -18,6 +18,7 @@ const passport = require('passport');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.get('/health', (req, res) => {
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/users`, userRoutes);
+app.use(`/api/${apiVersion}/projects`, projectRoutes);
 
 
 // Catch-all route for undefined endpoints

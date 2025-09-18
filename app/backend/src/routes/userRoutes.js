@@ -1,6 +1,6 @@
 const express = require('express');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { validateUserCreation, validateSignup, handleValidationErrors } = require('../middleware/validation');
+const { validateUserCreation, validateSignup, handleValidationErrors } = require('../middleware/userValidation');
 const { generateToken, generateRefreshToken, localAuth, authenticate, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 
