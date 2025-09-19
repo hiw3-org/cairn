@@ -60,9 +60,9 @@ A RESTful API for managing scientific research projects, researchers, and impact
 - `POST /api/v1/users/login` - User login
 
 ### Projects
-- `GET /api/v1/projects` - Get all projects (authenticated)
-- `GET /api/v1/projects/:id` - Get project by ID (authenticated)
-- `GET /api/v1/projects/field/:field` - Get projects by research field (authenticated)
+- `GET /api/v1/projects` - Get all projects
+- `GET /api/v1/projects/:id` - Get project by ID
+- `GET /api/v1/projects/field/:field` - Get projects by research field
 - `POST /api/v1/projects` - Create new project (authenticated)
 
 ## Usage Examples
@@ -149,7 +149,7 @@ curl -X GET http://localhost:3000/api/v1/projects \
   paper: {
     doi: String (optional, DOI format),
     arxiv_id: String (optional, arXiv format),
-    title: String (required),
+    title: String (optional),
     abstract: String (optional)
   },
   huggingface: {

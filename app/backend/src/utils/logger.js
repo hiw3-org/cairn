@@ -1,4 +1,10 @@
 const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure logs directory exists
+const logsDir = path.resolve(__dirname, '../../logs');
+fs.mkdirSync(logsDir, { recursive: true });
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -28,11 +34,11 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Add custom log methods for different contexts
-logger.auth = (action, data) => {
+logger.auth = (action, data = {}) => {
   logger.info('AUTH', { action, ...data });
 };
 
-logger.notification = (action, data) => {
+logger.notification = (action, data = {}) => {
   logger.info('NOTIFICATION', { action, ...data });
 };
 

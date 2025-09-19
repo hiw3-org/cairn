@@ -128,7 +128,6 @@ const projectSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 projectSchema.index({ researcher_id: 1 });
-projectSchema.index({ status: 1 });
 projectSchema.index({ field: 1 });
 projectSchema.index({ created_at: -1 });
 

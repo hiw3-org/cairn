@@ -72,7 +72,7 @@ const getProjectById = async (req, res) => {
     const { id } = req.params;
 
     const project = await Project.findById(id)
-      .populate('researcher_id', 'username email profile ethereumAddress');
+      .populate('researcher_id', 'username email profile address');
 
     if (!project) {
       return res.status(404).json({
@@ -172,17 +172,21 @@ const createProject = async (req, res) => {
   try {
     const {
       title,
-      researcher_id,
+      researcher_id: bodyResearcherId, // rename to avoid confusion
       field,
       paper,
       huggingface,
       por
     } = req.body;
-
+    // Determine researcher_id: only allow override if user is admin
+    let effectiveResearcherId = req.user && req.user._id;
+    if (req.user && req.user.role === 'admin' && bodyResearcherId) {
+      effectiveResearcherId = bodyResearcherId;
+    }
     // Create new project
     const projectData = {
       title,
-      researcher_id,
+      researcher_id: effectiveResearcherId,
       field
     };
 
