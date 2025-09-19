@@ -3,14 +3,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 require('dotenv').config();
 
 const logger = require('./utils/logger');
 const { errorHandler } = require('./middleware/errorHandler');
-const { connectDB } = require('./config/database');
+const { connectDB, disconnectDB } = require('./config/database');
 
 // Import Passport configuration
 require('./config/passport');
@@ -52,7 +51,6 @@ app.use(mongoSanitize()); // Prevent NoSQL injection
 
 // Initialize Passport
 app.use(passport.initialize());
-app.use(xss()); // Clean user input from malicious HTML
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -90,7 +88,8 @@ const server = app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error('UNHANDLED REJECTION! 💥 Shutting down...', err);
-  server.close(() => {
+  server.close(async () => {
+    await disconnectDB();
     process.exit(1);
   });
 });
@@ -104,7 +103,8 @@ process.on('uncaughtException', (err) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
-  server.close(() => {
+  server.close(async () => {
+    await disconnectDB();
     logger.info('💥 Process terminated!');
   });
 });

@@ -1,3 +1,5 @@
+const logger = require('../utils/logger');
+
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -17,7 +19,11 @@ const errorHandler = (err, req, res, next) => {
   error.message = err.message;
 
   // Log error
-  console.error(err);
+  logger.error('Unhandled error', { 
+    message: err.message, 
+    stack: err.stack, 
+    statusCode: err.statusCode 
+  });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
