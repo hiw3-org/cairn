@@ -8,3 +8,7 @@ out/
 .venv
 
 __pycache__/
+
+*.zip
+
+models/
