@@ -1,6 +1,25 @@
-/*** Project Uploader
+ * This script uploads a Hugging Face repository to Filecoin via the Synapse SDK.
+ * It initializes the Synapse SDK, downloads the repository from hf, creates a ZIP bundle, estimates storage cost,
+ * ensures payment setup, uploads the ZIP to Filecoin, logs upload details, and cleans up local files.
+ * Supports both command-line and interactive modes for specifying the Hugging Face repo URL.
+ * Requires a .env file with your PRIVATE_KEY for authentication.
  *
- */
+ * Usage:
+ * node projectUpload.js <hugging face repo url>
+ * or
+ * node projectUpload.js (for interactive mode)
+ * or
+ * import { runUpload } from './projectUpload.js'; (for programmatic use)
+ *
+ * Features:
+ * - Creates a single ZIP containing all files in the repo
+ * - One upload = One CID for the entire repo
+ * - Easy to download and extract later
+ * - Cleans up local files after upload
+ *
+ * Environment Setup:
+ * Create a .env file with
+ * PRIVATE_KEY=0x1234567890abcdef...
 import { Synapse, RPC_URLS } from "@filoz/synapse-sdk";
 import { ethers } from "ethers";
 import fs from "fs";
@@ -172,16 +191,17 @@ export class ProjectUploader {
   }
 
   /**
-   * Creates a ZIP archive containing the specified files and returns the path to the created ZIP file.
+   * Creates a ZIP archive containing all files and directories in the specified repository path and returns the path to the created ZIP file.
    *
    * @async
-   * @param {string} por1Path - Path to the first file to include in the ZIP.
-   * @param {string} por2Path - Path to the second file to include in the ZIP.
-   * @param {string} scriptPath - Path to the script file to include in the ZIP.
+   * @param {string} repoPath - Path to the repository directory to be zipped.
    * @returns {Promise<string>} Resolves with the path to the created ZIP file.
-   * @throws {Error} If any of the specified files do not exist or if an error occurs during ZIP creation.
+   * @throws {Error} If the specified repo path does not exist or if an error occurs during ZIP creation.
    */
   async createZipFile(repoPath) {
+    if (!fs.existsSync(repoPath)) {
+      throw new Error(`Repo path does not exist: ${repoPath}`);
+    }
     const timestamp = Date.now();
     const repoName = path.basename(repoPath);
     const files = fs.readdirSync(repoPath);
@@ -233,6 +253,13 @@ export class ProjectUploader {
    */
   async uploadZipBundle(repoPath) {
     try {
+      if (!fs.existsSync(repoPath)) {
+        throw new Error(`Repo path does not exist: ${repoPath}`);
+      }
+
+      if (!this.synapse) {
+        throw new Error("SDK not initialized. Call initialize() first.");
+      }
       // Create ZIP bundle
       const zipPath = await this.createZipFile(repoPath);
 
@@ -271,6 +298,11 @@ export class ProjectUploader {
    * @returns {Promise<{ path: string, size: number }>} Resolves with the local path and size (in bytes) of the repository.
    */
   async dlHuggingFaceRepo(repoUrl, destDir = "./models") {
+    // Check if destDir exists, if not create it
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+
     const { exec } = await import("child_process");
     return new Promise((resolve, reject) => {
       console.log(`\n🔽 Cloning Hugging Face repo: ${repoUrl}`);
@@ -316,6 +348,9 @@ export class ProjectUploader {
    * @returns {number} The total size of all files in the directory and its subdirectories, in bytes.
    */
   getDirectorySize(dirPath) {
+    if (!fs.existsSync(dirPath)) {
+      throw new Error(`Directory does not exist: ${dirPath}`);
+    }
     let totalSize = 0;
 
     const walkDirectory = (currentPath) => {
@@ -380,11 +415,15 @@ export class ProjectUploader {
  * @function runUpload
  * @param {string} repoUrl - The URL of the Hugging Face repository to upload.
  * @param {number} [dataDurationDays=90] - The number of days to retain the uploaded data (default is 90).
- * @returns {Promise<string>} Resolves with a snapshot string of the uploaded repository's contents.
- * The snapshot format is a textual summary, typically a newline-separated list of files and their sizes.
+ * @returns {Promise<void>} Resolves when the upload process is complete.
  * @throws Will log and exit the process if any step fails.
  */
 async function runUpload(repoUrl, dataDurationDays = 90) {
+  if (!repoUrl || !repoUrl.startsWith("http")) {
+    console.error("❌ Please provide a valid Hugging Face repo URL");
+    process.exit(1);
+  }
+
   const uploader = new ProjectUploader();
 
   try {
@@ -451,14 +490,14 @@ async function main() {
 Usage Options:
 
 1. Command line arguments:
-   node project_upload.js <hugging face repo url>
+   node projectUpload.js <hugging face repo url>
 
 2. Interactive mode (no arguments):
-   node project_upload.js
+   node projectUpload.js
 
 Examples:
-   node project_upload.js https://huggingface.co/username/repo_name
-   node project_upload.js  # Interactive mode
+   node projectUpload.js https://huggingface.co/username/repo_name
+   node projectUpload.js  # Interactive mode
 
 Features:
    - Creates a single ZIP containing all files
