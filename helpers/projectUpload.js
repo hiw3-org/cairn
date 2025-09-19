@@ -1,4 +1,3 @@
-/**
  * This script uploads a Hugging Face repository to Filecoin via the Synapse SDK.
  * It initializes the Synapse SDK, downloads the repository from hf, creates a ZIP bundle, estimates storage cost,
  * ensures payment setup, uploads the ZIP to Filecoin, logs upload details, and cleans up local files.
@@ -21,8 +20,6 @@
  * Environment Setup:
  * Create a .env file with
  * PRIVATE_KEY=0x1234567890abcdef...
- *
- */
 import { Synapse, RPC_URLS } from "@filoz/synapse-sdk";
 import { ethers } from "ethers";
 import fs from "fs";
@@ -205,7 +202,6 @@ export class ProjectUploader {
     if (!fs.existsSync(repoPath)) {
       throw new Error(`Repo path does not exist: ${repoPath}`);
     }
-
     const timestamp = Date.now();
     const repoName = path.basename(repoPath);
     const files = fs.readdirSync(repoPath);
@@ -355,7 +351,6 @@ export class ProjectUploader {
     if (!fs.existsSync(dirPath)) {
       throw new Error(`Directory does not exist: ${dirPath}`);
     }
-
     let totalSize = 0;
 
     const walkDirectory = (currentPath) => {
