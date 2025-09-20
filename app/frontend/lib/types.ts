@@ -273,7 +273,7 @@ export interface ApiUserProfile {
 
 // Backend Project types (from your server)
 export interface ApiProject {
-  id: string;
+  _id: string;
   title: string;
   researcher_id: string;
   field: "llm" | "vision" | "nlp" | "robotics" | "ml" | "ai" | "other";
