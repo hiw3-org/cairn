@@ -9,6 +9,7 @@ import {
   ProjectStatus,
 } from "../../lib/types";
 import { MOCK_USERS } from "../../lib/constants";
+import { useApi } from "../../context/api-context";
 import {
   SearchIcon,
   ChevronDownIcon,
@@ -48,6 +49,7 @@ export const OutputsLibrary = ({
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
 }) => {
+  const { downloadFilecoinFile, isLoading, error } = useApi();
   const [selectedOutput, setSelectedOutput] = useState<LibraryOutput | null>(
     null
   );
@@ -102,6 +104,18 @@ export const OutputsLibrary = ({
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [activeLicenses, setActiveLicenses] = useState<string[]>([]);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
+
+  // --- Download Handler ---
+  const handleFilecoinDownload = async () => {
+    try {
+      await downloadFilecoinFile(
+        "bafkzcibdtaaqokx37h22hakicy67potrkdnsdxeuiqlnwhhzs6y5pbma3xcqtkaz",
+        "test-dataset.zip"
+      );
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
+  };
 
   // --- Memoized Filtering and Sorting ---
   const filteredOutputs = useMemo(() => {
@@ -332,11 +346,12 @@ export const OutputsLibrary = ({
       <div className="col-span-12 md:col-span-4 flex md:justify-between items-center gap-4">
         <ReproducibilityBadge status={output.reproducibility} />
         <button
-          onClick={(e) => e.stopPropagation()}
-          className="group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg transition-all duration-300 ease-in-out hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+          onClick={handleFilecoinDownload}
+          disabled={isLoading}
+          className="group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg transition-all duration-300 ease-in-out hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           <StorageIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-          <span>Download from Filecoin</span>
+          <span>{isLoading ? "Downloading..." : "Test Download"}</span>
         </button>
       </div>
     </div>
@@ -361,7 +376,14 @@ export const OutputsLibrary = ({
             </p>
           </div>
           <button
-            onClick={() => onSelectProject(project)}
+            onClick={() => {
+              console.log(
+                "View Project clicked for:",
+                project.title,
+                project.id
+              );
+              onSelectProject(project);
+            }}
             className="flex items-center space-x-2 font-semibold text-primary text-sm py-1 px-3 rounded-full hover:bg-primary-light dark:hover:bg-primary/20"
           >
             <span>View Project</span>
@@ -390,6 +412,15 @@ export const OutputsLibrary = ({
 
   return (
     <div className="space-y-8">
+      {/* Error display */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200 text-sm">
+            Download error: {error}
+          </p>
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold text-text-primary dark:text-dark-text-primary">
           Reproduced Projects

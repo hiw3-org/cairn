@@ -11,6 +11,7 @@ import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { useAppContext } from "./context/app-provider";
 import { useContract } from "./context/contract-context";
+import { useFileCoinDownload } from "./context/filecoin-context";
 import { useApi } from "./context/api-context";
 import {
   UserRole,
@@ -168,7 +169,17 @@ const AppLayout = ({
   );
 };
 
-const PublicLayout = ({ children }: { children: React.ReactNode }) => {
+const PublicLayout = ({
+  children,
+  selectedProject,
+  onSelectProject,
+  onBackToLibrary,
+}: {
+  children: React.ReactNode;
+  selectedProject?: Project | null;
+  onSelectProject?: (project: Project) => void;
+  onBackToLibrary?: () => void;
+}) => {
   const { goToLandingPage } = useAppContext();
   return (
     <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex flex-col">
@@ -284,6 +295,8 @@ export function App() {
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = React.useState<StaticPage>("landing");
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
+  const [guestSelectedProject, setGuestSelectedProject] =
+    React.useState<Project | null>(null);
 
   const {
     userRole,
@@ -308,6 +321,14 @@ export function App() {
   const [activeDashboardPage, setActiveDashboardPage] = React.useState(
     userRole === UserRole.Researcher ? "outputs" : "dashboard"
   );
+
+  const handleGuestSelectProject = (project: Project) => {
+    setGuestSelectedProject(project);
+  };
+
+  const handleGuestBackToLibrary = () => {
+    setGuestSelectedProject(null);
+  };
 
   // Modal states
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] =
@@ -361,10 +382,10 @@ export function App() {
       );
       console.log("Converted projects:", convertedProjects);
       setProjects(convertedProjects);
-      addToast(
-        `Loaded ${convertedProjects.length} projects from server`,
-        "success"
-      );
+      // addToast(
+      //   `Loaded ${convertedProjects.length} projects from server`,
+      //   "success"
+      // );
     } catch (error) {
       console.error("Failed to load projects:", error);
       addToast("Failed to load projects from server", "error");
@@ -401,6 +422,7 @@ export function App() {
   };
 
   const handleSelectProject = (project: Project) => {
+    console.log("handleSelectProject called with:", project.title, project.id);
     setSelectedProject(project);
   };
 
@@ -501,6 +523,7 @@ export function App() {
   }, [userRole]);
 
   if (forceShowLanding) {
+    console.log("Rendering landing page");
     return (
       <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
     );
@@ -517,10 +540,33 @@ export function App() {
                   Loading projects from server...
                 </div>
               </div>
+            ) : guestSelectedProject ? (
+              <ProjectDetailView
+                project={guestSelectedProject}
+                onBack={handleGuestBackToLibrary}
+                onPorSubmitClick={() => {
+                  // For guests, maybe show a "Please login" message
+                  addToast(
+                    "Please login to submit proof of reproducibility",
+                    "info"
+                  );
+                }}
+                onViewReproducibility={() => {
+                  // For guests, maybe show a "Please login" message
+                  addToast(
+                    "Please login to view reproducibility details",
+                    "info"
+                  );
+                }}
+                onGetProofClick={() => {
+                  // For guests, maybe show a "Please login" message
+                  addToast("Please login to access proof features", "info");
+                }}
+              />
             ) : (
               <OutputsLibrary
                 allProjects={projects}
-                onSelectProject={handleSelectProject}
+                onSelectProject={handleGuestSelectProject}
               />
             )}
           </div>
@@ -539,13 +585,14 @@ export function App() {
 
   if (!currentUser) {
     // This state should be very brief after connection
+    console.log("No current user, showing loading");
     return (
       <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
         Loading user profile...
       </div>
     );
   }
-
+  console.log("About to render main AppLayout");
   return (
     <>
       <AppLayout
@@ -560,39 +607,53 @@ export function App() {
               Loading projects from server...
             </div>
           )}
-          {selectedProject ? (
-            <ProjectDetailView
-              project={selectedProject}
-              onBack={handleBackToDashboard}
-              onPorSubmitClick={() => setIsPorModalOpen(true)}
-              onViewReproducibility={(rep) =>
-                handleViewReproducibility(rep, selectedProject)
-              }
-            />
-          ) : userRole === UserRole.Researcher ? (
-            <ResearcherDashboard
-              key={`researcher-${activeDashboardPage}`}
-              projects={projects}
-              onSelectProject={handleSelectProject}
-              onNewProject={() => setIsNewProjectModalOpen(true)}
-              currentUser={currentUser}
-              activePage={activeDashboardPage}
-              onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
-              onNavigate={handleDashboardNavigation}
-              onApplyToFunding={handleOpenApplyFundingModal}
-            />
-          ) : userRole === UserRole.ImpactOwner ? (
-            <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
-          ) : (
-            <FunderDashboard
-              key={`funder-${activeDashboardPage}`}
-              projects={projects}
-              onSelectProject={handleSelectProject}
-              activePage={activeDashboardPage}
-              onNavigate={handleDashboardNavigation}
-              onViewInfo={handleOpenFundingRoundDetail}
-            />
-          )}
+          {(() => {
+            console.log("Dashboard render check:", {
+              selectedProject,
+              userRole,
+              activeDashboardPage,
+            });
+            return selectedProject ? (
+              <>
+                {console.log(
+                  "About to render ProjectDetailView for:",
+                  selectedProject.title
+                )}
+                <ProjectDetailView
+                  project={selectedProject}
+                  onBack={handleBackToDashboard}
+                  onPorSubmitClick={() => setIsPorModalOpen(true)}
+                  onViewReproducibility={(rep) =>
+                    handleViewReproducibility(rep, selectedProject)
+                  }
+                  onGetProofClick={() => handleOpenProofModal(selectedProject)}
+                />
+              </>
+            ) : userRole === UserRole.Researcher ? (
+              <ResearcherDashboard
+                key={`researcher-${activeDashboardPage}`}
+                projects={projects}
+                onSelectProject={handleSelectProject}
+                onNewProject={() => setIsNewProjectModalOpen(true)}
+                currentUser={currentUser}
+                activePage={activeDashboardPage}
+                onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
+                onNavigate={handleDashboardNavigation}
+                onApplyToFunding={handleOpenApplyFundingModal}
+              />
+            ) : userRole === UserRole.ImpactOwner ? (
+              <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
+            ) : (
+              <FunderDashboard
+                key={`funder-${activeDashboardPage}`}
+                projects={projects}
+                onSelectProject={handleSelectProject}
+                activePage={activeDashboardPage}
+                onNavigate={handleDashboardNavigation}
+                onViewInfo={handleOpenFundingRoundDetail}
+              />
+            );
+          })()}
         </div>
       </AppLayout>
 

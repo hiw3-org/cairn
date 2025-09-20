@@ -36,6 +36,15 @@ interface ApiContextType {
   ) => Promise<{ projects: ApiProject[]; pagination: any }>;
   createProject: (projectData: CreateProjectData) => Promise<ApiProject>;
 
+  // Filecoin
+  downloadFilecoinFile: (cid: string, filename?: string) => Promise<void>;
+  getFilecoinFileInfo: (cid: string) => Promise<{
+    cid: string;
+    downloadUrl: string;
+    estimatedFilename: string;
+  }>;
+  checkFilecoinHealth: () => Promise<{ status: string; initialized: boolean }>;
+
   // Users (admin only)
   fetchAllUsers: (params?: {
     page?: number;
@@ -300,6 +309,128 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
+  // Filecoin functions
+  const downloadFilecoinFile = async (
+    cid: string,
+    filename?: string
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (filename) params.append("filename", filename);
+
+      const response = await fetch(
+        `${API_BASE}/filecoin/download/${cid}?${params}`,
+        {
+          method: "GET",
+          // Remove Content-Type header for downloads to avoid issues
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Download failed");
+      }
+
+      // Check if the response is actually binary data
+      const contentType = response.headers.get("content-type");
+      console.log("Response content-type:", contentType);
+      console.log("Response size:", response.headers.get("content-length"));
+
+      // Get filename from response headers or use provided/default
+      const contentDisposition = response.headers.get("content-disposition");
+      let downloadFilename = filename;
+
+      if (!downloadFilename && contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        downloadFilename = match ? match[1] : `file_${cid.slice(0, 8)}.zip`;
+      } else if (!downloadFilename) {
+        downloadFilename = `file_${cid.slice(0, 8)}.zip`;
+      }
+
+      // Use arrayBuffer for binary data to avoid corruption
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], {
+        type: "application/octet-stream",
+      });
+
+      console.log("Downloaded blob size:", blob.size);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = downloadFilename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      handleApiError(error, "Failed to download file from Filecoin");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getFilecoinFileInfo = async (cid: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/filecoin/info/${cid}`, {
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<{
+        cid: string;
+        downloadUrl: string;
+        estimatedFilename: string;
+      }> = await response.json();
+
+      if (data.status === "success" && data.data) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Failed to get file info");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to get Filecoin file info");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkFilecoinHealth = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/filecoin/health`, {
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<{
+        initialized: boolean;
+        timestamp: string;
+      }> = await response.json();
+
+      if (data.status === "success" && data.data) {
+        return {
+          status: data.status,
+          initialized: data.data.initialized,
+        };
+      } else {
+        throw new Error(data.message || "Health check failed");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Filecoin health check failed");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Admin functions
   const fetchAllUsers = async (params?: { page?: number; limit?: number }) => {
     setIsLoading(true);
@@ -340,6 +471,9 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     getProjectById,
     getProjectsByField,
     createProject,
+    downloadFilecoinFile,
+    getFilecoinFileInfo,
+    checkFilecoinHealth,
     fetchAllUsers,
     isLoading,
     error,
