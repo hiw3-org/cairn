@@ -9,8 +9,6 @@ import {
 } from "../../lib/types";
 import {
   ChevronLeftIcon,
-  PlusIcon,
-  CodeIcon,
   DownloadIcon,
   StarIcon,
   BookOpenIcon,
@@ -86,7 +84,7 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
               $
               {project.fundingPool > 0
                 ? project.fundingPool.toLocaleString()
-                : "$0"}
+                : "0"}
             </p>
           </div>
         </div>
@@ -151,6 +149,7 @@ const OutputCard = ({
   output: Output;
   projectStatus: ProjectStatus;
 }) => {
+  // const { download, isDownloading } = useFileCoinDownload();
   const reproducibilityStatus: ReproducibilityStatus =
     projectStatus === ProjectStatus.Reproducible ||
     projectStatus === ProjectStatus.Funded
@@ -196,7 +195,7 @@ const OutputCard = ({
         </div>
         <div className="flex items-center space-x-2">
           <button className="flex items-center space-x-2 bg-primary text-white text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-primary-hover transition-colors">
-            <IpfsIcon className="w-4 h-4" />
+            {/* <IpfsIcon className="w-4 h-4" /> */}
             <span>Download</span>
           </button>
         </div>
@@ -219,7 +218,9 @@ export const ProjectDetailView = ({
   onGetProofClick: (project: Project) => void;
 }) => {
   const { currentUser } = useAppContext();
-  const isOwner = project.ownerId === currentUser.walletAddress;
+  const isOwner = currentUser
+    ? project.ownerId === currentUser.walletAddress
+    : false;
   const [isStarred, setIsStarred] = React.useState(false);
 
   return (
@@ -229,7 +230,7 @@ export const ProjectDetailView = ({
         className="flex items-center space-x-2 text-sm text-primary font-semibold mb-6 hover:underline"
       >
         <ChevronLeftIcon className="w-5 h-5" />
-        <span>Back to Dashboard</span>
+        <span>{currentUser ? "Back to Dashboard" : "Back to Projects"}</span>
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -334,7 +335,7 @@ export const ProjectDetailView = ({
             <div className="space-y-4">
               {project.outputs.map((output) => (
                 <OutputCard
-                  key={output.id}
+                  key={output.id} // Change from output._id to output.id
                   output={output}
                   projectStatus={project.status}
                 />
