@@ -1,3 +1,8 @@
+
+//******************
+// This modal is not used in this version of the app. It is kept here for reference and potential future use.
+//****************** 
+
 import React, { useState } from "react";
 import { Modal } from "../ui/modal";
 import {

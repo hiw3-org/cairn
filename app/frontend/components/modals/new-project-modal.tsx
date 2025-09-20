@@ -1,3 +1,8 @@
+//******************
+// This modal is not used in this version of the app. It is kept here for reference and potential future use.
+//****************** 
+
+
 "use client";
 
 import React, { useState } from "react";
