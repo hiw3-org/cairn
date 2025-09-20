@@ -1,68 +1,90 @@
-import type { Client } from "@web3-storage/w3up-client";
 
 export enum UserRole {
-  Scientist = "Scientist",
-  Funder = "Funder",
+  Researcher = 'Researcher',
+  Funder = 'Funder',
+  ImpactOwner = 'Impact Owner',
 }
 
 export enum ProjectStatus {
-  Draft = "Draft",
-  Active = "Active",
-  Funded = "Funded",
-  Archived = "Archived",
+  Draft = 'Draft',
+  PendingEvaluation = 'Pending Evaluation',
+  Reproducible = 'Reproducible',
+  InReview = 'In Review',
+  Funded = 'Funded',
 }
 
 export enum ResearchDomain {
-  Robotics = "Robotics",
-  Simulation = "Simulation",
-  Hardware = "Hardware",
+  Robotics = 'Robotics',
+  Simulation = 'Simulation',
+  Hardware = 'Hardware',
 }
 
 export enum PoRStatus {
-  Waiting = "Waiting",
-  Disputed = "Disputed",
-  Success = "Success",
+    Waiting = 'Waiting',
+    Disputed = 'Disputed',
+    Success = 'Success',
+}
+
+export interface ImpactAssetOwner {
+    walletAddress: string;
+    contribution: string;
+    ownershipPercentage: number;
+    claimed?: boolean;
+}
+
+export interface Metric {
+  value: number;
+  trend: number; // percentage change
+}
+
+export interface AdoptionMetrics {
+    githubStars: Metric;
+    githubForks: Metric;
+    dependencies: Metric;
+    huggingFaceDownloads: Metric;
+    huggingFaceModels?: string[];
+    huggingFaceDatasets?: string[];
+    huggingFaceSpaces?: string[];
+}
+
+export interface ScientificMetrics {
+    citations: Metric;
+    arxivDownloads: Metric;
 }
 
 export interface Project {
   id: string;
   ownerId: string;
-  createdAt: string;
   title: string;
   description: string;
+  tags: string[];
+  status: ProjectStatus;
+  domain: ResearchDomain;
+  coverImageUrl?: string;
+  cid: string;
+  hypercertFraction: number;
+  startDate: string;
+  endDate: string;
+  lastOutputDate: string;
+  reproducibilities: Reproducibility[];
+  fundingPool: number;
+  fundingPrice?: number;
+  impactScore: number;
+  outputs: Output[];
+  reproducibilityRequirements: string[];
   organization?: string;
   additionalInfoUrl?: string;
-  cid: string;
-  fundingGoal: number;
-  output: ProjectOutput[];
-  reproducibilities: ProofOfReproducibility[];
-  funder: string;
-  image_url?: string;
-  tags?: string[];
-  domain?: ResearchDomain;
-  impact: number; // Impact level as a number (0-3)
-  tokenIds: bigint[];
-  tokenUnits: number[];
-  tokenOwners: string[];
+  impactAssetOwners: ImpactAssetOwner[];
+  scientificMetrics?: ScientificMetrics;
+  adoptionMetrics?: AdoptionMetrics;
+  stars?: number;
+  license?: string;
 }
 
-export const TOOL_OPTIONS = [
-  "Python",
-  "ROS",
-  "MuJoCo",
-  "AWS",
-  "BitRobot",
-] as const;
-export type ToolOption = (typeof TOOL_OPTIONS)[number];
+export const TOOL_OPTIONS = ['Python', 'ROS', 'MuJoCo', 'AWS', 'BitRobot'] as const;
+export type ToolOption = typeof TOOL_OPTIONS[number];
 
-export type OutputType =
-  | "Document"
-  | "Dataset"
-  | "Code"
-  | "Tools & External Services"
-  | "Output Log"
-  | "Others"
-  | "Video";
+export type OutputType = 'Document' | 'Dataset' | 'Code' | 'Tools & External Services' | 'Output Log' | 'Others' | 'Video';
 
 export interface Output {
   id: string;
@@ -76,32 +98,34 @@ export interface Output {
     tools?: ToolOption[];
     otherText?: string;
   };
+  metrics?: {
+    downloads: number;
+    stars: number;
+    citations: number;
+  };
 }
 
+
 export interface Reproducibility {
-  proof_id: string;
-  project_id: string;
-  recorder: string;
+  id: string;
   timestamp: string;
-  description: string;
-  code_url: string;
-  output_url: string;
-  video_url?: string;
-  dispute?: boolean;
-  valid?: boolean;
-  dispute_uri?: string;
+  evidence: Output[];
+  notes: string;
+  verifier: string; // wallet address
+  status: PoRStatus;
 }
 
 export interface ToastInfo {
   id: number;
   message: string;
-  type: "success" | "error" | "info";
+  type: 'success' | 'error' | 'info';
 }
 
 export interface UserProfile {
-  walletAddress: string;
-  porContributedCount: number;
-  role: UserRole;
+    walletAddress: string;
+    porContributedCount: number;
+    name: string;
+    isVerified: boolean;
 }
 
 export interface FundingEvent {
@@ -111,58 +135,97 @@ export interface FundingEvent {
   amount: number;
   timestamp: string;
   funderWallet: string;
+  txHash: string;
 }
 
-export interface ProjectRegistration {
+export interface Opportunity {
+    id: string;
+    issuer: string;
+    amount: string;
+    currency: string;
+    title: string;
+    deadline: string;
+    isNew: boolean;
+    url: string;
+    creationDate?: string;
+}
+
+export interface RoundApplicant {
+  projectId: string;
+  projectTitle: string;
+  verifiedPors: number;
+  impactLevel: 'High' | 'Medium' | 'Low';
+  hfUpvotes: number;
+  communityScore: number;
+  fundingPercentage?: number;
+  fundingAmount?: number;
+}
+
+export interface FundingRound {
+  id: string;
   title: string;
   description: string;
-  created_at: string;
-  owner_address: string;
-  organization: string;
-  url: string;
-  image_url?: string;
-  tags?: string[];
-  domain?: ResearchDomain;
+  poolSize: number;
+  topics: string[];
+  applicationDeadline: string;
+  status: 'Open' | 'Voting' | 'Closed';
+  applicationCount: number;
+  totalImpactScore: number;
+  applicants?: RoundApplicant[];
+  evaluationMethod?: 'Delegated Evaluators' | 'Cairn Core' | 'DAO Vote';
+  selectionCriteria?: string;
+  evaluationDeadline: string;
+  distributionDeadline: string;
+  distributionMethod: 'Even' | 'By Score' | 'Manual';
+  maxProjects?: number;
+  funderName?: string;
+  creationDate?: string;
+  impactAssetMinted?: boolean;
 }
 
-export type Tools =
-  | "Python"
-  | "R"
-  | "JavaScript"
-  | "SQL"
-  | "Java"
-  | "C++"
-  | "Go"
-  | "Rust";
+export interface Notification {
+    id: string;
+    type: 'deadline' | 'review_needed' | 'new_submission' | 'impact_event' | 'system_nudge' | 'round_created';
+    title: string;
+    description: string;
+    date: string; // ISO string
+    relatedId: string; // project or round ID
+    action?: {
+        text: string;
+        link?: string;
+    };
+}
 
-export interface ProjectOutput {
-  paper_url: string;
-  description: string;
-  resources: {
-    dataset_url: string;
-    code_url: string;
-    code_output_url: string;
+
+// --- Outputs Library Types ---
+export type ReproducibilityStatus = 'Verified' | 'Pending' | 'Failed';
+export type LibraryOutputType = 'Model' | 'Dataset' | 'Paper' | 'Space';
+
+export interface LibraryOutput extends Output {
+  projectName: string;
+  projectId: string;
+  projectOwnerName: string;
+  projectTags: string[];
+  libraryType: LibraryOutputType;
+  // FIX: Renamed 'likes' to 'stars' to make the 'metrics' property compatible with the base 'Output' interface.
+  metrics: {
+    downloads: number;
+    stars: number;
+    citations: number;
   };
-  tools: {
-    tools: Tools[];
-    other_tools?: string[];
-  };
+  reproducibility: ReproducibilityStatus;
+  sourceUrl?: string;
+  sourceType?: 'GitHub' | 'Hugging Face' | 'ArXiv' | 'Other';
 }
 
-export interface ProofOfReproducibility {
-  project_id: string;
-  timestamp: string;
-  description: string;
-  code_url: string;
-  output_url: string;
-  video_url?: string;
-}
-
-export interface IpfsClient extends Client {
-  isInitialized: boolean;
-}
-
-export interface DisputeData {
-  proofId: string;
-  description: string;
+export interface HuggingFaceOutput {
+  id: string;
+  type: 'model' | 'dataset' | 'space';
+  name: string;
+  downloads: number;
+  likes: number;
+  lastModified: string;
+  private: boolean;
+  status: 'Not Imported' | 'Imported' | 'Pending Evaluation' | 'Reproducible';
+  cairnProjectId?: string;
 }
