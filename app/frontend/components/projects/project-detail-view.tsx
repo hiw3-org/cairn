@@ -56,7 +56,7 @@ const AddressWithCopy = ({ address }: { address: string }) => {
           e.stopPropagation();
           copy(address);
         }}
-        className="p-1 rounded-full text-text-secondary hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="p-1 rounded-full text-text-secondary hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
         aria-label="Copy address"
       >
         {copied ? (
@@ -75,18 +75,18 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
       <div className="space-y-6">
         {/* Funding Section */}
         <div>
-          <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-3">
+          <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-3">
             Funding
           </h3>
-          <div className="p-4 rounded-lg bg-hf-gray-50 dark:bg-hf-gray-900/50">
-            <p className="text-sm font-semibold text-text-secondary dark:text-dark-text-secondary">
+          <div className="p-4 rounded-lg bg-cairn-gray-50 dark:bg-cairn-gray-900/50">
+            <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary">
               Total Raised
             </p>
             <p className="text-3xl font-bold text-status-success mt-1">
               $
               {project.fundingPool > 0
                 ? project.fundingPool.toLocaleString()
-                : "0"}
+                : "$0"}
             </p>
           </div>
         </div>
@@ -94,7 +94,7 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
         {/* Ownership Section */}
         {project.impactAssetOwners && project.impactAssetOwners.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-2">
+            <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
               Ownership
             </h3>
             <ul className="space-y-2">
@@ -104,7 +104,7 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
                   className="py-2 flex justify-between items-center"
                 >
                   <div>
-                    <p className="font-semibold text-text-primary dark:text-dark-text-primary text-sm">
+                    <p className="font-semibold text-text dark:text-text-dark text-sm">
                       {owner.contribution}
                     </p>
                     <AddressWithCopy address={owner.walletAddress} />
@@ -133,12 +133,12 @@ const ImpactMetric = ({
 }) => (
   <div className="bg-background-light dark:bg-background-dark-light p-4 rounded-lg border border-border dark:border-border-dark">
     <div className="flex items-center space-x-2">
-      <Icon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
-      <p className="text-sm font-medium text-text-secondary dark:text-dark-text-secondary">
+      <Icon className="w-5 h-5 text-text-secondary dark:text-text-dark-secondary" />
+      <p className="text-sm font-medium text-text-secondary dark:text-text-dark-secondary">
         {label}
       </p>
     </div>
-    <p className="mt-1 text-2xl font-bold text-text-primary dark:text-dark-text-primary">
+    <p className="mt-1 text-2xl font-bold text-text dark:text-text-dark">
       {value}
     </p>
   </div>
@@ -160,13 +160,13 @@ const OutputCard = ({
   return (
     <div className="bg-background dark:bg-background-dark-light/50 p-4 rounded-xl border border-border dark:border-border-dark space-y-3">
       <div>
-        <span className="text-xs font-semibold bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-semibold bg-cairn-gray-200 dark:bg-cairn-gray-700 px-2 py-0.5 rounded-full">
           {output.type}
         </span>
-        <p className="font-semibold text-text-primary dark:text-dark-text-primary mt-2">
+        <p className="font-semibold text-text dark:text-text-dark mt-2">
           {output.description}
         </p>
-        <p className="text-xs text-text-secondary dark:text-dark-text-secondary">
+        <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
           Added on {output.timestamp}
         </p>
       </div>
@@ -176,7 +176,7 @@ const OutputCard = ({
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 border-t border-border dark:border-border-dark">
-        <div className="flex items-center space-x-4 text-sm text-text-secondary dark:text-dark-text-secondary">
+        <div className="flex items-center space-x-4 text-sm text-text-secondary dark:text-text-dark-secondary">
           <span className="flex items-center space-x-1" title="Downloads">
             <DownloadIcon className="w-4 h-4" />{" "}
             <span>
@@ -219,7 +219,6 @@ export const ProjectDetailView = ({
   onGetProofClick: (project: Project) => void;
 }) => {
   const { currentUser } = useAppContext();
-  if (!currentUser) return null; // Should not happen if authenticated
   const isOwner = project.ownerId === currentUser.walletAddress;
   const [isStarred, setIsStarred] = React.useState(false);
 
@@ -242,18 +241,18 @@ export const ProjectDetailView = ({
               <div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
                   <StatusBadge status={project.status} />
-                  <span className="text-sm text-text-secondary dark:text-dark-text-secondary">
+                  <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
                     Last updated: {project.lastOutputDate}
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-text-primary dark:text-dark-text-primary">
+                <h1 className="text-3xl font-bold text-text dark:text-text-dark">
                   {project.title}
                 </h1>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {project.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-xs bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full"
+                      className="text-xs bg-cairn-gray-200 dark:bg-cairn-gray-700 px-2 py-0.5 rounded-full"
                     >
                       {tag}
                     </span>
@@ -266,7 +265,7 @@ export const ProjectDetailView = ({
                   className={`p-2 rounded-full transition-colors ${
                     isStarred
                       ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-500/20"
-                      : "hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800"
+                      : "hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800"
                   }`}
                 >
                   {isStarred ? (
@@ -275,13 +274,13 @@ export const ProjectDetailView = ({
                     <StarIcon className="w-5 h-5" />
                   )}
                 </button>
-                <button className="p-2 rounded-full hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800">
+                <button className="p-2 rounded-full hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800">
                   <ShareIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <p className="mt-4 text-text-secondary dark:text-dark-text-secondary">
+            <p className="mt-4 text-text-secondary dark:text-text-dark-secondary">
               {project.description}
             </p>
           </div>
