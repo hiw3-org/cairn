@@ -1,29 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import {
-  Project,
-  ProjectStatus,
-  UserProfile,
-  Reproducibility,
-  PoRStatus,
-} from "../../lib/types";
-import {
-  PlusIcon,
-  FileTextIcon,
-  UploadCloudIcon,
-  BeakerIcon,
-  CheckCircleIcon,
-  ArrowRightIcon,
-  CheckIcon,
-  SearchIcon,
-  FlagIcon,
-  LightbulbIcon,
-  ChevronRightIcon,
-  ChevronDownIcon,
-  InfoIcon,
-  DownloadIcon,
-  EyeIcon,import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Project, ProjectStatus, UserProfile, Reproducibility, PoRStatus, Opportunity, FundingRound, HuggingFaceOutput } from '../../lib/types';
 import { PlusIcon, FileTextIcon, UploadCloudIcon, BeakerIcon, CheckCircleIcon, FlagIcon, ClockIcon, CurrencyDollarIcon, CheckBadgeIcon, GavelIcon, ChevronDownIcon, CloseIcon, HuggingFaceIcon, DownloadIcon, StarIcon, SearchIcon, ExternalLinkIcon, InfoIcon, EyeIcon, ChevronRightIcon } from '../ui/icons';
 import { StatusBadge } from '../ui/status-badge';
