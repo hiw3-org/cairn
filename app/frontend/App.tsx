@@ -203,7 +203,7 @@ const convertApiProjectToFrontendProject = (
   const outputs: Output[] = [];
   if (apiProject.huggingface?.repo_url) {
     outputs.push({
-      id: `${apiProject.id}-hf`,
+      id: `${apiProject._id}`,
       type: "Code",
       timestamp: apiProject.updated_at,
       description: `${apiProject.title} - HuggingFace Repository`,
@@ -223,7 +223,7 @@ const convertApiProjectToFrontendProject = (
   const reproducibilities: Reproducibility[] = [];
   if (apiProject.por?.por_cid) {
     reproducibilities.push({
-      id: `${apiProject.id}-por`,
+      id: `${apiProject._id}-por`,
       timestamp: apiProject.updated_at,
       evidence: outputs, // Reference the outputs we created
       notes: `Proof of Reproducibility stored at CID: ${apiProject.por.por_cid}`,
@@ -233,12 +233,12 @@ const convertApiProjectToFrontendProject = (
   }
 
   return {
-    id: apiProject.id,
+    id: apiProject._id,
     ownerId: apiProject.researcher_id,
     title: apiProject.title,
     description: apiProject.paper?.abstract || apiProject.title,
     tags: [apiProject.field],
-    status: ProjectStatus.PendingEvaluation,
+    status: ProjectStatus.Reproducible,
     domain: ResearchDomain.Robotics,
     coverImageUrl: undefined,
     cid: apiProject.por?.por_cid || "",
@@ -359,6 +359,7 @@ export function App() {
       const convertedProjects = result.projects.map(
         convertApiProjectToFrontendProject
       );
+      console.log("Converted projects:", convertedProjects);
       setProjects(convertedProjects);
       addToast(
         `Loaded ${convertedProjects.length} projects from server`,
