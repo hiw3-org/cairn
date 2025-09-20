@@ -1,51 +1,34 @@
 import React from "react";
-import {
-  Project,
-  Reproducibility,
-  ProjectStatus,
-  PoRStatus,
-} from "../../lib/types";
-import { EyeIcon, FlagIcon, ClockIcon, CheckCircleIcon } from "../ui/icons";
+import { Project, Reproducibility, PoRStatus } from "../../lib/types";
+import { EyeIcon, FlagIcon, ClockIcon, CheckCircleIcon, PlusIcon, BeakerIcon, ClipboardCheckIcon } from "../ui/icons";
+import { MOCK_USERS } from "../../lib/constants";
+import { Tooltip } from "../ui/tooltip";
 
-const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
-  let status: PoRStatus;
-
-  if (rep.valid === true) {
-    status = PoRStatus.Success;
-  } else if (rep.dispute === true) {
-    status = PoRStatus.Disputed;
-  } else {
-    status = PoRStatus.Waiting;
-  }
-
+const PoRTimelineItem = ({ rep, onView, isLast }: { rep: Reproducibility, onView: () => void, isLast: boolean }) => {
   const statusConfig = {
-    [PoRStatus.Success]: {
-      icon: CheckCircleIcon,
-      color: "text-status-success",
-      text: "Success: This submission has been successfully verified.",
-    },
-    [PoRStatus.Waiting]: {
-      icon: ClockIcon,
-      color: "text-status-warning",
-      text: "Waiting: This submission is in 5 minute dispute window. / days in production app.",
-    },
-    [PoRStatus.Disputed]: {
-      icon: FlagIcon,
-      color: "text-status-danger",
-      text: "Disputed: This submission has been flagged and is under review.",
-    },
+        [PoRStatus.Success]: { icon: CheckCircleIcon, color: 'text-status-success', bg: 'bg-status-success-bg dark:bg-status-success-bg-dark', text: 'Success' },
+        [PoRStatus.Waiting]: { icon: ClockIcon, color: 'text-status-warning', bg: 'bg-status-warning-bg dark:bg-status-warning-bg-dark', text: 'Waiting' },
+        [PoRStatus.Disputed]: { icon: FlagIcon, color: 'text-status-danger', bg: 'bg-status-danger-bg dark:bg-status-danger-bg-dark', text: 'Disputed' },
   };
-
-  const config = statusConfig[status];
+    const config = statusConfig[rep.status];
   const Icon = config.icon;
+    const authorName = MOCK_USERS.find(u => u.walletAddress === rep.verifier)?.name || rep.verifier.substring(0, 10) + '...';
 
   return (
-    <div className="relative group flex items-center justify-center">
-      <Icon className={`w-5 h-5 ${config.color}`} />
-      <span className="absolute bottom-full mb-2 w-max max-w-xs px-2 py-1 bg-text text-background-light text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-        {config.text}
-        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-text"></div>
-      </span>
+        <div className="relative flex items-start">
+            {!isLast && <div className="absolute top-5 left-[11px] h-full w-0.5 bg-border dark:bg-border-dark" />}
+            <div className={`relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${config.bg}`}>
+                <Icon className={`h-4 w-4 ${config.color}`} />
+            </div>
+            <div className="ml-4 flex-grow">
+                <div className="flex justify-between items-center">
+                    <p className="font-semibold text-sm text-text-primary dark:text-dark-text-primary">{config.text} by <span title={rep.verifier}>{authorName}</span></p>
+                    <button onClick={onView} className="p-1 rounded-full text-text-secondary hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800">
+                        <EyeIcon className="w-4 h-4"/>
+                    </button>
+                </div>
+                <p className="text-xs text-text-secondary dark:text-dark-text-secondary">{new Date(rep.timestamp).toLocaleDateString()}</p>
+            </div>
     </div>
   );
 };
@@ -55,107 +38,61 @@ export default function PoRModule({
   isOwner,
   onPorSubmitClick,
   onViewReproducibility,
-  className,
+    onGetProofClick,
 }: {
   project: Project;
   isOwner: boolean;
   onPorSubmitClick: () => void;
   onViewReproducibility: (rep: Reproducibility) => void;
-  className?: string;
+    onGetProofClick: () => void;
 }) {
-  return (
-    <div className={`space-y-6 ${className || ""}`}>
-      <h3
-        className={`text-xl font-semibold ${
-          project.output.length === 0
-            ? "text-text-secondary dark:text-text-dark-secondary opacity-60"
-            : "text-text dark:text-text-dark"
-        }`}
-      >
-        Reproducibility
-      </h3>
+    const hasSuccessPor = React.useMemo(() => 
+        project.reproducibilities.some(r => r.status === PoRStatus.Success), 
+    [project.reproducibilities]);
 
+  return (
+        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark flex flex-col">
+            <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-4">Reproducibility</h3>
+            
+            <div>
+                {project.reproducibilities.length > 0 ? (
+                    <div className="space-y-6">
+                        {project.reproducibilities.map((rep, index) => (
+                            <PoRTimelineItem 
+                                key={rep.id} 
+                                rep={rep} 
+                                onView={() => onViewReproducibility(rep)} 
+                                isLast={index === project.reproducibilities.length - 1} 
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-8 flex flex-col justify-center items-center">
+                        <BeakerIcon className="mx-auto h-12 w-12 text-text-secondary/50" />
+                        <h4 className="mt-4 text-md font-semibold text-text-primary dark:text-dark-text-primary">Not Yet Tested</h4>
+                        <p className="mt-1 text-sm text-text-secondary dark:text-dark-text-secondary">
+                            This project has not been submitted for reproducibility evaluation.
+                        </p>
       {!isOwner && (
-        <div className="relative group w-full">
-          <button
-            onClick={onPorSubmitClick}
-            className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg ${
-              project.output.length === 0
-                ? "bg-cairn-gray-200 text-text-secondary cursor-not-allowed opacity-60"
-                : "bg-primary text-primary-text hover:bg-primary-hover"
-            }`}
-            disabled={project.output.length === 0}
-          >
-            Submit for Reproducibility
+                            <button onClick={onPorSubmitClick} className="mt-6 flex items-center mx-auto space-x-2 bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors text-sm shadow-md">
+                                <PlusIcon className="w-4 h-4" />
+                                <span>Be the First to Evaluate</span>
           </button>
-          {project.output.length === 0 && (
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-xs px-2 py-1 bg-text text-background-light text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-              Project needs to register outputs first
-              <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-text"></div>
-            </span>
           )}
         </div>
       )}
-      <div>
-        <h4 className="font-semibold mb-2 text-text dark:text-text-dark">
-          Submissions ({project.reproducibilities.length})
-        </h4>
-        <div className="border border-border dark:border-border-dark rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-cairn-gray-50 dark:bg-cairn-gray-800/50 text-left text-xs text-text-secondary dark:text-text-dark-secondary uppercase">
-              <tr>
-                <th className="p-3 font-semibold text-center">Status</th>
-                <th className="p-3 font-semibold">Author</th>
-                <th className="p-3 font-semibold">Date</th>
-                <th className="p-3 font-semibold text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border dark:divide-border-dark">
-              {project.reproducibilities.map((rep) => {
-                return (
-                  <tr
-                    key={rep.proof_id}
-                    className="hover:bg-cairn-gray-50 dark:hover:bg-cairn-gray-800/50 transition-colors"
-                  >
-                    <td className="p-3 text-center">
-                      <PoRStatusBadge rep={rep} />
-                    </td>
-                    <td className="p-3" title={rep.recorder}>
-                      <span className="font-semibold text-text dark:text-text-dark font-mono">
-                        ...{rep.recorder.slice(-3)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-text-secondary dark:text-text-dark-secondary whitespace-nowrap">
-                      {new Date(rep.timestamp * 1000).toLocaleDateString()}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex justify-end items-center space-x-2">
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-border dark:border-border-dark">
                         <button
-                          onClick={() => onViewReproducibility(rep)}
-                          className="bg-cairn-gray-200 dark:bg-cairn-gray-700 text-text-secondary dark:text-text-dark-secondary text-xs font-semibold py-1 px-2.5 rounded-md hover:bg-cairn-gray-300 dark:hover:bg-cairn-gray-600 transition-colors"
-                          title="View Details"
-                        >
-                          View
+                    onClick={onGetProofClick}
+                    disabled={!hasSuccessPor}
+                    className="w-full flex items-center justify-center space-x-2 text-sm font-semibold py-2 px-4 rounded-lg transition-colors bg-primary-light text-primary hover:bg-blue-200 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-light dark:disabled:hover:bg-primary/20"
+                >
+                    <ClipboardCheckIcon className="w-5 h-5" />
+                    <span>Get Proof of Reproducibility</span>
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {project.reproducibilities.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="p-4 text-center text-text-secondary"
-                  >
-                    No submissions yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
-}
+};
