@@ -1,6 +1,6 @@
 //******************
 // This modal is not used in this version of the app. It is kept here for reference and potential future use.
-//****************** 
+//******************
 
 "use client";
 
@@ -8,7 +8,6 @@ import { useState, ComponentProps, memo } from "react";
 import { Project, ProofOfReproducibility } from "../../lib/types";
 import { Modal } from "../ui/modal";
 import { SpinnerIcon, CheckCircleIcon, AlertTriangleIcon } from "../ui/icons";
-import { useIpfsService } from "../../ipfs/ipfsService";
 import { useContract } from "../../context/contract-context";
 
 // Step-related types
@@ -111,7 +110,6 @@ export const SubmitPorModal = ({
   onSubmit: (data: ProofOfReproducibility) => void;
 }) => {
   const { recordPoR } = useContract();
-  const { uploadProofOfReproducibility } = useIpfsService();
 
   const [description, setDescription] = useState("");
   const [code_url, setCodeUrl] = useState("");

@@ -1,7 +1,6 @@
-
 //******************
 // This modal is not used in this version of the app. It is kept here for reference and potential future use.
-//****************** 
+//******************
 
 import React, { useState } from "react";
 import { Modal } from "../ui/modal";
@@ -13,7 +12,6 @@ import {
 } from "../ui/icons";
 import { Project, ProjectOutput, Tools } from "../../lib/types";
 import { TOOL_OPTIONS } from "../../lib/constants";
-import { useIpfsService } from "../../ipfs/ipfsService";
 import { useContract } from "../../context/contract-context";
 
 // Types for creation process
@@ -109,7 +107,6 @@ export const AddOutputModal = ({
   onClose: () => void;
   onAddOutputs: (outputs: ProjectOutput[]) => void;
 }) => {
-  const { uploadProjectOutput } = useIpfsService();
   const { addOutput } = useContract();
 
   const [description, setDescription] = useState("");

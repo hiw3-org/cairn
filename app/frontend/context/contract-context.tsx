@@ -2,8 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { ethers, JsonRpcProvider } from "ethers";
 import CairnAbi from "../abi/Cairn.json";
 import HypercertAbi from "../abi/IHypercertToken.json";
-import { claim } from "@web3-storage/w3up-client/capability/access";
-import { sign } from "crypto";
 
 const CONTRACT_ADDRESS = "0xdbe926f96e2250d7C4901f118225566Dc654B969";
 const HYPERCERT_ADDRESS = "0x822f17a9a5eecfd66dbaff7946a8071c265d1d07";

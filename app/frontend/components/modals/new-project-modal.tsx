@@ -1,7 +1,6 @@
 //******************
 // This modal is not used in this version of the app. It is kept here for reference and potential future use.
-//****************** 
-
+//******************
 
 "use client";
 
@@ -19,7 +18,6 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
 } from "../ui/icons";
-import { useIpfsService } from "../../ipfs/ipfsService";
 import { useContract } from "../../context/contract-context";
 
 // Types for creation process
@@ -126,7 +124,6 @@ export const NewProjectModal = ({
   onClose: () => void;
   onAddProject: (p: Project) => void;
 }) => {
-  const { registerProject } = useIpfsService();
   const { mintHypercert, approveHypercertTransfer, registerProjectCairn } =
     useContract();
 
