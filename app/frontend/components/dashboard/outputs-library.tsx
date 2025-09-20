@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Project, LibraryOutput, LibraryOutputType, ReproducibilityStatus, ProjectStatus } from '../../lib/types';
 import { MOCK_USERS } from '../../lib/constants';
-import { SearchIcon, ChevronDownIcon, DownloadIcon, StarIcon, BookOpenIcon, CloseIcon, IpfsIcon, ChevronRightIcon } from '../ui/icons';
+import { SearchIcon, ChevronDownIcon, DownloadIcon, StarIcon, BookOpenIcon, CloseIcon, StorageIcon, ChevronRightIcon } from '../ui/icons';
 import { OutputDetailsDrawer } from './output-details-drawer';
 import { ReproducibilityBadge } from '../ui/reproducibility-badge';
 import { StatusBadge } from '../ui/status-badge';
@@ -190,8 +190,8 @@ export const OutputsLibrary = ({ allProjects, onSelectProject }: { allProjects: 
                     onClick={e => e.stopPropagation()}
                     className="group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg transition-all duration-300 ease-in-out hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 >
-                    <IpfsIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-                    <span>Download from IPFS</span>
+                    <StorageIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                    <span>Download from Filecoin</span>
                 </button>
             </div>
         </div>
@@ -224,7 +224,7 @@ export const OutputsLibrary = ({ allProjects, onSelectProject }: { allProjects: 
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold text-text-primary dark:text-dark-text-primary">Reproduced Projects</h1>
-                <p className="mt-1 text-text-secondary dark:text-dark-text-secondary">Browse projects that have been successfully reproduced by the community. Download verified assets from IPFS.</p>
+                <p className="mt-1 text-text-secondary dark:text-dark-text-secondary">Browse projects that have been successfully reproduced by the community. Download verified assets from Filecoin.</p>
             </div>
 
             <div className="space-y-4">
