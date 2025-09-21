@@ -232,14 +232,16 @@ const convertApiProjectToFrontendProject = (
 
   // Create reproducibilities array with proper structure
   const reproducibilities: Reproducibility[] = [];
-  if (apiProject.por?.por_cid) {
+  if (apiProject.por) {
     reproducibilities.push({
       id: `${apiProject._id}-por`,
       timestamp: apiProject.updated_at,
       evidence: outputs, // Reference the outputs we created
-      notes: `Proof of Reproducibility stored at CID: ${apiProject.por.por_cid}`,
+      notes: apiProject.por.por_cid
+        ? `Proof of Reproducibility stored at CID: ${apiProject.por.por_cid}`
+        : "Proof of Reproducibility is pending.",
       verifier: apiProject.researcher_id, // Use researcher as verifier for now
-      status: PoRStatus.Success,
+      status: apiProject.por.por_cid ? PoRStatus.Success : PoRStatus.Waiting,
     });
   }
 
@@ -249,7 +251,9 @@ const convertApiProjectToFrontendProject = (
     title: apiProject.title,
     description: apiProject.paper?.abstract || apiProject.title,
     tags: [apiProject.field],
-    status: ProjectStatus.Reproducible,
+    status: apiProject.por?.por_cid
+      ? ProjectStatus.Reproducible
+      : ProjectStatus.InReview,
     domain: ResearchDomain.Robotics,
     coverImageUrl: undefined,
     cid: apiProject.por?.por_cid || "",
@@ -257,11 +261,11 @@ const convertApiProjectToFrontendProject = (
     startDate: apiProject.created_at,
     endDate: apiProject.updated_at,
     lastOutputDate: apiProject.updated_at,
-    reproducibilities: reproducibilities, // Fixed: properly structured array
+    reproducibilities: reproducibilities,
     fundingPool: 0,
     fundingPrice: undefined,
     impactScore: 0,
-    outputs: outputs, // Fixed: added the missing outputs array
+    outputs: outputs,
     reproducibilityRequirements: [],
     organization:
       apiProject.researcher?.profile?.firstName &&
