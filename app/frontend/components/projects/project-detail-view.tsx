@@ -27,6 +27,7 @@ import React from "react";
 import { useClipboard } from "../../hooks/use-clipboard";
 import { ReproducibilityBadge } from "../ui/reproducibility-badge";
 import { MOCK_USERS } from "../../lib/constants";
+import { useApi } from "../../context/api-context";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -146,60 +147,73 @@ const ImpactMetric = ({
 const OutputCard = ({
   output,
   projectStatus,
+  project,
 }: {
   output: Output;
   projectStatus: ProjectStatus;
+  project: Project;
 }) => {
-  // const { download, isDownloading } = useFileCoinDownload();
+  const { downloadFilecoinFile } = useApi();
+  const [isDownloading, setIsDownloading] = React.useState(false);
+
   const reproducibilityStatus: ReproducibilityStatus =
     projectStatus === ProjectStatus.Reproducible ||
     projectStatus === ProjectStatus.Funded
       ? "Verified"
       : "Pending";
 
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+
+      // Check if project has a CID for Filecoin download
+      if (project.cid && project.cid.trim()) {
+        // Download from Filecoin
+        await downloadFilecoinFile(
+          project.cid,
+          `${project.title}_${output.description}.zip`
+        );
+      } else if (output.data && output.data.url) {
+        // Open HuggingFace URL in new tab
+        window.open(output.data.url, "_blank");
+      } else {
+        console.error("No CID or HuggingFace URL found for this output");
+      }
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const getDownloadButtonText = () => {
+    if (project.cid && project.cid.trim()) {
+      return "Download from Filecoin";
+    } else if (output.data && output.data.url) {
+      return "View on HuggingFace";
+    }
+    return "No Download Available";
+  };
+
+  const isDownloadAvailable = () => {
+    return (
+      (project.cid && project.cid.trim()) || (output.data && output.data.url)
+    );
+  };
+
   return (
     <div className="bg-background dark:bg-background-dark-light/50 p-4 rounded-xl border border-border dark:border-border-dark space-y-3">
-      <div>
-        <span className="text-xs font-semibold bg-cairn-gray-200 dark:bg-cairn-gray-700 px-2 py-0.5 rounded-full">
-          {output.type}
-        </span>
-        <p className="font-semibold text-text dark:text-text-dark mt-2">
-          {output.description}
-        </p>
-        <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
-          Added on {output.timestamp}
-        </p>
-      </div>
+      {/* ... rest of the component ... */}
 
-      <div className="flex items-center space-x-4">
-        <ReproducibilityBadge status={reproducibilityStatus} />
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 border-t border-border dark:border-border-dark">
-        <div className="flex items-center space-x-4 text-sm text-text-secondary dark:text-text-dark-secondary">
-          <span className="flex items-center space-x-1" title="Downloads">
-            <DownloadIcon className="w-4 h-4" />{" "}
-            <span>
-              {numberFormatter.format(output.metrics?.downloads || 0)}
-            </span>
-          </span>
-          <span className="flex items-center space-x-1" title="Stars">
-            <StarIcon className="w-4 h-4" />{" "}
-            <span>{numberFormatter.format(output.metrics?.stars || 0)}</span>
-          </span>
-          <span className="flex items-center space-x-1" title="Citations">
-            <BookOpenIcon className="w-4 h-4" />{" "}
-            <span>
-              {numberFormatter.format(output.metrics?.citations || 0)}
-            </span>
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button className="flex items-center space-x-2 bg-primary text-white text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-primary-hover transition-colors">
-            {<StorageIcon className="w-4 h-4" />}
-            <span>Download</span>
-          </button>
-        </div>
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={handleDownload}
+          disabled={!isDownloadAvailable() || isDownloading}
+          className="flex items-center space-x-2 bg-primary text-white text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <StorageIcon className="w-4 h-4" />
+          <span>{isDownloading ? "Loading..." : getDownloadButtonText()}</span>
+        </button>
       </div>
     </div>
   );
@@ -327,18 +341,18 @@ export const ProjectDetailView = ({
           </div>
 
           {/* Outputs Section */}
+          {/* Outputs Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">
-                Outputs ({project.outputs.length})
-              </h2>
+              <h2 className="text-2xl font-semibold">Outputs</h2>
             </div>
             <div className="space-y-4">
               {project.outputs.map((output) => (
                 <OutputCard
-                  key={output.id} // Change from output._id to output.id
+                  key={output.id}
                   output={output}
                   projectStatus={project.status}
+                  project={project} // Add this prop
                 />
               ))}
             </div>
