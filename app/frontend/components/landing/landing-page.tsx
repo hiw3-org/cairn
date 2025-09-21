@@ -354,7 +354,7 @@ const AuthModal = ({
         </button>
       </div>
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Don't have an account?{" "}
+        {/* Don't have an account?{" "} */}
         <span className="font-semibold text-gray-400 cursor-not-allowed">
           Registration coming soon
         </span>
