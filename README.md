@@ -2,73 +2,92 @@
 
 ![header](assets/header.png)
 
-##  Overview
+## 🌍 Overview
 
-**Cairn** is protocol and platform that tracks the reuse and reproduction of scientific outputs in the field of embodied AI, and retroactively rewards impactful work (both scientific and supporting).
- 
- > By leveraging decentralized storage, smart contracts, and tokenized impact assets, Cairn creates a transparent, incentive-aligned ecosystem for scientists, funders, and the broader research community.
+**Cairn** is a decentralized protocol and platform designed to track the reuse and reproducibility of scientific outputs in the field of artificial intelligence, retroactively rewarding impactful research.\
+<br>
+By leveraging decentralized storage, smart contracts, and tokenized impact assets, Cairn creates a transparent, incentive-aligned ecosystem that connects scientists, funders, and the research community. It introduces the Proof of Reproducibility (PoR) to verify experiment replication, uses Filecoin for secure and verifiable data storage, and employs smart contracts on the Filecoin Virtual Machine to manage project registration, impact evaluation, and retroactive funding via USDFC stablecoin payments.
 
-![desci](assets/filecoin.png)
+<br>
+<img src="assets/filecoin.png" alt="desci" width="800"/>
 
-### Core Features: 
-  - 🔄 Tracks reuse and reproduction of scientific outputs  
-  - 🏆 Retroactively rewards impactful work  
-  - 🔍 Ensures transparency and data integrity  
----
-
-## Challenges in Scientific Research
-
-Scientific research, especially in **embodied AI**, faces systemic challenges: 
-
-- **Poor incentives for long-term, impactful work:** \
-Academic recognition and funding systems tend to reward novelty and publication volume over real-world usability, long-term impact, and reproducibility.
-- **Reproducibility crisis**: \
-A large portion of published research cannot be reliably reproduced, leading to wasted effort, erosion of trust, and slower scientific progress.  
-- **Centralized funding**: \
-Funding decisions are concentrated in a few institutions, which can limit diversity in research agendas and hinder innovation from underrepresented contributors.
 <br>
 
-> Together, these factors create a research ecosystem where reusable and impactful work is difficult to track, undervalued in funding decisions, and ultimately underutilized—slowing progress in one of the most promising and societally significant areas of artificial intelligence.
+### Core Features:
+
+- ✅ **Proofs of Reproducibility (PoRs)** - Verifiable evidence that research outputs (models, datasets, papers) can be independently replicated.
+
+- 📊 **Impact Tracking & Metrics** - Aggregates reuse signals across HuggingFace, ArXiv, etc. and surfaces which outputs are not only reproducible but also used by the community.
+
+- 💰 **Retroactive Funding Flows** - Rewards are distributed based on verified reproducibility and impact of the research outputs. 
+
+
+
+## ⚠️ Challenges in Scientific Research
+
+Scientific research, especially in the field od **artificial intelligence**, faces systemic challenges that hinder progress and equitable participation:
+
+- **🚫 Poor incentives for long-term, impactful work:** \
+Academic recognition and funding systems tend to reward novelty and publication volume over real-world impact, long-term usability, and reproducibility.
+
+- **🔎 Reproducibility  and transparency issues:** \
+A significant portion of published AI research cannot be reliably reproduced due to opaque methodologies, missing data, or proprietary tooling. This not only wastes resources but also undermines trust and slows scientific advancement.
+
+- **🔒  Centralized control and limited access:** \
+Research output and funding are heavily concentrated within a small number of elite institutions and corporations. This creates high barriers to entry, excludes underrepresented voices, and narrows the diversity of ideas and approaches.
+
+- **💸 Funding inefficiency:** \
+Funders struggle to identify and support projects with the highest potential for real-world impact, largely due to a lack of standardized, transparent indicators of research quality and reuse potential.
+
 <br>
 
-![problem](assets/problem.png)<br> 
-
+> Collectively, these challenges create a research ecosystem where meaningful, reusable, and socially beneficial work is hard to surface, fund, and scale, ultimately limiting the potential of AI research to serve broader public good.
+<br>
 
 ---
-##  Our Solution
+## 💡  Our Solution
 
-We combined established concepts with a new system (Proof of Reproducibility) designed to provide verifiable evidence for scientific experiments:
+We propose a transparent, community-driven system that incentivizes the production and validation of reproducible, high-impact research through retroactive funding:
 
-- **Proof of Reproducibility (PoR):** Verifiable, cryptographically-secured evidence that experiments have been independently reproduced. 
-- **Decentralized Storage:** All research data, models, and proofs are stored on IPFS for permanence and verifiability. 
-- **Smart Contracts:** Manage project registration and proof of reproducibility, impact evaluation, and funding distribution on-chain.  
-- **Hypercerts:** Tokenized certificates of impact, representing the value of scientific contributions.  
-- **Retroactive Funding:** Rewards are distributed based on actual impact and reproducibility, not just proposals.  
-- **DAO Governance:** Community-driven evaluation and funding decisions.
+1. **Retroactive Funding as Incentive** \
+Researchers are rewarded after their work has demonstrated real-world impact and reproducibility. This shifts the incentive structure away from publication quantity toward long-term utility, transparency, and community use.
+
+2. **Reproducibility as a Funding Criterion**\
+ To qualify for funding, research outputs must be:
+   - Accompanied by clear, complete, and open instructions for reproduction
+   - Successfully reproduced by independent contributors
+   - Used or cited by others in the ecosystem (impactful)
+
+3. **Community Verification (DAO)** \
+  A decentralized group of contributors evaluates reproducibility claims, submits proofs, and votes on their validity. This crowdsourced model improves trust, scalability, and reduces gatekeeping.
+
+4. **Decentralized Storage** \
+ All research artifacts and reproducibility proofs are stored on Filecoin, ensuring they are:
+    - Immutable and tamper-proof
+    - Publicly accessible and verifiable
+    - Permanently linked to the funding mechanism via smart contracts
+
 <br> 
+<img src="assets/PoR.png" alt="PoR" width="800"/>
 
-![PoR](assets/PoR.png)
+<br>
 
-
-The system is designed to incentivize and validate impactful, reproducible scientific research by connecting scientists, funders, and decentralized infrastructure via a Web3-native workflow. It is built around the
+The system is designed to incentivize and validate impactful, reproducible scientific research by connecting researchers, funders, and decentralized infrastructure via a Web3-native workflow. It is built around the
 Cairn platform, with various stakeholders and components described below:
+<br>
 
-<br> 
+<img src="assets/Cairn_platform.png" alt="Concept" width="800"/>
 
-![Concept](assets/Cairn.png)
-<br> 
-
-> See [whitepaper](whitepaper/Cairn_whitepaper.pdf) for a detailed technical and conceptual overview. 
 ---
 
-## Filecoin integration
+## ⚙️ Filecoin integration
 Cairn integrates Filecoin technology as a foundational layer to ensure decentralized, secure, and verifiable storage of scientific research data and metadata:
 
 - **Smart Contracts on the Filecoin Network:**  
   Cairn’s smart contract is currently deployed on the Filecoin calibration testnet.
 
 - **Data Storage and Retrieval:**  
-  All scientific research outputs—including datasets, machine learning models, benchmarks, and Proofs of Reproducibility (PoRs)—are stored on **IPFS**. This ensures **data provenance, immutability, and long-term availability**.
+  All scientific research outputs—including datasets, machine learning models, benchmarks, and Proofs of Reproducibility (PoRs)—are stored on **Filecoin**. This ensures **data provenance, immutability, and long-term availability**.
 
 - **Crypto-based Payments with USDFC Stablecoin:**  
   Cairn uses the **USDFC stablecoin**, native to Filecoin’s ecosystem, to enable **stable, trustless, and efficient capital flows** between funders and researchers, supporting usage-based billing and retroactive funding models.
@@ -78,37 +97,61 @@ Cairn integrates Filecoin technology as a foundational layer to ensure decentral
 
 | Component         | Technology / Protocol         | Purpose                                              |
 |-------------------|------------------------------|------------------------------------------------------|
-| Storage           | **Filecoin**, **IPFS**       | Decentralized, verifiable storage of all research data and metadata |
+| Storage           | **Filecoin**      | Decentralized, verifiable storage of all research data and metadata |
 | Payments          | **USDFC Stablecoin**         | Stable, on-chain funding and rewards                 |
 | Smart Contracts   | **Filecoin Virtual Machine (FVM)** | Transparent, immutable project and funding logic     |
-| Impact Assets     | **Hypercerts**                   | Tokenized, tradable proof of  impact       |
 
----
 
-## How Cairn Works
 
-Cairn provides a transparent, decentralized workflow for tracking, verifying, and rewarding impactful scientific research:
 
-1. **Project Creation:**  
-  Scientists register new research projects on-chain, minting Hypercert impact assets to represent contributions. Project metadata and outputs are stored on IPFS, with their CIDs registered on the Cairn smart contract.
+## 👉 How Cairn Works
 
-2. **Recording Outputs:**  
-  Models, datasets, benchmarks, and results are published to IPFS and linked to the project via smart contracts. This ensures all research outputs are verifiable and permanently available.
+ ### 👩‍🔬 A Researcher’s Journey
+
+1. **Connect your account:**  
+  Link Cairn with HuggingFace, ArXiv, GitHub, and other platforms to automatically import your research.
+
+2. **Create a Project:**  
+  Select your existing research outputs or upload new ones - code, datasets, papers etc. and create a project with metadata and outputs.
 
 3. **Proof of Reproducibility (PoR):**  
-  Third parties independently replicate experiments and submit cryptographically-secured PoRs—experiment logs, video proofs, and receipts—stored on IPFS and linked on-chain. This provides verifiable evidence of reproducibility.
+  Evaluators review and replicate your work, and submit cryptographically-secured Proofs of Reproducibility (PoRs) logs and other proofs stored on Filecoin and linked on-chain. This provides verifiable evidence of reproducibility.
 
 4. **Impact Evaluation:**  
-  Designated scientists, funders, and evaluators vote on each project’s impact tier, determining eligibility for retroactive funding. Future implementations will introduce DAO-based community voting.
+  Designated evaluators, researchers and funders vote on each project’s impact. Future implementations will introduce DAO-based community voting.
 
 5. **Retroactive Funding:**  
-  Once a project meets the required criteria (outputs, PoRs, impact evaluation), USDFC funds are distributed proportionally to impact-asset holders based on verified impact.
+  Once a project meets the required criteria (verified PoRs, impact evaluation), it can be submitted for a funding round.
 
-**Dispute Resolution:**  
+     **Dispute Resolution:**  
 Community members can challenge submitted PoRs through a dispute mechanism, ensuring the integrity and trustworthiness of reproducibility claims.
 
----
-## Tech Stack ##
+
+### 💸 A Funder’s Perspective
+
+1. **Fund Research Projects:**  
+Start a funding round to support projects that align with what you value.
+
+2. **Assess Impact:**  
+  Track reproducibility metrics and identify projects delivering real value.
+
+3. **Track Your Contribution:**  
+onitor the real-world outcomes of your funding through transparent, on-chain reporting. 
+
+### 👀 A Guest’s Perspective
+
+1. **Explore Projects:**  
+Browse projects, models, datasets and other outputs that have verified proof of reproducibility.
+
+2. **Follow Impact:**  
+  See which projects are gaining traction and reuse.
+
+3. **Download Outputs:**  
+Download open-source data and PoR proofs from Filecoin.
+
+
+## 🛠 Tech Stack ##
+
 -  w3up-client – IPFS-based storage services (decentralized file management)
 - ethers.js – Blockchain network interactions & decentralized features
 - React – Component-based UI architecture
@@ -121,16 +164,13 @@ Community members can challenge submitted PoRs through a dispute mechanism, ensu
 👉 **Note:** For detailed setup instructions for smart contracts, frontend, and other modules, see the respective subdirectory README files.
 
 ---
-## Live Demo ##
 
-Visit: [Cairn app](https://octopus-app-5rjoy.ondigitalocean.app/)\
-Or watch our demo video: [YouTube](https://www.youtube.com/watch?v=aHEJTJmeWjM&ab_channel=LukaLevac)
+## 🌐 Live Demo ##
 
-## License ##
+[Try the Cairn App](https://cairn-app-9vb6z.ondigitalocean.app/)\
+▶️ Watch our demo video: [YouTube](https://www.youtube.com/watch?v=aHEJTJmeWjM&ab_channel=LukaLevac) \
+X:  Cairn [@cairn_platform](https://x.com/cairn_platform)
+
+## 📜 License ##
+
 This project is licensed under the MIT License.
-
-
-
-
-
-
