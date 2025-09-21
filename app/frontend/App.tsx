@@ -262,8 +262,14 @@ const convertApiProjectToFrontendProject = (
     endDate: apiProject.updated_at,
     lastOutputDate: apiProject.updated_at,
     reproducibilities: reproducibilities,
-    fundingPool: 0,
-    fundingPrice: undefined,
+    fundingPool:
+      apiProject.por && apiProject.por.por_cid
+        ? Math.floor(Math.random() * 9000) + 1000
+        : 0,
+    fundingPrice:
+      apiProject.por && apiProject.por.por_cid
+        ? Math.floor(Math.random() * 9000) + 1000
+        : 0,
     impactScore: 0,
     outputs: outputs,
     reproducibilityRequirements: [],
