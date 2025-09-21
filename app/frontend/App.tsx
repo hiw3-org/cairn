@@ -537,7 +537,7 @@ export function App() {
             {isLoadingProjects ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-text-primary dark:text-dark-text-primary">
-                  Loading projects from server...
+                  Loading projects...
                 </div>
               </div>
             ) : guestSelectedProject ? (
