@@ -104,16 +104,53 @@ export const OutputsLibrary = ({
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [activeLicenses, setActiveLicenses] = useState<string[]>([]);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
+  const [downloadingOutputs, setDownloadingOutputs] = useState<Set<string>>(
+    new Set()
+  );
 
   // --- Download Handler ---
-  const handleFilecoinDownload = async () => {
+  // --- Download Handler ---
+  const handleFilecoinDownload = async (output: LibraryOutput) => {
     try {
-      await downloadFilecoinFile(
-        "bafkzcibdtaaqokx37h22hakicy67potrkdnsdxeuiqlnwhhzs6y5pbma3xcqtkaz",
-        "test-dataset.zip"
-      );
+      // Set loading for this specific output
+      setDownloadingOutputs((prev) => new Set(prev).add(output.id));
+
+      // Find the project that contains this output
+      const project = allProjects.find((p) => p.id === output.projectId);
+      if (!project) {
+        console.error("Project not found for output");
+        return;
+      }
+
+      // Find the specific output in the project's outputs array
+      const projectOutput = project.outputs.find((o) => o.id === output.id);
+      if (!projectOutput) {
+        console.error("Output not found in project");
+        return;
+      }
+
+      // Check if project has a CID for Filecoin download
+      if (project.cid && project.cid.trim()) {
+        // Download from Filecoin
+        await downloadFilecoinFile(
+          project.cid,
+          `${project.title}_${projectOutput.description}.zip`
+        );
+      } else if (projectOutput.data && projectOutput.data.url) {
+        // Open HuggingFace URL in new tab
+        window.open(projectOutput.data.url, "_blank");
+      } else {
+        console.error("No CID or HuggingFace URL found for this output");
+      }
     } catch (err) {
       console.error("Download failed:", err);
+    } finally {
+      // Remove loading for this specific output
+      setDownloadingOutputs((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(output.id);
+        return newSet;
+      });
     }
   };
 
@@ -266,6 +303,21 @@ export const OutputsLibrary = ({
     );
   };
 
+  const getDownloadButtonText = (output: LibraryOutput) => {
+    const project = allProjects.find((p) => p.id === output.projectId);
+    if (!project) return "Download";
+
+    if (project.cid && project.cid.trim()) {
+      return "Download from Filecoin";
+    } else {
+      const projectOutput = project.outputs.find((o) => o.id === output.id);
+      if (projectOutput?.data?.url) {
+        return "View on HuggingFace";
+      }
+    }
+    return "No Download Available";
+  };
+
   const ToggleSwitch = ({
     checked,
     onChange,
@@ -346,12 +398,16 @@ export const OutputsLibrary = ({
       <div className="col-span-12 md:col-span-4 flex md:justify-between items-center gap-4">
         <ReproducibilityBadge status={output.reproducibility} />
         <button
-          onClick={handleFilecoinDownload}
-          disabled={isLoading}
+          onClick={() => handleFilecoinDownload(output)}
+          disabled={downloadingOutputs.has(output.id)}
           className="group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg transition-all duration-300 ease-in-out hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           <StorageIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-          <span>{isLoading ? "Downloading..." : "Test Download"}</span>
+          <span>
+            {downloadingOutputs.has(output.id)
+              ? "Downloading..."
+              : getDownloadButtonText(output)}
+          </span>
         </button>
       </div>
     </div>
