@@ -1,6 +1,6 @@
 const path = require("path");
 const { DataDownloader } = require(
-  path.join(__dirname, "../../../../helpers/getFilecoinData")
+  path.resolve(__dirname, "../../../../helpers/getFilecoinData")
 );
 
 // Create a singleton instance
