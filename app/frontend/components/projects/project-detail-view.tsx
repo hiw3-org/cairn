@@ -195,7 +195,7 @@ const OutputCard = ({
         </div>
         <div className="flex items-center space-x-2">
           <button className="flex items-center space-x-2 bg-primary text-white text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-primary-hover transition-colors">
-            {/* <IpfsIcon className="w-4 h-4" /> */}
+            { <StorageIcon className="w-4 h-4" /> }
             <span>Download</span>
           </button>
         </div>

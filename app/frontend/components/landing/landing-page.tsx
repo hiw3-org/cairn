@@ -570,8 +570,7 @@ const HeroSection = ({
             </span>
           </h1>
           <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-cairn-gray-300">
-            A Web3 platform empowering Embodied AI researchers and funders
-            through transparent Proof-of-Reproducibility and impact tracking.
+            A platform empowering researchers and funders with transparent reproducibility and impact tracking.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center space-y-4">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -651,7 +650,7 @@ const FeaturesSection = () => {
     {
       name: "Secure Data Management",
       description:
-        "Store research data immutably via IPFS and prove its origin with on-chain records.",
+        "Store research data immutably on Filecoin and prove its origin with on-chain records.",
       icon: BeakerIcon,
     },
     {
@@ -663,15 +662,15 @@ const FeaturesSection = () => {
   ];
   const funderFeatures = [
     {
-      name: "Verifiable Research Progress",
+      name: "Verifiable Research",
       description:
-        "Track funded projects through on-chain outputs and reproducibility proofs—making every milestone auditable and tamper-proof.",
+        "Identify which projects are reproducible and valuable—so every funding decision is backed by evidence",
       icon: SearchIcon,
     },
     {
       name: "Impact Evaluation",
       description:
-        "Explore scientific impact through community evaluation, reproducibility, and downstream metrics.",
+        "Explore research impact through community evaluation, reproducibility, and downstream metrics.",
       icon: ChartBarIcon,
     },
     {
@@ -756,7 +755,7 @@ export const AppFooter = () => (
             FAQ
           </a>
           <a
-            href="#"
+            href="https://x.com/cairn_platform"
             className="hover:text-text dark:hover:text-white transition-colors"
             aria-label="Twitter"
           >

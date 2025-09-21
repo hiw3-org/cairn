@@ -91,47 +91,47 @@ export const HowItWorksPage = ({
   const scientistSteps = [
     {
       icon: LightbulbIcon,
-      title: "Create Project",
+      title: "Connect your account",
       description:
-        "Define your research scope, goals, and other significant information.",
+        "Connect Cairn with your Hugging Face, Arxiv, Github and other accounts to automaticaly import your research work.",
     },
     {
       icon: UploadCloudIcon,
-      title: "Record Outputs",
+      title: "Create a Project",
       description:
-        "Securely log code, documents, protocols and other relevant data on IPFS for immutable record-keeping.",
+        "Create a projects from selected files and securely log code, documents, protocols and other relevant data on Filecoin for immutable record-keeping.",
     },
     {
       icon: CheckCircleIcon,
       title: "Enable Reproducibility",
       description:
-        "Community members can now review and reproduce your work, strengthening its validity with Proof Of Reproducibility.",
+        "Evaluators will review and reproduce your work, strengthening its validity with Proof Of Reproducibility.",
     },
     {
       icon: HypercertIcon,
       title: "Gain Impact & Funding",
       description:
-        "Generate Hypercerts, show your impact and get retroactive funding.",
+        "Generate Impact certificates, show your impact and get retroactive funding.",
     },
   ];
   const funderSteps = [
     {
       icon: SearchIcon,
-      title: "Discover Projects",
+      title: "Fund Research Projects",
       description:
-        "Filter and find high-potential projects that align with your funding mission.",
+        "Start a funding round to support projects with proven reproducible research outputs.",
     },
     {
       icon: ChartBarIcon,
       title: "Assess Impact",
       description:
-        "Analyze on-chain data, reproducibility metrics, and impact value of the project.",
+        "Evaluate reproducibility metrics and see which projects deliver real value.",
     },
     {
       icon: GavelIcon,
       title: "Participate in DAO Voting",
       description:
-        "Use your stake to vote for funding allocation towards validated, impactful research.",
+        "Shape funding decisions by voting on validated, impactful research.",
     },
     {
       icon: ScaleIcon,
@@ -143,15 +143,15 @@ export const HowItWorksPage = ({
   const coreConcepts = [
     {
       icon: BeakerIcon,
-      title: "IPFS Integration",
+      title: "Filecoin Integration",
       description:
-        "All research outputs are stored on the InterPlanetary File System, ensuring data is permanent, content-addressed, and resilient.",
+        "All research outputs are stored on tFilecoin, ensuring data is permanent, content-addressed, and resilient.",
     },
     {
       icon: HypercertIcon,
-      title: "Hypercerts",
+      title: "Impact certificates",
       description:
-        "We use Hypercerts to create granular, transferable, and composable claims about the impact of scientific work, enabling retroactive rewards.",
+        "We use impact certificates to create granular, transferable, and composable claims about the impact of scientific work, enabling retroactive rewards.",
     },
     {
       icon: BeakerIcon,

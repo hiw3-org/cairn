@@ -83,11 +83,11 @@ export const OutputListItem = ({ output }: { output: ProjectOutput }) => {
               </DataBox>
             )}
 
-            {/* IPFS */}
+            {/* Filecoin */}
             {output.data.ipfsCid && (
               <DataBox>
-                {/* <IpfsIcon className="w-5 h-5 text-text-secondary flex-shrink-0" /> */}
-                <span className="text-text-secondary mr-2">IPFS:</span>
+                { <StorageIcon className="w-5 h-5 text-text-secondary flex-shrink-0" /> }
+                <span className="text-text-secondary mr-2">Filecoin:</span>
                 <span className="text-text dark:text-text-dark truncate flex-grow">
                   {output.data.ipfsCid}
                 </span>
