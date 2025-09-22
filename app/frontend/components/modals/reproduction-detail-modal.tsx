@@ -3,7 +3,6 @@
 import { Reproducibility, PoRStatus, DisputeData } from "../../lib/types";
 import { Modal } from "../ui/modal";
 import { EyeIcon, FlagIcon, ClockIcon, CheckCircleIcon } from "../ui/icons";
-import { useIpfsService } from "../../ipfs/ipfsService";
 import { useContract } from "../../context/contract-context";
 import { useAppContext } from "@/context/app-provider";
 
@@ -61,9 +60,6 @@ export const ReproducibilityDetailModal = ({
   onDispute: () => void;
   isOwner: boolean;
 }) => {
-  const { uploadDispute } = useIpfsService();
-  const { contractDisputeProof } = useContract();
-
   const handleDispute = async () => {
     if (onDispute) {
       onDispute();
