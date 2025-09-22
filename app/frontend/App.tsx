@@ -1,104 +1,132 @@
-import React, { useState } from "react";
-import { LandingPage } from "./components/landing/landing-page";
-import { HowItWorksPage } from "./components/how-it-works/how-it-works-page";
-import Header from "./components/layout/header";
-import { ScientistDashboard } from "./components/dashboard/scientist-dashboard";
-import { FunderDashboard } from "./components/dashboard/funder-dashboard";
-import { ProjectDetailView } from "./components/projects/project-detail-view";
-import { NewProjectModal } from "./components/modals/new-project-modal";
-import { AddOutputModal } from "./components/modals/add-output-modal";
-import { SubmitPorModal } from "./components/modals/submit-por-modal";
-import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
-import { OnboardingModal } from "./components/modals/onboarding-modal";
-import { useAppContext } from "./context/app-provider";
-import {
-  UserRole,
-  Project,
-  Reproducibility,
-  Output,
-  ProjectOutput,
-  ProjectRegistration,
-  Project as ParsedProject,
-  ProofOfReproducibility,
-} from "./lib/types";
-import { AppLogo } from "./components/ui/logo";
-import { FileTextIcon, ChartBarIcon, SearchIcon } from "./components/ui/icons";
-import { AppFooter } from "./components/landing/landing-page";
-import { BottomNavBar } from "./components/layout/bottom-nav-bar";
-import { useContract } from "./context/contract-context";
+import React from 'react';
+import { LandingPage } from './components/landing/landing-page';
+import { HowItWorksPage } from './components/how-it-works/how-it-works-page';
+import Header from './components/layout/header';
+import { ResearcherDashboard } from './components/dashboard/scientist-dashboard';
+import { FunderDashboard } from './components/dashboard/funder-dashboard';
+import { ImpactOwnerDashboard } from './components/dashboard/impact-owner-dashboard';
+import { ProjectDetailView } from './components/projects/project-detail-view';
+import { NewProjectModal } from './components/modals/new-project-modal';
+import { SubmitPorModal } from './components/modals/submit-por-modal';
+import { ReproducibilityDetailModal } from './components/modals/reproduction-detail-modal';
+import { useAppContext } from './context/app-provider';
+import { UserRole, Project, Reproducibility, Output, FundingRound, HuggingFaceOutput, ProjectStatus } from './lib/types';
+import { AppLogo } from './components/ui/logo';
+import { FileTextIcon, ChartBarIcon, GavelIcon, BookOpenIcon, HuggingFaceIcon, HomeIcon } from './components/ui/icons';
+import { AppFooter } from './components/landing/landing-page';
+import { BottomNavBar } from './components/layout/bottom-nav-bar';
+import { MOCK_OPPORTUNITIES } from './lib/constants';
+import { FundingRoundDetailModal } from './components/modals/funding-round-detail-modal';
+import { OutputsLibrary } from './components/dashboard/outputs-library';
+import { CreateProjectWizardModal } from './components/modals/create-project-wizard-modal';
+import { ApplyToFundingModal } from './components/modals/apply-to-funding-modal';
+import { ProofOfReproducibilityModal } from './components/modals/proof-of-reproducibility-modal';
 
-const Sidebar = ({
-  activePage,
-  onNavigate,
-}: {
-  activePage: string;
-  onNavigate: (page: string) => void;
-}) => {
-  const { userRole } = useAppContext();
+const Sidebar = ({ activePage, onNavigate, draftProjectsCount, newOpportunitiesCount }: { activePage: string; onNavigate: (page: string) => void; draftProjectsCount: number; newOpportunitiesCount: number; }) => {
+    const { userRole } = useAppContext();
+    
+    const researcherNavItems = [
+        { id: 'outputs', label: 'Reproduced Projects', icon: BookOpenIcon },
+        { id: 'projects', label: 'My Projects', icon: FileTextIcon, notificationCount: draftProjectsCount },
+        { id: 'funding', label: 'Funding', icon: ChartBarIcon, notificationCount: newOpportunitiesCount },
+        { id: 'dao', label: 'DAO', icon: GavelIcon, disabled: true },
+    ];
 
-  const scientistNavItems = [
-    { id: "projects", label: "My Projects", icon: FileTextIcon },
-    { id: "discover", label: "Discover & PoR", icon: SearchIcon },
-    { id: "funding", label: "Funding", icon: ChartBarIcon },
-  ];
+    const funderNavItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: ChartBarIcon },
+        { id: 'portfolio', label: 'Portfolio', icon: FileTextIcon },
+        { id: 'dao', label: 'DAO', icon: GavelIcon, disabled: true },
+    ];
 
-  const funderNavItems = [
-    { id: "portfolio", label: "Portfolio", icon: ChartBarIcon },
-    { id: "discover", label: "Discover", icon: SearchIcon },
-  ];
+    let navItems: (typeof researcherNavItems[0] | typeof funderNavItems[0])[] = [];
+    if (userRole === UserRole.Researcher) {
+        navItems = researcherNavItems;
+    } else if (userRole === UserRole.Funder) {
+        navItems = funderNavItems;
+    }
 
-  const navItems =
-    userRole === UserRole.Scientist ? scientistNavItems : funderNavItems;
-
-  return (
-    <aside className="w-64 bg-background-light dark:bg-background-dark-light border-r border-border dark:border-border-dark flex-shrink-0 flex flex-col hidden lg:flex">
-      <div className="h-20 flex items-center px-6 border-b border-border dark:border-border-dark">
-        <AppLogo />
-      </div>
-      <nav className="flex-1 px-4 py-6 space-y-1">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onNavigate(item.id)}
-            className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 ${
-              activePage === item.id
-                ? "bg-primary-light text-primary dark:bg-primary dark:text-white"
-                : "text-text-secondary dark:text-text-dark-secondary hover:bg-cairn-gray-100 dark:hover:bg-cairn-gray-800"
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-    </aside>
-  );
+    return (
+        <aside className="w-64 bg-background-light dark:bg-background-dark-light border-r border-border dark:border-border-dark flex-shrink-0 flex flex-col hidden lg:flex">
+            <div className="h-20 flex items-center px-6 border-b border-border dark:border-border-dark">
+                <AppLogo />
+            </div>
+            <nav className="flex-1 px-4 py-6 space-y-1">
+                {navItems.map(item => (
+                    <button 
+                        key={item.id}
+                        onClick={() => !(item as any).disabled && onNavigate(item.id)} 
+                        disabled={(item as any).disabled}
+                        className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 ${
+                            activePage === item.id 
+                            ? 'bg-hf-gray-100 text-text-primary dark:bg-hf-gray-800 dark:text-dark-text-primary' 
+                            : (item as any).disabled
+                            ? 'text-hf-gray-400 dark:text-hf-gray-600 cursor-not-allowed'
+                            : 'text-text-secondary dark:text-dark-text-secondary hover:bg-hf-gray-100 hover:text-text-primary dark:hover:bg-hf-gray-800 dark:hover:text-dark-text-primary'
+                        }`}
+                    >
+                        <item.icon className="w-5 h-5" />
+                        <span>{item.label}</span>
+                         {'notificationCount' in item && item.notificationCount > 0 && (
+                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-status-danger text-white text-xs font-bold">
+                                {item.notificationCount}
+                            </span>
+                        )}
+                        {(item as any).disabled && (
+                            <span className="ml-auto text-xs font-bold bg-hf-gray-200 text-hf-gray-500 dark:bg-hf-gray-700 dark:text-hf-gray-400 px-2 py-0.5 rounded-full">Soon</span>
+                        )}
+                    </button>
+                ))}
+            </nav>
+        </aside>
+    );
+  };
+const AppLayout = ({ children, activePage, onNavigate, draftProjectsCount, newOpportunitiesCount }: { children: React.ReactNode, activePage: string, onNavigate: (page: string) => void, draftProjectsCount: number, newOpportunitiesCount: number }) => {
+    const { userRole } = useAppContext();
+    return (
+        <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex">
+            {userRole !== UserRole.ImpactOwner && <Sidebar 
+                activePage={activePage} 
+                onNavigate={onNavigate} 
+                draftProjectsCount={draftProjectsCount}
+                newOpportunitiesCount={newOpportunitiesCount}
+            />}
+            <div className="flex-1 flex flex-col min-w-0">
+                <Header onNavigate={onNavigate} />
+                <main className="flex-grow overflow-y-auto">
+                    <div className="pb-16 lg:pb-0">
+                        {children}
+                    </div>
+                </main>
+                <AppFooter />
+                <BottomNavBar 
+                    activePage={activePage} 
+                    onNavigate={onNavigate} 
+                    draftProjectsCount={draftProjectsCount}
+                    newOpportunitiesCount={newOpportunitiesCount}
+                />
+            </div>
+        </div>
+    );
 };
 
-const AppLayout = ({
-  children,
-  activePage,
-  onNavigate,
-}: {
-  children: React.ReactNode;
-  activePage: string;
-  onNavigate: (page: string) => void;
-}) => {
-  return (
-    <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex">
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
-      <div className="flex-1 flex flex-col min-w-0 max-h-screen">
-        <Header onNavigate={onNavigate} />
-        <main className="flex-grow overflow-y-auto">
-          <div className="pb-16 lg:pb-0">{children}</div>
-        </main>
-        <AppFooter />
-        <BottomNavBar activePage={activePage} onNavigate={onNavigate} />
-      </div>
-    </div>
-  );
-};
-
+const PublicLayout = ({ children }: { children: React.ReactNode }) => {
+    const { goToLandingPage } = useAppContext();
+    return (
+         <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex flex-col">
+            <header className="relative z-30 h-20 flex-shrink-0 bg-background-light/80 dark:bg-background-dark-light/80 backdrop-blur-lg border-b border-border dark:border-border-dark flex items-center justify-between px-6 lg:px-8">
+                <AppLogo />
+                <div className="flex items-center space-x-2">
+                    <button onClick={goToLandingPage} className="font-semibold text-sm py-2 px-4 rounded-full hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 transition-colors">Log In</button>
+                    <button onClick={goToLandingPage} className="bg-primary text-primary-text font-semibold text-sm py-2 px-4 rounded-full hover:bg-primary-hover transition-colors">Sign Up</button>
+                </div>
+            </header>
+            <main className="flex-grow">
+                {children}
+            </main>
+            <AppFooter />
+        </div>
+    )
+}
 export function App() {
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = useState<StaticPage>("landing");
@@ -116,32 +144,46 @@ export function App() {
     currentUser,
     handlePorSubmit,
     handleAddProject,
-    handleAddOutputs,
     handleDispute,
     isAuthenticated,
-    isOnboardingModalOpen,
+    forceShowLanding,
+    goToLandingPage,
+    isGuestBrowsing,
     setProjects,
   } = useAppContext();
 
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [activeDashboardPage, setActiveDashboardPage] = useState(
-    userRole === UserRole.Scientist ? "projects" : "portfolio"
-  );
+    const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
+    const [activeDashboardPage, setActiveDashboardPage] = React.useState(userRole === UserRole.Researcher ? 'outputs' : 'dashboard');
 
-  // Modal states
-  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
-  const [isAddOutputModalOpen, setIsAddOutputModalOpen] = useState(false);
-  const [
-    isReproducibilityDetailModalOpen,
-    setIsReproducibilityDetailModalOpen,
-  ] = useState(false);
-  const [isPorModalOpen, setIsPorModalOpen] = useState(false);
+    // Modal states
+    const [isNewProjectModalOpen, setIsNewProjectModalOpen] = React.useState(false);
+    const [isReproducibilityDetailModalOpen, setIsReproducibilityDetailModalOpen] = React.useState(false);
+    const [isPorModalOpen, setIsPorModalOpen] = React.useState(false);
+    const [isFundingRoundDetailModalOpen, setIsFundingRoundDetailModalOpen] = React.useState(false);
+    const [isApplyFundingModalOpen, setIsApplyFundingModalOpen] = React.useState(false);
+    const [projectToApply, setProjectToApply] = React.useState<Project | null>(null);
+    const [selectedFundingRound, setSelectedFundingRound] = React.useState<FundingRound | null>(null);
+    const [isProofOfReproModalOpen, setIsProofOfReproModalOpen] = React.useState(false);
+    const [selectedProjectForProof, setSelectedProjectForProof] = React.useState<Project | null>(null);
 
-  const [reproducibilityModalData, setReproducibilityModalData] = useState<{
-    reproducibility: Reproducibility;
-    isOwner: boolean;
-    projectId: string;
-  } | null>(null);
+    // New wizard modal state
+    const [isCreateProjectWizardOpen, setIsCreateProjectWizardOpen] = React.useState(false);
+    const [wizardInitialOutputs, setWizardInitialOutputs] = React.useState<HuggingFaceOutput[]>([]);
+    
+    const [reproducibilityModalData, setReproducibilityModalData] = React.useState<{
+        reproducibility: Reproducibility;
+        isOwner: boolean;
+        projectId: string;
+    } | null>(null);
+
+    // --- NOTIFICATION COUNT LOGIC ---
+    const newOpportunitiesCount = React.useMemo(() => MOCK_OPPORTUNITIES.filter(op => op.isNew).length, []);
+
+    const draftProjectsCount = React.useMemo(() => {
+        if (!currentUser || userRole !== UserRole.Researcher) return 0;
+        return projects.filter(p => p.ownerId === currentUser.walletAddress && p.status === ProjectStatus.Draft).length;
+    }, [projects, currentUser, userRole]);
+
 
   const handleStaticNavigate = (page: StaticPage) => {
     setStaticPage(page);
@@ -156,10 +198,7 @@ export function App() {
     setSelectedProject(null);
   };
 
-  const handleViewReproducibility = (
-    reproducibility: Reproducibility,
-    project: Project
-  ) => {
+    const handleViewReproducibility = (reproducibility: Reproducibility, project: Project) => {
     if (!currentUser) return;
     setReproducibilityModalData({
       reproducibility,
@@ -169,11 +208,8 @@ export function App() {
     setIsReproducibilityDetailModalOpen(true);
   };
 
-  const handleViewDashboardContribution = (
-    reproducibility: Reproducibility,
-    projectId: string
-  ) => {
-    const project = projects.find((p) => p.id === projectId);
+    const handleViewDashboardContribution = (reproducibility: Reproducibility, projectId: string) => {
+        const project = projects.find(p => p.id === projectId);
     if (project) {
       handleViewReproducibility(reproducibility, project);
     }
@@ -183,204 +219,94 @@ export function App() {
     setIsReproducibilityDetailModalOpen(false);
     setReproducibilityModalData(null);
   };
-
-  const onPorSubmitAndExit = (
-    projectId: string,
-    data: { notes: string; evidence: Output[] }
-  ) => {
+    const onPorSubmitAndExit = (projectId: string, data: { notes: string; evidence: Output[]; }) => {
     handlePorSubmit(projectId, data);
     setIsPorModalOpen(false);
   };
+   const handleDisputeAndClose = (reproducibilityId: string) => {
+     if (!reproducibilityModalData) return;
+       handleDispute(reproducibilityModalData.projectId, reproducibilityId);
+       handleCloseReproducibilityModal();
+    };
 
   const handleDashboardNavigation = (page: string) => {
+     if (page === 'landing') {
+         goToLandingPage();
+         return;
+        }
     setSelectedProject(null);
     setActiveDashboardPage(page);
   };
 
-  React.useEffect(() => {
-    console.log("User role changed:", userRole);
-    setActiveDashboardPage(
-      userRole === UserRole.Scientist ? "projects" : "portfolio"
-    );
-  }, [userRole]);
-
-  React.useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        console.log("Fetching projects from contract...");
-        const rawProjects = await getAllProjects(0, 100);
-        console.log("Fetched projects from contract:", rawProjects);
-
-        const parsedProjects = await Promise.all(
-          rawProjects.map(async (p: any) => {
-            const cid = p.projectURI;
-            // If project cid equals bafkreieft5kh227lbenhz23f6jk2pc6z3tnegpxzvstsvgjzzpnp7b3cii, ignore it
-            if (
-              cid ===
-                "bafkreieft5kh227lbenhz23f6jk2pc6z3tnegpxzvstsvgjzzpnp7b3cii" ||
-              cid ===
-                "bafkreifkaav5hqvg65aw7q2zvyab727p2drqpyoykyz7nzgghigpuopfki"
-            ) {
-              return null;
-            }
-            const metadataUrl = `https://${cid}.ipfs.w3s.link/`;
-
-            try {
-              const res = await fetch(metadataUrl);
-              const data = await res.json();
-
-              // Fetch Outputs
-              let outputs: ProjectOutput[] = [];
-              if (p.outputsURI) {
-                const outputUrl = `https://${p.outputsURI}.ipfs.w3s.link/`;
-                try {
-                  const outputRes = await fetch(outputUrl);
-                  const outputData = await outputRes.json();
-                  outputs = Array.isArray(outputData)
-                    ? outputData
-                    : [outputData];
-                } catch (err) {
-                  console.warn(
-                    "Failed to fetch outputs for",
-                    p.outputsURI,
-                    err
-                  );
-                }
-              }
-
-              // Fetch Proofs (Reproducibilities)
-              const reproducibilities: Reproducibility[] = [];
-
-              if (Array.isArray(p.proofs)) {
-                for (const proofCID of p.proofs) {
-                  try {
-                    const [res, onchainProof] = await Promise.all([
-                      fetch(`https://${proofCID}.ipfs.w3s.link/`),
-                      getProof(proofCID),
-                    ]);
-
-                    const validity = await isProofValid(proofCID);
-
-                    const data = await res.json();
-
-                    reproducibilities.push({
-                      proof_id: proofCID,
-                      project_id: cid,
-                      recorder: onchainProof.recorder,
-                      timestamp: String(onchainProof.recordedAt),
-                      description: data.description,
-                      code_url: data.code_url,
-                      output_url: data.output_url,
-                      video_url: data.video_url ?? undefined,
-                      dispute: onchainProof.dispute,
-                      dispute_uri: onchainProof.disputeURI,
-                      valid: validity,
-                    });
-                  } catch (err) {
-                    console.warn(
-                      "Failed to fetch or combine proof",
-                      proofCID,
-                      err
-                    );
-                  }
-                }
-              }
-
-              const tokenIds: bigint[] = p.tokenIDs.map((id: string) =>
-                BigInt(id)
-              );
-              const tokenOwners: string[] = [];
-              const tokenUnits: number[] = [];
-              console.log("Token IDs for project:", tokenIds);
-              for (const tokenId of tokenIds) {
-                try {
-                  const [owner, units] = await Promise.all([
-                    getTokenOwner(tokenId),
-                    getTokenUnits(tokenId),
-                  ]);
-                  tokenOwners.push(owner ?? "0x0");
-                  tokenUnits.push(units ?? 0);
-                } catch (err) {
-                  console.warn(
-                    `Failed to fetch token data for ${tokenId}`,
-                    err
-                  );
-                  tokenOwners.push("0x0");
-                  tokenUnits.push(0);
-                }
-              }
-
-              console.log("Token owners:", tokenOwners);
-              console.log("Token units:", tokenUnits);
-
-              return {
-                id: p.projectURI,
-                ownerId: p.creator,
-                title: data.title,
-                createdAt: String(data.created_at ?? ""),
-                description: data.description,
-                organization: data.organization ?? undefined,
-                additionalInfoUrl: data.url ?? undefined,
-                cid,
-                funder: p.funder,
-                fundingGoal: Number(p.fundingGoal ?? 0),
-                output: outputs,
-                reproducibilities,
-                image_url: data.image_url ?? undefined,
-                tags: data.tags ?? [],
-                domain: data.domain ?? undefined,
-                tokenIds: tokenIds,
-                tokenUnits: tokenUnits,
-                tokenOwners: tokenOwners,
-                impact: Number(p.impact),
-              } as Project;
-            } catch (e) {
-              console.error("Failed to fetch metadata for project", cid, e);
-              return null;
-            }
-          })
-        );
-
-        const validProjects = parsedProjects.filter(
-          (p): p is Project => p !== null
-        );
-        console.log("Valid projects:", validProjects);
-        setProjects(validProjects);
-      } catch (err) {
-        console.error("Error fetching projects from contract:", err);
-      }
+  const handleOpenFundingRoundDetail = (round: FundingRound) => {
+        setSelectedFundingRound(round);
+           };
+    
+    const handleCloseFundingRoundDetail = () => {
+        setSelectedFundingRound(null);
+        setIsFundingRoundDetailModalOpen(false);
+    };
+    
+    const handleSelectProjectFromRoundModal = (project: Project) => {
+        handleCloseFundingRoundDetail();
+        handleSelectProject(project);
     };
 
-    if (isAuthenticated) {
-      fetchProjects();
-    }
-  }, [isAuthenticated]);
+    const handleOpenCreateProjectWizard = (initialOutputs: HuggingFaceOutput[]) => {
+        setWizardInitialOutputs(initialOutputs);
+        setIsCreateProjectWizardOpen(true);
+    };
+    
+    const handleOpenApplyFundingModal = (project: Project) => {
+        setProjectToApply(project);
+        setIsApplyFundingModalOpen(true);
+    };
+    
+    const handleOpenProofModal = (project: Project) => {
+        setSelectedProjectForProof(project);
+        setIsProofOfReproModalOpen(true);
+    };
 
+    React.useEffect(() => {
+        if (userRole === UserRole.Researcher) {
+            setActiveDashboardPage('outputs');
+        } else if (userRole === UserRole.Funder) {
+            setActiveDashboardPage('dashboard');
+        } else {
+            setActiveDashboardPage('claim'); // For Impact Owner
+        }
+    }, [userRole]);
+
+    if (forceShowLanding) {
+        return <LandingPage onNavigate={() => handleStaticNavigate('howitworks')} />;
+    }    
   if (!isAuthenticated) {
-    if (staticPage === "howitworks") {
-      return (
-        <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
-      );
+        if (isGuestBrowsing) {
+            return (
+                <PublicLayout>
+                    <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
+                        <OutputsLibrary allProjects={projects} onSelectProject={handleSelectProject} />
+                    </div>
+                </PublicLayout>
+            );
     }
-    return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
-    );
+        if (staticPage === 'howitworks') {
+            return <HowItWorksPage onNavigate={() => handleStaticNavigate('landing')} />;
+        }
+        return <LandingPage onNavigate={() => handleStaticNavigate('howitworks')} />;
   }
 
   if (!currentUser) {
     // This state should be very brief after connection
-    return (
-      <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text dark:text-text-dark">
-        Loading user profile...
-      </div>
-    );
+        return <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">Loading user profile...</div>;
   }
-
   return (
     <>
       <AppLayout
         activePage={activeDashboardPage}
         onNavigate={handleDashboardNavigation}
+        draftProjectsCount={draftProjectsCount}
+        newOpportunitiesCount={newOpportunitiesCount}
       >
         <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
           {selectedProject ? (
@@ -388,21 +314,23 @@ export function App() {
               project={selectedProject}
               onBack={handleBackToDashboard}
               onPorSubmitClick={() => setIsPorModalOpen(true)}
-              onAddOutputClick={() => setIsAddOutputModalOpen(true)}
-              onViewReproducibility={(rep) =>
-                handleViewReproducibility(rep, selectedProject)
-              }
+              onViewReproducibility={(rep) => handleViewReproducibility(rep, selectedProject)}
+
             />
-          ) : userRole === UserRole.Scientist ? (
-            <ScientistDashboard
-              key={`scientist-${activeDashboardPage}`}
-              projects={projects}
-              onSelectProject={handleSelectProject}
-              onNewProject={() => setIsNewProjectModalOpen(true)}
-              currentUser={currentUser}
-              onViewContributionDetails={handleViewDashboardContribution}
-              activePage={activeDashboardPage}
-            />
+            ) : userRole === UserRole.Researcher ? (
+               <ResearcherDashboard
+                 key={`researcher-${activeDashboardPage}`}
+                 projects={projects}
+                 onSelectProject={handleSelectProject}
+                 onNewProject={() => setIsNewProjectModalOpen(true)}
+                 currentUser={currentUser}
+                 activePage={activeDashboardPage}
+                onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
+                 onNavigate={handleDashboardNavigation}
+                 onApplyToFunding={handleOpenApplyFundingModal}
+               />
+           ) : userRole === UserRole.ImpactOwner ? (
+               <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
           ) : (
             <FunderDashboard
               key={`funder-${activeDashboardPage}`}
@@ -410,32 +338,28 @@ export function App() {
               onSelectProject={handleSelectProject}
               activePage={activeDashboardPage}
               onNavigate={handleDashboardNavigation}
+              onViewInfo={handleOpenFundingRoundDetail}
             />
           )}
         </div>
       </AppLayout>
 
-      {isOnboardingModalOpen && <OnboardingModal />}
+         {isNewProjectModalOpen && <NewProjectModal onClose={() => setIsNewProjectModalOpen(false)} onAddProject={handleAddProject} />}
+            
+         {isCreateProjectWizardOpen && <CreateProjectWizardModal initialOutputs={wizardInitialOutputs} onClose={() => setIsCreateProjectWizardOpen(false)} />}
+            
+        {isApplyFundingModalOpen && projectToApply && (
+                <ApplyToFundingModal
+                    project={projectToApply}
+                    onClose={() => setIsApplyFundingModalOpen(false)}
+                />
+            )}
 
-      {isNewProjectModalOpen && (
-        <NewProjectModal
-          onClose={() => setIsNewProjectModalOpen(false)}
-          onAddProject={handleAddProject}
-        />
-      )}
-
-      {isAddOutputModalOpen && selectedProject && (
-        <AddOutputModal
-          project={selectedProject}
-          onClose={() => setIsAddOutputModalOpen(false)}
-          onAddOutputs={(outputs) => {
-            const updatedProject = handleAddOutputs(
-              selectedProject.id,
-              outputs
-            );
-            setSelectedProject(updatedProject);
-            setIsAddOutputModalOpen(false);
-          }}
+         {isFundingRoundDetailModalOpen && selectedFundingRound && (
+                <FundingRoundDetailModal 
+                    round={selectedFundingRound}
+                    onClose={handleCloseFundingRoundDetail}
+                    onSelectProject={handleSelectProjectFromRoundModal}
         />
       )}
 
@@ -451,14 +375,17 @@ export function App() {
         <ReproducibilityDetailModal
           reproducibility={reproducibilityModalData.reproducibility}
           onClose={handleCloseReproducibilityModal}
-          onDispute={() =>
-            handleDisputeAndClose(
-              reproducibilityModalData.reproducibility.proof_id
-            )
-          }
+          onDispute={() => handleDisputeAndClose(reproducibilityModalData.reproducibility.id)}
           isOwner={reproducibilityModalData.isOwner}
         />
       )}
+           
+     {isProofOfReproModalOpen && selectedProjectForProof && (
+         <ProofOfReproducibilityModal
+                project={selectedProjectForProof}
+               onClose={() => setIsProofOfReproModalOpen(false)}
+                />
+            )}
     </>
   );
 }

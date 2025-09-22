@@ -1,303 +1,201 @@
 "use client";
 
-import { useState } from "react";
-import { Project, Reproducibility } from "../../lib/types";
-import {
-  ChevronLeftIcon,
-  PlusIcon,
-  CodeIcon,
-  LinkIcon,
-  UsersGroupIcon,
-  ChartBarIcon,
-  ScaleIcon,
-} from "../ui/icons";
-import PoRModule from "./por-module";
-import { OutputListItem } from "./output-list-item";
-import { useAppContext } from "../../context/app-provider";
-import { GenerativePlaceholder } from "../ui/generative-placeholder";
-import { AddressDisplay } from "../ui/address-display";
-import { ImpactLevelBadge } from "../ui/impact-level-badge";
-import { Modal } from "../ui/modal";
+import { Project, Reproducibility, Output, ProjectStatus, ReproducibilityStatus } from '../../lib/types';
+import { ChevronLeftIcon, PlusIcon, CodeIcon, DownloadIcon, StarIcon, BookOpenIcon, CopyIcon, CheckIcon, ShareIcon, CitationIcon, IpfsIcon, BeakerIcon, StarFilledIcon } from '../ui/icons';
+import { StatusBadge } from '../ui/status-badge';
+import PoRModule from './por-module';
+import { useAppContext } from '../../context/app-provider';
+import React from 'react';
+import { useClipboard } from '../../hooks/use-clipboard';
+import { ReproducibilityBadge } from '../ui/reproducibility-badge';
+import { MOCK_USERS } from '../../lib/constants';
 
-// --- Start of components moved into this file for locality ---
+const numberFormatter = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
-const getImpactLevel = (
-  level: number
-): "Undefined" | "Low" | "Medium" | "High" => {
-  switch (level) {
-    case 0:
-      return "Undefined";
-    case 1:
-      return "Low";
-    case 2:
-      return "Medium";
-    case 3:
-      return "High";
-    default:
-      return "Undefined";
-  }
+const AddressWithCopy = ({ address }: { address: string }) => {
+    const { copy, copied } = useClipboard();
+    const userName = MOCK_USERS.find(u => u.walletAddress === address)?.name || 'Unknown User';
+    const formatAddress = (addr: string) => {
+        if (!addr || addr.length < 10) return addr;
+        return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+    };
+
+    return (
+        <div className="flex items-center space-x-2 group">
+            <span className="font-mono text-sm text-text-secondary dark:text-text-dark-secondary" title={`${userName} - ${address}`}>{formatAddress(address)}</span>
+            <button onClick={(e) => { e.stopPropagation(); copy(address); }} className="p-1 rounded-full text-text-secondary hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Copy address">
+                {copied ? <CheckIcon className="h-4 w-4 text-status-success" /> : <CopyIcon className="h-4 w-4" />}
+            </button>
+        </div>
+    );
 };
 
-const ImpactAssetOwnershipWidget = ({ project }: { project: Project }) => {
-  const impactLevel = getImpactLevel(project.impact);
-  return (
-    <div className="bg-primary-light/40 dark:bg-primary/10 rounded-xl p-6 border border-primary/30 dark:border-primary/50">
-      <div className="flex items-center">
-        <UsersGroupIcon className="w-6 h-6 mr-3 text-primary" />
-        <h3 className="text-xl font-semibold text-text dark:text-text-dark">
-          Impact Asset Ownership
-        </h3>
-      </div>
-      <div className="my-4">
-        <ImpactLevelBadge level={impactLevel as any} />
-      </div>
-      <ul className="divide-y divide-border dark:divide-primary/20">
-        {project.tokenOwners.map((owner, index) => (
-          <li key={index} className="py-4">
-            <div className="flex justify-between items-start">
-              <p className="text-md font-semibold text-text dark:text-text-dark">
-                {project.tokenUnits[index] > 1}
-              </p>
-              <span className="text-lg font-bold text-primary flex-shrink-0 ml-4">
-                {(project.tokenUnits[index] / 10).toFixed(1)}%
-              </span>
+const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
+    return (
+        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark">
+            <div className="space-y-6">
+                {/* Funding Section */}
+                <div>
+                    <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-3">Funding</h3>
+                    <div className="p-4 rounded-lg bg-hf-gray-50 dark:bg-hf-gray-900/50">
+                        <p className="text-sm font-semibold text-text-secondary dark:text-dark-text-secondary">Total Raised</p>
+                        <p className="text-3xl font-bold text-status-success mt-1">${project.fundingPool > 0 ? project.fundingPool.toLocaleString() : '0'}</p>
+                    </div>
+                </div>
+
+                {/* Ownership Section */}
+                {project.impactAssetOwners && project.impactAssetOwners.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-2">Ownership</h3>
+                        <ul className="space-y-2">
+                            {project.impactAssetOwners.map((owner, index) => (
+                                <li key={index} className="py-2 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-semibold text-text-primary dark:text-dark-text-primary text-sm">{owner.contribution}</p>
+                                        <AddressWithCopy address={owner.walletAddress} />
+                                    </div>
+                                    <span className="text-lg font-bold text-primary dark:text-primary-light flex-shrink-0 ml-4">{owner.ownershipPercentage.toFixed(1)}%</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
-            <AddressDisplay address={owner} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-const FundingDetailsWidget = ({ project }: { project: Project }) => {
-  const { fundingHistory } = useAppContext();
-  const numberFormatter = new Intl.NumberFormat("de-DE");
-
-  const projectFundingEvents = fundingHistory.filter(
-    (f) => f.projectId === project.id
-  );
-  const firstFundedDate =
-    projectFundingEvents.length > 0
-      ? new Date(
-          projectFundingEvents.reduce((oldest, current) =>
-            new Date(current.timestamp) < new Date(oldest.timestamp)
-              ? current
-              : oldest
-          ).timestamp
-        ).toLocaleDateString()
-      : "N/A";
-  const funders = [...new Set(projectFundingEvents.map((f) => f.funderWallet))];
-
-  return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-6 border border-border dark:border-border-dark">
-      <div className="flex items-center mb-4">
-        <ChartBarIcon className="w-6 h-6 mr-3 text-primary" />
-        <h3 className="text-xl font-semibold text-text dark:text-text-dark">
-          Funding Details
-        </h3>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary">
-            Total Raised
-          </p>
-          <p className="text-2xl font-bold text-status-success mt-1">
-            ${numberFormatter.format(project.fundingGoal / 1_000_000)}
-          </p>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary mb-2">
-            Funder
-          </p>
-          <ul className="space-y-2">{project.funder}</ul>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
-const ProjectFundingModal = ({
-  project,
-  onClose,
-}: {
-  project: Project;
-  onClose: () => void;
-}) => {
-  return (
-    <Modal
-      onClose={onClose}
-      title={`Impact & Funding Details for "${project.title}"`}
-    >
-      <div className="space-y-6">
-        {project.tokenOwners && project.tokenOwners.length > 0 && (
-          <ImpactAssetOwnershipWidget project={project} />
-        )}
-        {project.funder != "0x0000000000000000000000000000000000000000" && (
-          <FundingDetailsWidget project={project} />
-        )}
-      </div>
-    </Modal>
-  );
+
+const ImpactMetric = ({ icon: Icon, label, value }: { icon: React.FC<any>, label: string, value: string | number }) => (
+    <div className="bg-background-light dark:bg-background-dark-light p-4 rounded-lg border border-border dark:border-border-dark">
+        <div className="flex items-center space-x-2">
+            <Icon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
+            <p className="text-sm font-medium text-text-secondary dark:text-dark-text-secondary">{label}</p>
+        </div>
+        <p className="mt-1 text-2xl font-bold text-text-primary dark:text-dark-text-primary">{value}</p>
+    </div>
+);
+
+const OutputCard = ({ output, projectStatus }: { output: Output, projectStatus: ProjectStatus }) => {
+    const reproducibilityStatus: ReproducibilityStatus = (projectStatus === ProjectStatus.Reproducible || projectStatus === ProjectStatus.Funded) ? 'Verified' : 'Pending';
+    
+    return (
+        <div className="bg-background dark:bg-background-dark-light/50 p-4 rounded-xl border border-border dark:border-border-dark space-y-3">
+            <div>
+                <span className="text-xs font-semibold bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full">{output.type}</span>
+                <p className="font-semibold text-text-primary dark:text-dark-text-primary mt-2">{output.description}</p>
+                <p className="text-xs text-text-secondary dark:text-dark-text-secondary">Added on {output.timestamp}</p>
+            </div>
+
+            <div className="flex items-center space-x-4">
+                <ReproducibilityBadge status={reproducibilityStatus} />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 border-t border-border dark:border-border-dark">
+                <div className="flex items-center space-x-4 text-sm text-text-secondary dark:text-dark-text-secondary">
+                    <span className="flex items-center space-x-1" title="Downloads"><DownloadIcon className="w-4 h-4" /> <span>{numberFormatter.format(output.metrics?.downloads || 0)}</span></span>
+                    <span className="flex items-center space-x-1" title="Stars"><StarIcon className="w-4 h-4" /> <span>{numberFormatter.format(output.metrics?.stars || 0)}</span></span>
+                    <span className="flex items-center space-x-1" title="Citations"><BookOpenIcon className="w-4 h-4" /> <span>{numberFormatter.format(output.metrics?.citations || 0)}</span></span>
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <button className="flex items-center space-x-2 bg-primary text-white text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-primary-hover transition-colors">
+                        <IpfsIcon className="w-4 h-4"/>
+                        <span>Download</span>
+                    </button>
+                 </div>
+            </div>
+        </div>
+    );
 };
-// --- End of local components ---
 
 export const ProjectDetailView = ({
-  project,
-  onBack,
-  onPorSubmitClick,
-  onAddOutputClick,
-  onViewReproducibility,
+    project,
+    onBack,
+    onPorSubmitClick,
+    onViewReproducibility,
+    onGetProofClick,
 }: {
-  project: Project;
-  onBack: () => void;
-  onPorSubmitClick: () => void;
-  onAddOutputClick: () => void;
-  onViewReproducibility: (rep: Reproducibility) => void;
+    project: Project,
+    onBack: () => void,
+    onPorSubmitClick: () => void,
+    onViewReproducibility: (rep: Reproducibility) => void,
+    onGetProofClick: (project: Project) => void;
 }) => {
-  const { currentUser } = useAppContext();
-  const isOwner = project.ownerId.toLowerCase() === currentUser.walletAddress;
-  const [isFundingModalOpen, setIsFundingModalOpen] = useState(false);
-  //   const impactLevel = getImpactLevel(project.hypercertFraction);
+    const { currentUser } = useAppContext();
+    if (!currentUser) return null; // Should not happen if authenticated
+    const isOwner = project.ownerId === currentUser.walletAddress;
+    const [isStarred, setIsStarred] = React.useState(false);
 
-  return (
-    <div className="animate-fade-in space-y-8">
-      <button
-        onClick={onBack}
-        className="flex items-center space-x-2 text-sm text-primary font-semibold mb-6 hover:underline"
-      >
-        <ChevronLeftIcon className="w-5 h-5" />
-        <span>Back to Dashboard</span>
-      </button>
 
-      <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg overflow-hidden border border-border dark:border-border-dark">
-        {project.image_url ? (
-          <img
-            src={project.image_url}
-            alt={project.title}
-            className="w-full h-40 object-cover rounded-md"
-          />
-        ) : (
-          <GenerativePlaceholder
-            projectId={project.id}
-            className="w-full h-40"
-          />
-        )}
-        <div className="p-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-3xl font-bold text-text dark:text-text-dark">
-                {project.title}
-              </h2>
-              {project.organization && (
-                <p className="text-lg font-semibold text-primary dark:text-primary-light mt-1">
-                  {project.organization}
-                </p>
-              )}
-              {project.additionalInfoUrl && (
-                <div className="mt-2">
-                  <a
-                    href={project.additionalInfoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 text-sm text-primary dark:text-primary-light font-semibold hover:underline"
-                  >
-                    <LinkIcon className="w-4 h-4" />
-                    <span>Contributor Info</span>
-                  </a>
-                </div>
-              )}
-            </div>
-            {/* <div className="flex items-center space-x-2 flex-shrink-0">
-              <ImpactLevelBadge level={impactLevel} />
-              <StatusBadge status={project.status} />
-            </div> */}
-          </div>
-          {/* <p className="text-md text-text-secondary dark:text-text-dark-secondary mt-1">
-            {project.domain}
-          </p> */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {/* {project.tags.map((tag) => (
-              <span
-                key={tag}
-                className="bg-primary-light text-primary text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-primary/20 dark:text-primary-light"
-              >
-                {tag}
-              </span>
-            ))} */}
-          </div>
-          <p className="mt-4 text-base text-text-secondary dark:text-text-dark-secondary">
-            {project.description}
-          </p>
-          <div className="mt-6 pt-4 border-t border-border dark:border-border-dark flex justify-between items-end">
-            <div className="font-mono text-xs text-text-secondary dark:text-text-dark-secondary">
-              <p>Owner: {project.ownerId}</p>
-              <p>CID: {project.cid}</p>
-            </div>
-
-            <button
-              onClick={() => setIsFundingModalOpen(true)}
-              className="flex items-center space-x-2 bg-primary-light text-primary font-semibold py-2 px-4 rounded-lg hover:bg-blue-200/50 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 transition-colors text-sm shadow-sm"
-            >
-              <ScaleIcon className="w-5 h-5" />
-              <span>View Ownership & Funding</span>
+    return (
+        <div className="animate-fade-in">
+            <button onClick={onBack} className="flex items-center space-x-2 text-sm text-primary font-semibold mb-6 hover:underline">
+                <ChevronLeftIcon className="w-5 h-5" />
+                <span>Back to Dashboard</span>
             </button>
-          </div>
-        </div>
-      </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                {/* Main Content Column */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Project Header */}
+                    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark">
+                        <div className="flex justify-between items-start">
+                             <div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
+                                    <StatusBadge status={project.status} />
+                                    <span className="text-sm text-text-secondary dark:text-dark-text-secondary">Last updated: {project.lastOutputDate}</span>
+                                </div>
+                                <h1 className="text-3xl font-bold text-text-primary dark:text-dark-text-primary">{project.title}</h1>
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {project.tags.map(tag => (
+                                        <span key={tag} className="text-xs bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full">{tag}</span>
+                                    ))}
+                                </div>
+                             </div>
+                             <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+                                 <button onClick={() => setIsStarred(s => !s)} className={`p-2 rounded-full transition-colors ${isStarred ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-500/20' : 'hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800'}`}>
+                                     {isStarred ? <StarFilledIcon className="w-5 h-5" /> : <StarIcon className="w-5 h-5" />}
+                                 </button>
+                                 <button className="p-2 rounded-full hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800"><ShareIcon className="w-5 h-5" /></button>
+                             </div>
+                        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg p-8 border border-border dark:border-border-dark h-full w-full break-words">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-text dark:text-text-dark">
-              Research Outputs
-            </h3>
-          </div>
-          {project.output[0] ? (
-            <ul className="divide-y divide-border dark:divide-border-dark">
-              <OutputListItem key={0} output={project.output[0]} />
-            </ul>
-          ) : (
-            <div className="text-center py-8 px-6 border-2 border-dashed border-border dark:border-border-dark rounded-lg bg-background dark:bg-background-dark/50">
-              <CodeIcon className="mx-auto h-12 w-12 text-text-secondary" />
-              <h4 className="mt-4 text-lg font-semibold text-text dark:text-text-dark">
-                No Outputs Yet
-              </h4>
-              <p className="mt-1 text-sm text-text-secondary dark:text-text-dark-secondary">
-                {isOwner
-                  ? "Add research outputs to make this project active and reviewable."
-                  : "The researcher has not recorded any outputs for this project yet."}
-              </p>
-              {isOwner && project.output[0] === undefined && (
-                <button
-                  onClick={onAddOutputClick}
-                  className="mt-6 flex items-center mx-auto space-x-2 bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors text-sm shadow-md hover:shadow-lg"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  <span>Add Outputs</span>
-                </button>
-              )}
+                        <p className="mt-4 text-text-secondary dark:text-dark-text-secondary">{project.description}</p>
+                    </div>
+
+                    {/* Impact Metrics */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <ImpactMetric icon={DownloadIcon} label="Total Downloads" value={numberFormatter.format(project.outputs.reduce((sum, o) => sum + (o.metrics?.downloads || 0), 0))} />
+                        <ImpactMetric icon={StarIcon} label="Total Stars" value={numberFormatter.format(project.outputs.reduce((sum, o) => sum + (o.metrics?.stars || 0), 0))} />
+                        <ImpactMetric icon={CitationIcon} label="Total Citations" value={numberFormatter.format(project.outputs.reduce((sum, o) => sum + (o.metrics?.citations || 0), 0))} />
+                        <ImpactMetric icon={BeakerIcon} label="PoRs" value={project.reproducibilities.length} />
+                    </div>
+
+                    {/* Outputs Section */}
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-semibold">Outputs ({project.outputs.length})</h2>
+                        </div>
+                        <div className="space-y-4">
+                            {project.outputs.map(output => (
+                                <OutputCard key={output.id} output={output} projectStatus={project.status} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar Column */}
+                <div className="lg:col-span-1 space-y-8 lg:sticky lg:top-28">
+                    <FundingAndOwnershipWidget project={project} />
+                    <PoRModule 
+                        project={project} 
+                        isOwner={isOwner} 
+                        onPorSubmitClick={onPorSubmitClick} 
+                        onViewReproducibility={onViewReproducibility} 
+                        onGetProofClick={() => onGetProofClick(project)}
+                    />
+                </div>
             </div>
-          )}
         </div>
-
-        <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-lg p-6 border border-border dark:border-border-dark h-full">
-          <PoRModule
-            project={project}
-            isOwner={isOwner}
-            onPorSubmitClick={onPorSubmitClick}
-            onViewReproducibility={onViewReproducibility}
-            className="h-full"
-          />
-        </div>
-      </div>
-
-      {isFundingModalOpen && (
-        <ProjectFundingModal
-          project={project}
-          onClose={() => setIsFundingModalOpen(false)}
-        />
-      )}
-    </div>
-  );
+    );
 };
