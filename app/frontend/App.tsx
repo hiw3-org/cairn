@@ -221,6 +221,7 @@ const convertApiProjectToFrontendProject = (
       data: {
         url: apiProject.huggingface.repo_url,
         fileName: apiProject.huggingface.files || "model.py",
+        cid: apiProject.huggingface.contents_cid,
       },
       metrics: {
         downloads: Math.floor(Math.random() * 5000),
@@ -237,9 +238,7 @@ const convertApiProjectToFrontendProject = (
       id: `${apiProject._id}-por`,
       timestamp: apiProject.updated_at,
       evidence: outputs, // Reference the outputs we created
-      notes: apiProject.por.por_cid
-        ? `Proof of Reproducibility stored at CID: ${apiProject.por.por_cid}`
-        : "Proof of Reproducibility is pending.",
+      notes: apiProject.por.por_cid ? `${apiProject.por.por_cid}` : "",
       verifier: apiProject.researcher_id, // Use researcher as verifier for now
       status: apiProject.por.por_cid ? PoRStatus.Success : PoRStatus.Waiting,
     });

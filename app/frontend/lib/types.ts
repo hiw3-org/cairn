@@ -106,7 +106,7 @@ export interface Output {
   description: string;
   data: {
     url?: string;
-    ipfsCid?: string;
+    cid?: string;
     fileName?: string;
     tools?: ToolOption[];
     otherText?: string;
@@ -224,7 +224,6 @@ export interface LibraryOutput extends Output {
   projectOwnerName: string;
   projectTags: string[];
   libraryType: LibraryOutputType;
-  // FIX: Renamed 'likes' to 'stars' to make the 'metrics' property compatible with the base 'Output' interface.
   metrics: {
     downloads: number;
     stars: number;
@@ -287,6 +286,7 @@ export interface ApiProject {
     repo_url?: string;
     commit_hash?: string;
     files?: string;
+    contents_cid?: string;
   };
   por?: {
     por_cid?: string;
