@@ -76,8 +76,7 @@ export const FileCoinProvider = ({
       const rpcURL = rpcUrl || RPC_URLS.calibration.http;
 
       const synapseInstance = await Synapse.create({
-        privateKey:
-          "70082da69c4b67a3763fbb795b7553a7db2bdb6687a2e4388d403e51b14af497",
+        privateKey: ephemeralPrivateKey,
         rpcURL: rpcURL,
       });
 
