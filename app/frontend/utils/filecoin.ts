@@ -32,12 +32,11 @@ export async function downloadFromFileCoin({
       chain || import.meta.env.VITE_FILECOIN_CHAIN || "calibration";
 
     // Construct the base URL with the chain
-    const finalBaseUrl =
-      baseUrl || `https://{wallet}.${filecoinChain}.filcdn.io`;
-
     // Construct the FileCoin download URL
     const downloadUrl =
-      finalBaseUrl.replace("{wallet}", walletAddress) + "/" + pieceCID;
+      (baseUrl
+        ? `${baseUrl}/${pieceCID}`
+        : `https://${walletAddress}.${filecoinChain}.filcdn.io/${pieceCID}`);
     const finalFilename = filename || `cairn_${pieceCID.slice(0, 8)}.zip`;
 
     console.log(`Downloading from FileCoin URL: ${downloadUrl}`);
