@@ -29,6 +29,36 @@ const projectSchema = new mongoose.Schema({
       message: 'Field must be one of: llm, vision, nlp, robotics, ml, ai, other'
     }
   },
+
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters']
+  },
+
+  project_status: {
+    type: String,
+    default: 'Draft',
+    enum: {
+      values: ['Draft', 'Pending Evaluation', 'Evaluated', 'Funded'],
+      message: 'Project status must be one of: Draft, Pending Evaluation, Evaluated, Funded'
+    }
+  },
+
+  por_status: {
+    type: String,
+    default: 'InReview',
+    enum: {
+      values: ['InReview', 'Disputed', 'Phase1', 'Phase2'],
+      message: 'PoR status must be one of: InReview, Disputed, Phase1, Phase2'
+    }
+  },
+
+  funded_amount: {
+    type: Number,
+    min: [0, 'Funded amount must be non-negative'],
+    default: 0
+  },
   
   paper: {
     doi: {
@@ -100,6 +130,11 @@ const projectSchema = new mongoose.Schema({
         },
         message: 'Files must be semicolon-separated list of valid filenames'
       }
+    },
+    licence: {
+      type: String,
+      trim: true,
+      default: 'MIT'
     }
   },
   
@@ -129,6 +164,8 @@ const projectSchema = new mongoose.Schema({
 // Indexes for better query performance
 projectSchema.index({ researcher_id: 1 });
 projectSchema.index({ field: 1 });
+projectSchema.index({ project_status: 1 });
+projectSchema.index({ por_status: 1 });
 projectSchema.index({ created_at: -1 });
 
 // Virtual to get researcher details

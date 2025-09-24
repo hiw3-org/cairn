@@ -97,7 +97,45 @@ const validateCreateProject = [
   body('por.por_cid')
     .optional()
     .matches(/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{56})$/)
-    .withMessage('Invalid IPFS CID format')
+    .withMessage('Invalid IPFS CID format'),
+
+  // Description validation (optional)
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters'),
+
+  // Project status validation (optional)
+  body('project_status')
+    .optional()
+    .isIn(['Draft', 'Pending Evaluation', 'Evaluated', 'Funded'])
+    .withMessage('Project status must be one of: Draft, Pending Evaluation, Evaluated, Funded'),
+
+  // PoR status validation (optional)
+  body('por_status')
+    .optional()
+    .isIn(['InReview', 'Disputed', 'Phase1', 'Phase2'])
+    .withMessage('PoR status must be one of: InReview, Disputed, Phase1, Phase2'),
+
+  // Funded amount validation (optional)
+  body('funded_amount')
+    .optional()
+    .isNumeric()
+    .withMessage('Funded amount must be a number')
+    .custom(value => {
+      if (value < 0) {
+        throw new Error('Funded amount must be non-negative');
+      }
+      return true;
+    }),
+
+  // HuggingFace licence validation (optional)
+  body('huggingface.licence')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Licence cannot be empty if provided')
 ];
 
 module.exports = {
