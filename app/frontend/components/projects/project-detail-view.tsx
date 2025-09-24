@@ -170,8 +170,12 @@ const OutputCard = ({
       // Check if output has a CID for Filecoin download
       if (output.data && output.data.cid && output.data.cid.trim()) {
         // Use the new utility function for FileCoin download with output-specific CID
+        const walletAddress = import.meta.env.VITE_FILECOIN_WALLET_ADDRESS;
+        if (!walletAddress || typeof walletAddress !== "string" || walletAddress.trim() === "") {
+          throw new Error("Missing required environment variable: VITE_FILECOIN_WALLET_ADDRESS");
+        }
         const result = await downloadFromFileCoin({
-          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use Vite's env access
+          walletAddress,
           pieceCID: output.data.cid, // Use the output-specific CID
           filename: `${project.title}_${output.description}.zip`,
         });
