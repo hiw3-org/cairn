@@ -9,7 +9,7 @@ import {
   ProjectStatus,
 } from "../../lib/types";
 import { MOCK_USERS } from "../../lib/constants";
-import { useApi } from "../../context/api-context";
+import { downloadFromFileCoin } from "../../utils/filecoin"; // Import the new utility
 import {
   SearchIcon,
   ChevronDownIcon,
@@ -49,11 +49,12 @@ export const OutputsLibrary = ({
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
 }) => {
-  const { downloadFilecoinFile, isLoading, error } = useApi();
+  // Remove the useApi hook and replace with local state
   const [selectedOutput, setSelectedOutput] = useState<LibraryOutput | null>(
     null
   );
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // --- UI State ---
   const [isGrouped, setIsGrouped] = useState(false);
@@ -108,42 +109,52 @@ export const OutputsLibrary = ({
     new Set()
   );
 
-  // --- Download Handler ---
-  // --- Download Handler ---
+  // --- Updated Download Handler ---
   const handleFilecoinDownload = async (output: LibraryOutput) => {
     try {
       // Set loading for this specific output
       setDownloadingOutputs((prev) => new Set(prev).add(output.id));
+      setDownloadError(null);
 
       // Find the project that contains this output
       const project = allProjects.find((p) => p.id === output.projectId);
       if (!project) {
-        console.error("Project not found for output");
-        return;
+        throw new Error("Project not found for output");
       }
 
       // Find the specific output in the project's outputs array
       const projectOutput = project.outputs.find((o) => o.id === output.id);
       if (!projectOutput) {
-        console.error("Output not found in project");
-        return;
+        throw new Error("Output not found in project");
       }
 
-      // Check if project has a CID for Filecoin download
-      if (project.cid && project.cid.trim()) {
-        // Download from Filecoin
-        await downloadFilecoinFile(
-          project.cid,
-          `${project.title}_${projectOutput.description}.zip`
-        );
+      // Check if output has a CID for Filecoin download
+      if (
+        projectOutput.data &&
+        projectOutput.data.cid &&
+        projectOutput.data.cid.trim()
+      ) {
+        // Use the new utility function for FileCoin download with output-specific CID
+        const result = await downloadFromFileCoin({
+          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use env variable with correct prefix
+          pieceCID: projectOutput.data.cid, // Use the output-specific CID
+          filename: `${project.title}_${projectOutput.description}.zip`,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || "Download failed");
+        }
+
+        console.log(`Successfully downloaded: ${result.filename}`);
       } else if (projectOutput.data && projectOutput.data.url) {
         // Open HuggingFace URL in new tab
         window.open(projectOutput.data.url, "_blank");
       } else {
-        console.error("No CID or HuggingFace URL found for this output");
+        throw new Error("No CID or HuggingFace URL found for this output");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Download failed:", err);
+      setDownloadError(err.message || "Download failed");
     } finally {
       // Remove loading for this specific output
       setDownloadingOutputs((prev) => {
@@ -154,7 +165,7 @@ export const OutputsLibrary = ({
     }
   };
 
-  // --- Memoized Filtering and Sorting ---
+  // --- Rest of your component logic remains the same ---
   const filteredOutputs = useMemo(() => {
     return allOutputs.filter((o) => {
       const project = allProjects.find((p) => p.id === o.projectId);
@@ -247,7 +258,7 @@ export const OutputsLibrary = ({
         : [...prev, license]
     );
 
-  // --- UI Sub-components ---
+  // --- UI Sub-components remain the same ---
   const FilterDropdown = ({
     title,
     allItems,
@@ -307,13 +318,18 @@ export const OutputsLibrary = ({
     const project = allProjects.find((p) => p.id === output.projectId);
     if (!project) return "Download";
 
-    if (project.cid && project.cid.trim()) {
+    const projectOutput = project.outputs.find((o) => o.id === output.id);
+    if (!projectOutput) return "Download";
+
+    // Check for output-specific CID first
+    if (
+      projectOutput.data &&
+      projectOutput.data.cid &&
+      projectOutput.data.cid.trim()
+    ) {
       return "Download from Filecoin";
-    } else {
-      const projectOutput = project.outputs.find((o) => o.id === output.id);
-      if (projectOutput?.data?.url) {
-        return "View on HuggingFace";
-      }
+    } else if (projectOutput.data && projectOutput.data.url) {
+      return "View on HuggingFace";
     }
     return "No Download Available";
   };
@@ -468,12 +484,18 @@ export const OutputsLibrary = ({
 
   return (
     <div className="space-y-8">
-      {/* Error display */}
-      {error && (
+      {/* Updated Error display */}
+      {downloadError && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-red-800 dark:text-red-200 text-sm">
-            Download error: {error}
+            Download error: {downloadError}
           </p>
+          <button
+            onClick={() => setDownloadError(null)}
+            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Project, Reproducibility, PoRStatus } from "../../lib/types";
-import { useApi } from "../../context/api-context";
+import { downloadFromFileCoin } from "../../utils/filecoin"; // Import the new utility
 import {
   EyeIcon,
   FlagIcon,
@@ -123,7 +123,9 @@ export default function PoRModule({
   onViewReproducibility: (rep: Reproducibility) => void;
   onGetProofClick: () => void;
 }) {
-  const { downloadFilecoinFile, isLoading, error } = useApi();
+  // Replace useApi with local state
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
   const hasSuccessPor = React.useMemo(
     () => project.reproducibilities.some((r) => r.status === PoRStatus.Success),
@@ -158,17 +160,31 @@ export default function PoRModule({
   const handleDownloadProof = async () => {
     const cid = getProofCID();
     if (!cid) {
-      console.error("No CID found for proof of reproducibility");
+      setDownloadError("No CID found for proof of reproducibility");
       return;
     }
 
     try {
-      await downloadFilecoinFile(
-        cid,
-        `${project.title}_proof_of_reproducibility.zip`
-      );
-    } catch (err) {
+      setIsLoading(true);
+      setDownloadError(null);
+
+      // Use the new utility function for FileCoin download
+      const result = await downloadFromFileCoin({
+        walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use Vite's env access
+        pieceCID: cid,
+        filename: `${project.title}_proof_of_reproducibility.zip`,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Download failed");
+      }
+
+      console.log(`Successfully downloaded proof: ${result.filename}`);
+    } catch (err: any) {
       console.error("Failed to download proof:", err);
+      setDownloadError(err.message || "Failed to download proof");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -177,11 +193,17 @@ export default function PoRModule({
   return (
     <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark flex flex-col">
       {/* Error display */}
-      {error && (
+      {downloadError && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
           <p className="text-red-800 dark:text-red-200 text-sm">
-            Download error: {error}
+            Download error: {downloadError}
           </p>
+          <button
+            onClick={() => setDownloadError(null)}
+            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
