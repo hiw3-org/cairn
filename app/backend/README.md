@@ -5,7 +5,11 @@ A RESTful API for managing scientific research projects, researchers, and impact
 ## Features
 
 - **User Management**: Registration, authentication, and profile management
-- **Project Management**: Create, retrieve, and manage research projects
+- **Project Management**: Create, retrieve, and manage research projects with status tracking
+- **Project Status Tracking**: Support for project lifecycle (Draft → Pending Evaluation → Evaluated → Funded)
+- **PoR (Proof of Reproducibility) Management**: Track PoR status through phases (InReview → Phase1/Phase2)
+- **Funding Tracking**: Track funded amounts for projects
+- **Enhanced Project Metadata**: Support for project descriptions and licensing information
 - **Authentication**: JWT-based authentication with secure token management
 - **Validation**: Comprehensive input validation and error handling
 - **Database**: MongoDB with Mongoose ODM for data persistence
@@ -101,8 +105,11 @@ curl -X POST http://localhost:3000/api/v1/projects \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "title": "Machine Learning for Climate Prediction",
-    "researcher_id": "USER_ID",
     "field": "ml",
+    "description": "Advanced machine learning techniques for accurate climate modeling and prediction.",
+    "project_status": "Pending Evaluation",
+    "por_status": "Phase1",
+    "funded_amount": 50000,
     "paper": {
       "doi": "10.1234/example.2024",
       "title": "Deep Learning for Weather Forecasting",
@@ -110,16 +117,20 @@ curl -X POST http://localhost:3000/api/v1/projects \
     },
     "huggingface": {
       "repo_url": "https://huggingface.co/user/climate-model",
-      "model_type": "regression",
-      "commit_hash": "abc123def456"
+      "commit_hash": "abc123def456",
+      "licence": "Apache-2.0"
+    },
+    "por": {
+      "por_cid": "QmX1234567890abcdefghijklmnopqrstuvwxyzABCDEF"
     }
   }'
 ```
 
 ### Get All Projects
 ```bash
-curl -X GET http://localhost:3000/api/v1/projects \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+# Get all projects
+curl -X GET http://localhost:3000/api/v1/projects
+
 ```
 
 ## Data Models
@@ -146,16 +157,21 @@ curl -X GET http://localhost:3000/api/v1/projects \
   title: String (required, 3-200 chars),
   researcher_id: ObjectId (required, references User),
   field: String (llm|vision|nlp|robotics|ml|ai|other),
+  description: String (optional, max 500 chars),
+  project_status: String (Draft|Pending Evaluation|Evaluated|Funded, default: Draft),
+  por_status: String (InReview|Disputed|Phase1|Phase2, default: InReview),
+  funded_amount: Number (optional, non-negative, default: 0),
   paper: {
     doi: String (optional, DOI format),
     arxiv_id: String (optional, arXiv format),
-    title: String (optional),
-    abstract: String (optional)
+    title: String (optional, max 300 chars),
+    abstract: String (optional, max 5000 chars)
   },
   huggingface: {
-    repo_url: String (required, HuggingFace URL),
-    model_type: String (optional),
-    commit_hash: String (optional)
+    repo_url: String (optional, HuggingFace URL),
+    commit_hash: String (optional, hex format),
+    files: String (optional, semicolon-separated),
+    licence: String (optional, default: MIT)
   },
   por: {
     por_cid: String (optional, IPFS CID format)
@@ -172,11 +188,16 @@ curl -X GET http://localhost:3000/api/v1/projects \
 - **Address**: Valid Ethereum address format (0x + 40 hex characters), unique
 
 ### Project Validation
-- **Title**: 3-200 characters
-- **Field**: Must be one of the predefined research fields
+- **Title**: 3-200 characters, required
+- **Field**: Must be one of the predefined research fields (llm|vision|nlp|robotics|ml|ai|other)
+- **Description**: Optional, maximum 500 characters
+- **Project Status**: Must be one of: Draft, Pending Evaluation, Evaluated, Funded
+- **PoR Status**: Must be one of: InReview, Disputed, Phase1, Phase2
+- **Funded Amount**: Non-negative number, defaults to 0
 - **DOI**: Standard DOI format (10.xxxx/xxxxx)
 - **arXiv ID**: arXiv format (YYYY.NNNNN)
 - **HuggingFace URL**: Valid HuggingFace repository URL
+- **HuggingFace Licence**: String, defaults to "MIT"
 - **IPFS CID**: Valid IPFS content identifier format
 
 ## Error Handling

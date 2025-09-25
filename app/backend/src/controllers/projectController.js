@@ -174,6 +174,10 @@ const createProject = async (req, res) => {
       title,
       researcher_id: bodyResearcherId, // rename to avoid confusion
       field,
+      description,
+      project_status,
+      por_status,
+      funded_amount,
       paper,
       huggingface,
       por
@@ -189,6 +193,12 @@ const createProject = async (req, res) => {
       researcher_id: effectiveResearcherId,
       field
     };
+
+    // Add optional fields if provided
+    if (description) projectData.description = description;
+    if (project_status) projectData.project_status = project_status;
+    if (por_status) projectData.por_status = por_status;
+    if (funded_amount !== undefined) projectData.funded_amount = funded_amount;
 
     // Add optional nested objects if provided
     if (paper) projectData.paper = paper;
