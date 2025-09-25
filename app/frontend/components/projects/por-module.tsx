@@ -1,6 +1,6 @@
 import React from "react";
 import { Project, Reproducibility, PoRStatus } from "../../lib/types";
-import { downloadFromFileCoin } from "../../utils/filecoin"; // Import the new utility
+import { downloadFromFileCoin } from "../../utils/filecoin";
 import {
   EyeIcon,
   FlagIcon,
@@ -10,105 +10,7 @@ import {
   BeakerIcon,
   ClipboardCheckIcon,
 } from "../ui/icons";
-import { MOCK_USERS } from "../../lib/constants";
 import { Tooltip } from "../ui/tooltip";
-
-const PoRTimelineItem = ({
-  rep,
-  onView,
-  isLast,
-}: {
-  rep: Reproducibility;
-  onView: () => void;
-  isLast: boolean;
-}) => {
-  const statusConfig = {
-    [PoRStatus.Success]: {
-      icon: CheckCircleIcon,
-      color: "text-status-success",
-      bg: "bg-status-success-bg dark:bg-status-success-bg-dark",
-      text: "Success",
-    },
-    [PoRStatus.Waiting]: {
-      icon: ClockIcon,
-      color: "text-status-warning",
-      bg: "bg-status-warning-bg dark:bg-status-warning-bg-dark",
-      text: "Waiting",
-    },
-    [PoRStatus.Disputed]: {
-      icon: FlagIcon,
-      color: "text-status-danger",
-      bg: "bg-status-danger-bg dark:bg-status-danger-bg-dark",
-      text: "Disputed",
-    },
-  };
-  const config = statusConfig[rep.status];
-  const Icon = config.icon;
-
-  // Handle both object and string verifier types
-  const getVerifierName = (verifier: any) => {
-    if (!verifier) return "Unknown";
-
-    // If verifier is an object with username or email
-    if (typeof verifier === "object" && verifier.username) {
-      return verifier.username;
-    }
-    if (typeof verifier === "object" && verifier.email) {
-      return verifier.email;
-    }
-
-    // If verifier is a string (wallet address), try to find in MOCK_USERS
-    if (typeof verifier === "string") {
-      const user = MOCK_USERS.find((u) => u.walletAddress === verifier);
-      if (user) return user.name;
-      return verifier.length > 10
-        ? verifier.substring(0, 10) + "..."
-        : verifier;
-    }
-
-    return "Unknown";
-  };
-
-  const authorName = getVerifierName(rep.verifier);
-
-  return (
-    <div className="relative flex items-start">
-      {!isLast && (
-        <div className="absolute top-5 left-[11px] h-full w-0.5 bg-border dark:bg-border-dark" />
-      )}
-      <div
-        className={`relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${config.bg}`}
-      >
-        <Icon className={`h-4 w-4 ${config.color}`} />
-      </div>
-      <div className="ml-4 flex-grow">
-        <div className="flex justify-between items-center">
-          <p className="font-semibold text-sm text-text-primary dark:text-dark-text-primary">
-            {config.text} by{" "}
-            <span
-              title={
-                typeof rep.verifier === "string"
-                  ? rep.verifier
-                  : rep.verifier?.email || "Unknown"
-              }
-            >
-              {authorName}
-            </span>
-          </p>
-          <button
-            onClick={onView}
-            className="p-1 rounded-full text-text-secondary hover:bg-hf-gray-200 dark:hover:bg-hf-gray-800"
-          >
-            <EyeIcon className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-xs text-text-secondary dark:text-dark-text-secondary">
-          {new Date(rep.timestamp).toLocaleDateString()}
-        </p>
-      </div>
-    </div>
-  );
-};
 
 export default function PoRModule({
   project,
@@ -123,35 +25,27 @@ export default function PoRModule({
   onViewReproducibility: (rep: Reproducibility) => void;
   onGetProofClick: () => void;
 }) {
-  // Replace useApi with local state
   const [isLoading, setIsLoading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
-  const hasSuccessPor = React.useMemo(
-    () => project.reproducibilities.some((r) => r.status === PoRStatus.Success),
-    [project.reproducibilities]
-  );
+  // Check if project has reached Phase2 (successful PoR) or has a POR CID available
+  const hasSuccessPor =
+    project.por_status === "Phase2" ||
+    (project.por?.por_cid && project.por.por_cid.trim());
 
-  // Extract CID for proof download
+  // Get the appropriate CID for downloading proof
   const getProofCID = () => {
-    // First try to get CID from project level
-    if (project.cid && project.cid.trim()) {
-      return project.cid;
+    // Try POR CID first
+    if (project.por?.por_cid && project.por.por_cid.trim()) {
+      return project.por.por_cid;
     }
 
-    // Then try to extract from successful reproducibility notes
-    const successfulReproducibility = project.reproducibilities.find(
-      (r) => r.status === PoRStatus.Success
-    );
-
-    if (successfulReproducibility?.notes) {
-      // Extract CID from notes like "Proof of Reproducibility stored at CID: bafkzcibd..."
-      const cidMatch = successfulReproducibility.notes.match(
-        /CID:\s*([a-zA-Z0-9]+)/
-      );
-      if (cidMatch && cidMatch[1]) {
-        return cidMatch[1];
-      }
+    // Fallback to HuggingFace contents CID
+    if (
+      project.huggingface?.contents_cid &&
+      project.huggingface.contents_cid.trim()
+    ) {
+      return project.huggingface.contents_cid;
     }
 
     return null;
@@ -168,9 +62,8 @@ export default function PoRModule({
       setIsLoading(true);
       setDownloadError(null);
 
-      // Use the new utility function for FileCoin download
       const result = await downloadFromFileCoin({
-        walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use Vite's env access
+        walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "",
         pieceCID: cid,
         filename: `${project.title}_proof_of_reproducibility.zip`,
       });
@@ -189,6 +82,33 @@ export default function PoRModule({
   };
 
   const proofCID = getProofCID();
+
+  // Create a status display based on the actual project data
+  const statusConfig = React.useMemo(() => {
+    // Only log in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("Project has POR CID:", project.por?.por_cid);
+    }
+    if (project.por?.por_cid && project.por.por_cid.trim()) {
+      return {
+        icon: CheckCircleIcon,
+        color: "text-status-success",
+        bg: "bg-status-success-bg dark:bg-status-success-bg-dark",
+        text: "Reproducible",
+        description: "This project has a proof of reproducibility available.",
+      };
+    } else {
+      return {
+        icon: ClockIcon,
+        color: "text-status-warning",
+        bg: "bg-status-warning-bg dark:bg-status-warning-bg-dark",
+        text: "In Review",
+        description: "This project is under review for reproducibility.",
+      };
+    }
+  }, [project]);
+
+  const StatusIcon = statusConfig.icon;
 
   return (
     <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark flex flex-col">
@@ -211,41 +131,82 @@ export default function PoRModule({
         Reproducibility
       </h3>
 
-      <div>
-        {project.reproducibilities.length > 0 ? (
-          <div className="space-y-6">
-            {project.reproducibilities.map((rep, index) => (
-              <PoRTimelineItem
-                key={rep.id}
-                rep={rep}
-                onView={() => onViewReproducibility(rep)}
-                isLast={index === project.reproducibilities.length - 1}
-              />
-            ))}
+      <div className="space-y-4">
+        {/* Current Status Display */}
+        <div className="flex items-start space-x-3">
+          <div
+            className={`relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${statusConfig.bg}`}
+          >
+            <StatusIcon className={`h-5 w-5 ${statusConfig.color}`} />
           </div>
-        ) : (
-          <div className="text-center py-8 flex flex-col justify-center items-center">
-            <BeakerIcon className="mx-auto h-12 w-12 text-text-secondary/50" />
-            <h4 className="mt-4 text-md font-semibold text-text-primary dark:text-dark-text-primary">
-              Not Yet Tested
-            </h4>
-            <p className="mt-1 text-sm text-text-secondary dark:text-dark-text-secondary">
-              This project has not been submitted for reproducibility
-              evaluation.
+          <div className="flex-grow">
+            <p className="font-semibold text-sm text-text-primary dark:text-dark-text-primary">
+              {statusConfig.text}
             </p>
-            {!isOwner && (
-              <button
-                onClick={onPorSubmitClick}
-                className="mt-6 flex items-center mx-auto space-x-2 bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors text-sm shadow-md"
-              >
-                <PlusIcon className="w-4 h-4" />
-                <span>Be the First to Evaluate</span>
-              </button>
-            )}
+            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mt-1">
+              {statusConfig.description}
+            </p>
+            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mt-1">
+              Last updated: {new Date(project.updated_at).toLocaleDateString()}
+            </p>
           </div>
-        )}
+        </div>
+
+        {/* Project Details */}
+        <div className="bg-background dark:bg-background-dark rounded-lg p-3 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-text-secondary dark:text-dark-text-secondary">
+              Field:
+            </span>
+            <span className="text-text-primary dark:text-dark-text-primary font-medium">
+              {project.field}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-text-secondary dark:text-dark-text-secondary">
+              Status:
+            </span>
+            <span className="text-text-primary dark:text-dark-text-primary font-medium">
+              {project.project_status}
+            </span>
+          </div>
+          {project.funded_amount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-text-secondary dark:text-dark-text-secondary">
+                Funding:
+              </span>
+              <span className="text-text-primary dark:text-dark-text-primary font-medium">
+                ${project.funded_amount.toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {project.por_status === "InReview" && !isOwner && (
+            <button
+              onClick={onPorSubmitClick}
+              className="w-full flex items-center justify-center space-x-2 bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors text-sm shadow-md"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>Submit Reproducibility Evidence</span>
+            </button>
+          )}
+
+          {isOwner && (
+            <button
+              onClick={onGetProofClick}
+              className="w-full flex items-center justify-center space-x-2 bg-secondary text-secondary-text font-semibold py-2 px-4 rounded-lg hover:bg-secondary-hover transition-colors text-sm"
+            >
+              <BeakerIcon className="w-4 h-4" />
+              <span>Get Proof of Reproducibility</span>
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Download Proof Section */}
       <div className="mt-6 pt-4 border-t border-border dark:border-border-dark">
         <button
           onClick={handleDownloadProof}
@@ -256,9 +217,11 @@ export default function PoRModule({
           <span>
             {isLoading
               ? "Downloading..."
-              : proofCID
+              : proofCID && hasSuccessPor
               ? "Download Proof from Filecoin"
-              : "No Proof Available"}
+              : hasSuccessPor
+              ? "No Proof CID Available"
+              : "Proof Not Yet Available"}
           </span>
         </button>
         {proofCID && (

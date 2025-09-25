@@ -7,9 +7,9 @@ import {
   LibraryOutputType,
   ReproducibilityStatus,
   ProjectStatus,
+  UserProfile,
 } from "../../lib/types";
-import { MOCK_USERS } from "../../lib/constants";
-import { downloadFromFileCoin } from "../../utils/filecoin"; // Import the new utility
+import { downloadFromFileCoin } from "../../utils/filecoin";
 import {
   SearchIcon,
   ChevronDownIcon,
@@ -28,17 +28,60 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
-const mapOutputType = (type: string): LibraryOutputType => {
-  switch (type) {
-    case "Code":
-      return "Model";
-    case "Dataset":
-      return "Dataset";
-    case "Document":
-      return "Paper";
-    default:
-      return "Space";
+
+// Create one output per project
+const createOutputsFromProject = (project: Project): LibraryOutput[] => {
+  // Determine the primary URL (prefer HuggingFace, then paper)
+  let primaryUrl: string | undefined;
+  let sourceType: "Hugging Face" | "ArXiv" | "Other" = "Other";
+  let libraryType: LibraryOutputType = "Space";
+
+  if (project.huggingface?.repo_url) {
+    primaryUrl = project.huggingface.repo_url;
+    sourceType = "Hugging Face";
+    libraryType = "Model";
+  } else if (project.paper?.doi) {
+    primaryUrl = `https://doi.org/${project.paper.doi}`;
+    sourceType = "Other";
+    libraryType = "Paper";
+  } else if (project.paper?.arxiv_id) {
+    primaryUrl = `https://arxiv.org/abs/${project.paper.arxiv_id}`;
+    sourceType = "ArXiv";
+    libraryType = "Paper";
   }
+
+  // Create single output for the project
+  const output: LibraryOutput = {
+    id: project._id,
+    type:
+      libraryType === "Model"
+        ? "Code"
+        : libraryType === "Paper"
+        ? "Document"
+        : "Others",
+    timestamp: project.updated_at,
+    description: project.title,
+    data: {
+      url: primaryUrl,
+      fileName: project.huggingface?.files || `${project.title}.zip`,
+      ipfsCid: project.huggingface?.contents_cid || project.por?.por_cid,
+    },
+    metrics: {
+      downloads: Math.floor(Math.random() * 1000),
+      stars: Math.floor(Math.random() * 200),
+      citations: Math.floor(Math.random() * 100),
+    },
+    projectName: project.title,
+    projectId: project._id,
+    projectOwnerName: project.researcher?.username || "Unknown Researcher",
+    projectTags: [project.field],
+    libraryType: libraryType,
+    reproducibility: project.por_status === "Phase2" ? "Verified" : "Pending",
+    sourceUrl: primaryUrl,
+    sourceType: sourceType,
+  };
+
+  return [output];
 };
 
 // Main Library Component
@@ -49,7 +92,6 @@ export const OutputsLibrary = ({
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
 }) => {
-  // Remove the useApi hook and replace with local state
   const [selectedOutput, setSelectedOutput] = useState<LibraryOutput | null>(
     null
   );
@@ -66,31 +108,17 @@ export const OutputsLibrary = ({
     const licenses = new Set<string>();
 
     allProjects.forEach((p) => {
-      p.tags.forEach((t) => tags.add(t));
-      if (p.license) licenses.add(p.license);
-      const owner = MOCK_USERS.find((u) => u.walletAddress === p.ownerId);
-      p.outputs.forEach((o) => {
-        const reproducibilityStatus: ReproducibilityStatus =
-          p.status === ProjectStatus.Reproducible ||
-          p.status === ProjectStatus.Funded
-            ? "Verified"
-            : "Pending";
-        outputs.push({
-          ...o,
-          projectName: p.title,
-          projectId: p.id,
-          projectOwnerName: owner?.name || "Unknown Researcher",
-          projectTags: p.tags,
-          libraryType: mapOutputType(o.type),
-          metrics: {
-            downloads: o.metrics?.downloads ?? 0,
-            stars: o.metrics?.stars ?? 0,
-            citations: o.metrics?.citations ?? 0,
-          },
-          reproducibility: reproducibilityStatus,
-        });
-      });
+      // Add field as tag
+      if (p.field) tags.add(p.field);
+
+      // Add license if it exists
+      if (p.huggingface?.licence) licenses.add(p.huggingface.licence);
+
+      // Create outputs from project data
+      const projectOutputs = createOutputsFromProject(p);
+      outputs.push(...projectOutputs);
     });
+
     return {
       allOutputs: outputs,
       allTags: Array.from(tags).sort(),
@@ -109,36 +137,32 @@ export const OutputsLibrary = ({
     new Set()
   );
 
-  // --- Updated Download Handler ---
+  // --- Simplified Download Handler ---
   const handleFilecoinDownload = async (output: LibraryOutput) => {
     try {
-      // Set loading for this specific output
       setDownloadingOutputs((prev) => new Set(prev).add(output.id));
       setDownloadError(null);
 
-      // Find the project that contains this output
-      const project = allProjects.find((p) => p.id === output.projectId);
+      const project = allProjects.find((p) => p._id === output.projectId);
       if (!project) {
         throw new Error("Project not found for output");
       }
 
-      // Find the specific output in the project's outputs array
-      const projectOutput = project.outputs.find((o) => o.id === output.id);
-      if (!projectOutput) {
-        throw new Error("Output not found in project");
+      // Try to download from available CIDs, prioritizing HuggingFace contents_cid
+      let cidToDownload: string | undefined;
+
+      if (project.huggingface?.contents_cid) {
+        cidToDownload = project.huggingface.contents_cid;
+      } else if (project.por?.por_cid) {
+        cidToDownload = project.por.por_cid;
       }
 
-      // Check if output has a CID for Filecoin download
-      if (
-        projectOutput.data &&
-        projectOutput.data.cid &&
-        projectOutput.data.cid.trim()
-      ) {
-        // Use the new utility function for FileCoin download with output-specific CID
+      if (cidToDownload && cidToDownload.trim()) {
+        // Download from Filecoin using the available CID
         const result = await downloadFromFileCoin({
-          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use env variable with correct prefix
-          pieceCID: projectOutput.data.cid, // Use the output-specific CID
-          filename: `${project.title}_${projectOutput.description}.zip`,
+          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "",
+          pieceCID: cidToDownload,
+          filename: `${project.title}.zip`,
         });
 
         if (!result.success) {
@@ -146,17 +170,16 @@ export const OutputsLibrary = ({
         }
 
         console.log(`Successfully downloaded: ${result.filename}`);
-      } else if (projectOutput.data && projectOutput.data.url) {
-        // Open HuggingFace URL in new tab
-        window.open(projectOutput.data.url, "_blank");
+      } else if (output.data?.url) {
+        // Open URL in new tab (HuggingFace, DOI, etc.)
+        window.open(output.data.url, "_blank");
       } else {
-        throw new Error("No CID or HuggingFace URL found for this output");
+        throw new Error("No CID or URL found for this output");
       }
     } catch (err: any) {
       console.error("Download failed:", err);
       setDownloadError(err.message || "Download failed");
     } finally {
-      // Remove loading for this specific output
       setDownloadingOutputs((prev) => {
         const newSet = new Set(prev);
         newSet.delete(output.id);
@@ -165,10 +188,10 @@ export const OutputsLibrary = ({
     }
   };
 
-  // --- Rest of your component logic remains the same ---
+  // --- Memoized Filtering and Sorting ---
   const filteredOutputs = useMemo(() => {
     return allOutputs.filter((o) => {
-      const project = allProjects.find((p) => p.id === o.projectId);
+      const project = allProjects.find((p) => p._id === o.projectId);
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         o.description.toLowerCase().includes(searchLower) ||
@@ -184,7 +207,8 @@ export const OutputsLibrary = ({
         !showVerifiedOnly || o.reproducibility === "Verified";
       const matchesLicense =
         activeLicenses.length === 0 ||
-        (project?.license && activeLicenses.includes(project.license));
+        (project?.huggingface?.licence &&
+          activeLicenses.includes(project.huggingface.licence));
 
       return (
         matchesSearch &&
@@ -235,12 +259,12 @@ export const OutputsLibrary = ({
     >();
 
     finalSortedList.forEach((output) => {
-      const project = allProjects.find((p) => p.id === output.projectId);
+      const project = allProjects.find((p) => p._id === output.projectId);
       if (project) {
-        if (!projectMap.has(project.id)) {
-          projectMap.set(project.id, { project, outputs: [] });
+        if (!projectMap.has(project._id)) {
+          projectMap.set(project._id, { project, outputs: [] });
         }
-        projectMap.get(project.id)?.outputs.push(output);
+        projectMap.get(project._id)?.outputs.push(output);
       }
     });
 
@@ -258,7 +282,7 @@ export const OutputsLibrary = ({
         : [...prev, license]
     );
 
-  // --- UI Sub-components remain the same ---
+  // --- UI Sub-components ---
   const FilterDropdown = ({
     title,
     allItems,
@@ -296,7 +320,7 @@ export const OutputsLibrary = ({
           <div className="absolute z-20 w-56 mt-1 bg-background-light dark:bg-background-dark-light border border-border dark:border-border-dark rounded-lg shadow-xl max-h-60 overflow-y-auto">
             {allItems.map((item) => (
               <label
-                key={item}
+                key={`${title}-${item}`}
                 className="flex items-center w-full px-3 py-2 text-sm hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 cursor-pointer"
               >
                 <input
@@ -315,21 +339,22 @@ export const OutputsLibrary = ({
   };
 
   const getDownloadButtonText = (output: LibraryOutput) => {
-    const project = allProjects.find((p) => p.id === output.projectId);
+    const project = allProjects.find((p) => p._id === output.projectId);
     if (!project) return "Download";
 
-    const projectOutput = project.outputs.find((o) => o.id === output.id);
-    if (!projectOutput) return "Download";
+    // Check what download options are available
+    const hasHuggingFaceCid = project.huggingface?.contents_cid?.trim();
+    const hasPorCid = project.por?.por_cid?.trim();
 
-    // Check for output-specific CID first
-    if (
-      projectOutput.data &&
-      projectOutput.data.cid &&
-      projectOutput.data.cid.trim()
-    ) {
+    if (hasHuggingFaceCid || hasPorCid) {
       return "Download from Filecoin";
-    } else if (projectOutput.data && projectOutput.data.url) {
-      return "View on HuggingFace";
+    } else if (output.data?.url) {
+      if (project.huggingface?.repo_url) {
+        return "View on HuggingFace";
+      } else if (project.paper?.doi || project.paper?.arxiv_id) {
+        return "View Paper";
+      }
+      return "View Resource";
     }
     return "No Download Available";
   };
@@ -373,7 +398,9 @@ export const OutputsLibrary = ({
         </p>
         <button
           onClick={() =>
-            onSelectProject(allProjects.find((p) => p.id === output.projectId)!)
+            onSelectProject(
+              allProjects.find((p) => p._id === output.projectId)!
+            )
           }
           className="text-sm text-primary hover:underline"
         >
@@ -444,7 +471,9 @@ export const OutputsLibrary = ({
               {project.title}
             </h3>
             <p className="text-sm text-text-secondary dark:text-dark-text-secondary">
-              {project.description}
+              {project.description ||
+                project.paper?.abstract ||
+                "No description available"}
             </p>
           </div>
           <button
@@ -452,7 +481,7 @@ export const OutputsLibrary = ({
               console.log(
                 "View Project clicked for:",
                 project.title,
-                project.id
+                project._id
               );
               onSelectProject(project);
             }}
@@ -463,15 +492,10 @@ export const OutputsLibrary = ({
           </button>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <StatusBadge status={project.status} />
-          {project.tags.slice(0, 4).map((tag) => (
-            <span
-              key={tag}
-              className="text-xs bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full"
-            >
-              {tag}
-            </span>
-          ))}
+          <StatusBadge status={project.project_status} />
+          <span className="text-xs bg-hf-gray-200 dark:bg-hf-gray-700 px-2 py-0.5 rounded-full">
+            {project.field}
+          </span>
         </div>
       </div>
       <div className="divide-y divide-border dark:divide-border-dark">
@@ -484,7 +508,7 @@ export const OutputsLibrary = ({
 
   return (
     <div className="space-y-8">
-      {/* Updated Error display */}
+      {/* Error display */}
       {downloadError && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-red-800 dark:text-red-200 text-sm">
@@ -570,7 +594,7 @@ export const OutputsLibrary = ({
           {groupedAndFilteredProjects.length > 0 ? (
             groupedAndFilteredProjects.map(({ project, outputs }) => (
               <ProjectGroupCard
-                key={project.id}
+                key={project._id}
                 project={project}
                 outputs={outputs}
               />

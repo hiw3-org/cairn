@@ -11,7 +11,6 @@ import {
   AlertTriangleIcon,
 } from "../ui/icons";
 import { Project, ProjectOutput, Tools } from "../../lib/types";
-import { TOOL_OPTIONS } from "../../lib/constants";
 import { useContract } from "../../context/contract-context";
 
 // Types for creation process
@@ -307,7 +306,7 @@ export const AddOutputModal = ({
           />
           <div>
             <label className="block mb-1 font-medium">Tools</label>
-            <div className="flex flex-wrap gap-2">
+            {/* <div className="flex flex-wrap gap-2">
               {TOOL_OPTIONS.map((tool) => (
                 <label key={tool} className="flex items-center space-x-2">
                   <input
@@ -318,7 +317,7 @@ export const AddOutputModal = ({
                   <span>{tool}</span>
                 </label>
               ))}
-            </div>
+            </div> */}
           </div>
           <FormInput
             type="text"

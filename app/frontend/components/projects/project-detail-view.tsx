@@ -7,7 +7,7 @@ import {
   ProjectStatus,
   ReproducibilityStatus,
 } from "../../lib/types";
-import { downloadFromFileCoin } from "../../utils/filecoin"; // Import the new utility
+import { downloadFromFileCoin } from "../../utils/filecoin";
 import {
   ChevronLeftIcon,
   DownloadIcon,
@@ -27,7 +27,6 @@ import { useAppContext } from "../../context/app-provider";
 import React from "react";
 import { useClipboard } from "../../hooks/use-clipboard";
 import { ReproducibilityBadge } from "../ui/reproducibility-badge";
-import { MOCK_USERS } from "../../lib/constants";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -36,8 +35,6 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
 
 const AddressWithCopy = ({ address }: { address: string }) => {
   const { copy, copied } = useClipboard();
-  const userName =
-    MOCK_USERS.find((u) => u.walletAddress === address)?.name || "Unknown User";
   const formatAddress = (addr: string) => {
     if (!addr || addr.length < 10) return addr;
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -47,7 +44,7 @@ const AddressWithCopy = ({ address }: { address: string }) => {
     <div className="flex items-center space-x-2 group">
       <span
         className="font-mono text-sm text-text-secondary dark:text-text-dark-secondary"
-        title={`${userName} - ${address}`}
+        title={address}
       >
         {formatAddress(address)}
       </span>
@@ -83,40 +80,25 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
               Total Raised
             </p>
             <p className="text-3xl font-bold text-status-success mt-1">
-              $
-              {project.fundingPool > 0
-                ? project.fundingPool.toLocaleString()
-                : "0"}
+              ${(project.funded_amount || 0).toLocaleString()}
             </p>
           </div>
         </div>
 
-        {/* Ownership Section */}
-        {project.impactAssetOwners && project.impactAssetOwners.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
-              Ownership
-            </h3>
-            <ul className="space-y-2">
-              {project.impactAssetOwners.map((owner, index) => (
-                <li
-                  key={index}
-                  className="py-2 flex justify-between items-center"
-                >
-                  <div>
-                    <p className="font-semibold text-text dark:text-text-dark text-sm">
-                      {owner.contribution}
-                    </p>
-                    <AddressWithCopy address={owner.walletAddress} />
-                  </div>
-                  <span className="text-lg font-bold text-primary dark:text-primary-light flex-shrink-0 ml-4">
-                    {owner.ownershipPercentage.toFixed(1)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
+        {/* Researcher Section */}
+        <div>
+          <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
+            Researcher
+          </h3>
+          <div className="py-2">
+            <p className="font-semibold text-text dark:text-text-dark text-sm">
+              {project.researcher?.username || "Unknown Researcher"}
+            </p>
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+              {project.researcher?.email || "No email provided"}
+            </p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -144,36 +126,43 @@ const ImpactMetric = ({
   </div>
 );
 
-const OutputCard = ({
-  output,
-  projectStatus,
+const ProjectResourceCard = ({
+  title,
+  url,
+  type,
   project,
 }: {
-  output: Output;
-  projectStatus: ProjectStatus;
+  title: string;
+  url?: string;
+  type: string;
   project: Project;
 }) => {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
   const reproducibilityStatus: ReproducibilityStatus =
-    projectStatus === ProjectStatus.Reproducible ||
-    projectStatus === ProjectStatus.Funded
-      ? "Verified"
-      : "Pending";
+    project.por_status === "Phase2" ? "Verified" : "Pending";
 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
       setDownloadError(null);
 
-      // Check if output has a CID for Filecoin download
-      if (output.data && output.data.cid && output.data.cid.trim()) {
-        // Use the new utility function for FileCoin download with output-specific CID
+      // Check for available CIDs
+      let cidToDownload: string | undefined;
+
+      if (type === "HuggingFace" && project.huggingface?.contents_cid) {
+        cidToDownload = project.huggingface.contents_cid;
+      } else if (project.por?.por_cid) {
+        cidToDownload = project.por.por_cid;
+      }
+
+      if (cidToDownload && cidToDownload.trim()) {
+        // Download from Filecoin
         const result = await downloadFromFileCoin({
-          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "", // Use Vite's env access
-          pieceCID: output.data.cid, // Use the output-specific CID
-          filename: `${project.title}_${output.description}.zip`,
+          walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "",
+          pieceCID: cidToDownload,
+          filename: `${project.title}_${title}.zip`,
         });
 
         if (!result.success) {
@@ -181,11 +170,11 @@ const OutputCard = ({
         }
 
         console.log(`Successfully downloaded: ${result.filename}`);
-      } else if (output.data && output.data.url) {
-        // Open HuggingFace URL in new tab
-        window.open(output.data.url, "_blank");
+      } else if (url) {
+        // Open URL in new tab
+        window.open(url, "_blank");
       } else {
-        throw new Error("No CID or HuggingFace URL found for this output");
+        throw new Error("No CID or URL found for this resource");
       }
     } catch (err: any) {
       console.error("Download failed:", err);
@@ -196,20 +185,26 @@ const OutputCard = ({
   };
 
   const getDownloadButtonText = () => {
-    // Check for output-specific CID first
-    if (output.data && output.data.cid && output.data.cid.trim()) {
+    let hasCid = false;
+    if (type === "HuggingFace" && project.huggingface?.contents_cid) {
+      hasCid = true;
+    } else if (project.por?.por_cid) {
+      hasCid = true;
+    }
+
+    if (hasCid) {
       return "Download from Filecoin";
-    } else if (output.data && output.data.url) {
-      return "View on HuggingFace";
+    } else if (url) {
+      return type === "HuggingFace" ? "View on HuggingFace" : "View Paper";
     }
     return "No Download Available";
   };
 
   const isDownloadAvailable = () => {
-    return (
-      (output.data && output.data.cid && output.data.cid.trim()) ||
-      (output.data && output.data.url)
-    );
+    const hasCid =
+      (type === "HuggingFace" && project.huggingface?.contents_cid) ||
+      project.por?.por_cid;
+    return hasCid || url;
   };
 
   return (
@@ -229,32 +224,16 @@ const OutputCard = ({
         </div>
       )}
 
-      {/* Output header */}
+      {/* Resource header */}
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-semibold text-text dark:text-text-dark">
-            {output.description}
+            {title}
           </h3>
-          <ReproducibilityBadge status={reproducibilityStatus} />
+          {/* <ReproducibilityBadge status={reproducibilityStatus} /> */}
         </div>
         <span className="text-xs bg-primary-light text-primary dark:bg-primary/20 dark:text-primary-light px-2 py-1 rounded-full">
-          {output.type}
-        </span>
-      </div>
-
-      {/* Metrics */}
-      <div className="flex items-center space-x-4 text-sm text-text-secondary dark:text-text-dark-secondary">
-        <span className="flex items-center space-x-1">
-          <DownloadIcon className="w-4 h-4" />
-          <span>{numberFormatter.format(output.metrics?.downloads || 0)}</span>
-        </span>
-        <span className="flex items-center space-x-1">
-          <StarIcon className="w-4 h-4" />
-          <span>{numberFormatter.format(output.metrics?.stars || 0)}</span>
-        </span>
-        <span className="flex items-center space-x-1">
-          <BookOpenIcon className="w-4 h-4" />
-          <span>{numberFormatter.format(output.metrics?.citations || 0)}</span>
+          {type}
         </span>
       </div>
 
@@ -273,12 +252,17 @@ const OutputCard = ({
       </div>
 
       {/* CID display if available */}
-      {output.data && output.data.cid && (
+      {((type === "HuggingFace" && project.huggingface?.contents_cid) ||
+        project.por?.por_cid) && (
         <div className="text-xs text-text-secondary dark:text-text-dark-secondary">
           CID:{" "}
-          {output.data.cid.length > 20
-            ? output.data.cid.substring(0, 20) + "..."
-            : output.data.cid}
+          {(() => {
+            const cid =
+              type === "HuggingFace" && project.huggingface?.contents_cid
+                ? project.huggingface.contents_cid
+                : project.por?.por_cid || "";
+            return cid.length > 20 ? cid.substring(0, 20) + "..." : cid;
+          })()}
         </div>
       )}
     </div>
@@ -300,9 +284,40 @@ export const ProjectDetailView = ({
 }) => {
   const { currentUser } = useAppContext();
   const isOwner = currentUser
-    ? project.ownerId === currentUser.walletAddress
+    ? project.researcher_id === currentUser._id
     : false;
   const [isStarred, setIsStarred] = React.useState(false);
+
+  // Create resource cards from project data
+  const projectResources = React.useMemo(() => {
+    const resources = [];
+
+    // Add HuggingFace resource if available
+    if (project.huggingface?.repo_url) {
+      resources.push({
+        title: `${project.title} - HuggingFace Repository`,
+        url: project.huggingface.repo_url,
+        type: "HuggingFace",
+      });
+    }
+
+    // Add paper resource if available
+    if (project.paper?.doi || project.paper?.arxiv_id) {
+      const paperUrl = project.paper.doi
+        ? `https://doi.org/${project.paper.doi}`
+        : project.paper.arxiv_id
+        ? `https://arxiv.org/abs/${project.paper.arxiv_id}`
+        : undefined;
+
+      resources.push({
+        title: project.paper.title || `${project.title} - Research Paper`,
+        url: paperUrl,
+        type: project.paper.doi ? "DOI Paper" : "ArXiv Paper",
+      });
+    }
+
+    return resources;
+  }, [project]);
 
   return (
     <div className="animate-fade-in">
@@ -322,23 +337,19 @@ export const ProjectDetailView = ({
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
-                  <StatusBadge status={project.status} />
+                  <StatusBadge status={project.project_status} />
                   <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
-                    Last updated: {project.lastOutputDate}
+                    Last updated:{" "}
+                    {new Date(project.updated_at).toLocaleDateString()}
                   </span>
                 </div>
                 <h1 className="text-3xl font-bold text-text dark:text-text-dark">
                   {project.title}
                 </h1>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {project.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs bg-cairn-gray-200 dark:bg-cairn-gray-700 px-2 py-0.5 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  <span className="text-xs bg-cairn-gray-200 dark:bg-cairn-gray-700 px-2 py-0.5 rounded-full">
+                    {project.field}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
@@ -363,7 +374,9 @@ export const ProjectDetailView = ({
             </div>
 
             <p className="mt-4 text-text-secondary dark:text-text-dark-secondary">
-              {project.description}
+              {project.description ||
+                project.paper?.abstract ||
+                "No description available"}
             </p>
           </div>
 
@@ -371,55 +384,47 @@ export const ProjectDetailView = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <ImpactMetric
               icon={DownloadIcon}
-              label="Total Downloads"
-              value={numberFormatter.format(
-                project.outputs.reduce(
-                  (sum, o) => sum + (o.metrics?.downloads || 0),
-                  0
-                )
-              )}
+              label="Funding"
+              value={`${(project.funded_amount || 0).toLocaleString()}`}
             />
             <ImpactMetric
               icon={StarIcon}
-              label="Total Stars"
-              value={numberFormatter.format(
-                project.outputs.reduce(
-                  (sum, o) => sum + (o.metrics?.stars || 0),
-                  0
-                )
-              )}
+              label="Field"
+              value={project.field || "Unknown"}
             />
             <ImpactMetric
               icon={CitationIcon}
-              label="Total Citations"
-              value={numberFormatter.format(
-                project.outputs.reduce(
-                  (sum, o) => sum + (o.metrics?.citations || 0),
-                  0
-                )
-              )}
+              label="Status"
+              value={project.project_status || "Unknown"}
             />
             <ImpactMetric
               icon={BeakerIcon}
-              label="PoRs"
-              value={project.reproducibilities.length}
+              label="PoR Status"
+              value={project.por_status || "Unknown"}
             />
           </div>
 
-          {/* Outputs Section */}
+          {/* Resources Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">Outputs</h2>
+              <h2 className="text-2xl font-semibold">Resources</h2>
             </div>
             <div className="space-y-4">
-              {project.outputs.map((output) => (
-                <OutputCard
-                  key={output.id}
-                  output={output}
-                  projectStatus={project.status}
-                  project={project}
-                />
-              ))}
+              {projectResources.length > 0 ? (
+                projectResources.map((resource, index) => (
+                  <ProjectResourceCard
+                    key={index}
+                    title={resource.title}
+                    url={resource.url}
+                    type={resource.type}
+                    project={project}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-8 text-text-secondary dark:text-text-dark-secondary">
+                  No resources available for this project
+                </div>
+              )}
             </div>
           </div>
         </div>
