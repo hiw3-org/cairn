@@ -52,6 +52,7 @@ export class ProjectUploader {
       this.synapse = await Synapse.create({
         privateKey: privateKey,
         rpcURL: rpcURL,
+        withCDN: true,
       });
       this.context = await this.synapse.storage.createContext();
     } catch (error) {

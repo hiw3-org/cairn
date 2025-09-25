@@ -53,6 +53,7 @@ class PorUploader {
     this.synapse = await Synapse.create({
       privateKey: privateKey,
       rpcURL: rpcURL,
+      withCDN: true,
     });
     console.log("✅ SDK initialized");
   }
