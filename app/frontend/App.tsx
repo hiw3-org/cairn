@@ -6,7 +6,6 @@ import Header from "./components/layout/header";
 // import { FunderDashboard } from "./components/dashboard/funder-dashboard";
 // import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
 import { ProjectDetailView } from "./components/projects/project-detail-view";
-// import { NewProjectModal } from "./components/modals/new-project-modal";
 import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { useAppContext } from "./context/app-provider";
@@ -277,8 +276,6 @@ export function App() {
   // ===== MODAL STATE MANAGEMENT =====
   // Handles all the different modals that can be opened throughout the app
 
-  const [isNewProjectModalOpen, setIsNewProjectModalOpen] =
-    React.useState(false);
   const [
     isReproducibilityDetailModalOpen,
     setIsReproducibilityDetailModalOpen,
@@ -586,7 +583,6 @@ export function App() {
             //       key={`researcher-${activeDashboardPage}`}
             //       projects={projects}
             //       onSelectProject={handleSelectProject}
-            //       onNewProject={() => setIsNewProjectModalOpen(true)}
             //       currentUser={currentUser}
             //       activePage={activeDashboardPage}
             //       onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
@@ -617,14 +613,6 @@ export function App() {
 
       {/* ===== MODAL COMPONENTS ===== */}
       {/* All modals are conditionally rendered based on their state */}
-
-      {/* New project creation modal */}
-      {/* {isNewProjectModalOpen && (
-        <NewProjectModal
-          onClose={() => setIsNewProjectModalOpen(false)}
-          onAddProject={handleAddProject}
-        />
-      )} */}
 
       {/* Apply for funding modal */}
       {isApplyFundingModalOpen && projectToApply && (
