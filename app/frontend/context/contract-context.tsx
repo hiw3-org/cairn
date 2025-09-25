@@ -25,7 +25,6 @@ interface ContractContextType {
     unitPrice: bigint
   ) => Promise<void>;
   approveHypercertTransfer: () => Promise<boolean>;
-  addOutput: (projectURI: string, outputsURI: string) => Promise<void>;
   getProof: (proofCID: string) => Promise<any>;
   getUserPoRCount: (userAddress: string) => Promise<number>;
   recordPoR: (projectCID: string, proofCID: string) => Promise<any>;
@@ -220,20 +219,6 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const addOutput = async (
-    projectURI: string,
-    outputsURI: string
-  ): Promise<void> => {
-    if (!signer || !cairnContract) return;
-
-    try {
-      const tx = await cairnContract.recordOutputs(projectURI, outputsURI);
-      await tx.wait();
-    } catch (err) {
-      console.error("Failed to record outputs:", err);
-      throw err;
-    }
-  };
 
   const contractDisputeProof = async (
     proofCID: string,
@@ -397,7 +382,6 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
         mintHypercert,
         registerProjectCairn,
         approveHypercertTransfer,
-        addOutput,
         getProof,
         getUserPoRCount,
         recordPoR,
