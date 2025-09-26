@@ -75,13 +75,6 @@ export const CodeIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const GitCommitIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <circle cx="12" cy="12" r="3" />
-        <line x1="12" y1="2" x2="12" y2="9" />
-        <line x1="12" y1="15" x2="12" y2="22" />
-    </svg>
-);
 
 export const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -91,14 +84,6 @@ export const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const HardDriveIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <rect x="3" y="14" width="18" height="7" rx="1" ry="1" />
-        <line x1="6" y1="18" x2="6" y2="18" />
-        <line x1="9" y1="18" x2="10" y2="18" />
-        <path d="M3 6h18v8H3z" />
-    </svg>
-);
 
 export const FileTextIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -149,33 +134,6 @@ export const BeakerIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const RoboticArmIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path
-        d="M3 21H9"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        />
-        <path
-        d="M6 21L8 8L16 4L18 8L21 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        />
-        <path
-        d="M21 12C21 12 20 14 18 14C16 14 16 12 16 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        />
-        <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
-  </svg>
-);
-
 export const UsersGroupIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-2.063M16.5 7.875a4.125 4.125 0 11-8.25 0 4.125 4.125 0 018.25 0zM9 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-2.063M6.875 19.5a4.5 4.5 0 01-1.41-8.75" />
@@ -215,11 +173,6 @@ export const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
-        <path d="M21.79 0H2.21C1 0 0 1 0 2.21v16.32c0 1.21 1 2.21 2.21 2.21h15.22l-1.35-2.03h-2.3c-.55 0-1.04-.3-1.31-.78-.7-.28-.8-1.55-1.84-2.28.34-.14.68-.34.98-.6.28-.24.48-.54.62-.87.14-.34.22-.7.22-1.08s-.08-.74-.22-1.08c-.14-.34-.34-.62-.62-.87-.28-.24-.62-.44-.98-.6-.04-.02-.08-.04-.12-.06.04-.02.08-.04.12-.06 1.04-.72 1.14-2 1.84-2.28.27-.48.76-.78 1.31-.78h2.3L24 22.74V2.21C24 1 23 0 21.79 0zM8.32 13.82c-.9 0-1.62-.8-1.62-1.78s.72-1.78 1.62-1.78 1.62.8 1.62 1.78-.72 1.78-1.62 1.78zm7.36 0c-.9 0-1.62-.8-1.62-1.78s.72-1.78 1.62-1.78 1.62.8 1.62 1.78-.72 1.78-1.62 1.78z" />
-    </svg>
-);
 
 export const GitHubIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -272,11 +225,6 @@ export const ScaleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const ChevronUpIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-    </svg>
-);
 
 export const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
@@ -352,18 +300,6 @@ export const MenuIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export const ChatIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
-    </svg>
-);
-
-export const PaperPlaneIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-    </svg>
-);
-
 export const MetaMaskIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 80 80" fill="none" {...props}>
         <path fill="#E17726" d="M73.333 23.333c0-4.418-3.582-8-8-8H14.667c-4.418 0-8 3.582-8 8v33.333c0 4.418 3.582 8 8 8h50.667c4.418 0 8-3.582 8-8V23.333z"/>
@@ -417,12 +353,6 @@ export const ExternalLinkIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export const GitForkIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-    </svg>
-);
-
 export const BookOpenIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -435,12 +365,6 @@ export const CheckBadgeIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const CompareIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18" />
-    </svg>
-);
 
 export const CurrencyDollarIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>

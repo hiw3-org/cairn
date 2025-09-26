@@ -2,16 +2,13 @@ import React from "react";
 import { LandingPage } from "./components/landing/landing-page";
 import { HowItWorksPage } from "./components/how-it-works/how-it-works-page";
 import Header from "./components/layout/header";
-import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
-import { FunderDashboard } from "./components/dashboard/funder-dashboard";
-import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
+// import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
+// import { FunderDashboard } from "./components/dashboard/funder-dashboard";
+// import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
 import { ProjectDetailView } from "./components/projects/project-detail-view";
-import { NewProjectModal } from "./components/modals/new-project-modal";
 import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { useAppContext } from "./context/app-provider";
-import { useContract } from "./context/contract-context";
-import { useFileCoinDownload } from "./context/filecoin-context";
 import { useApi } from "./context/api-context";
 import {
   UserRole,
@@ -19,12 +16,7 @@ import {
   Reproducibility,
   Output,
   FundingRound,
-  HuggingFaceOutput,
   ProjectStatus,
-  ApiProject,
-  ApiUserProfile,
-  PoRStatus,
-  ResearchDomain,
 } from "./lib/types";
 import { AppLogo } from "./components/ui/logo";
 import {
@@ -32,18 +24,18 @@ import {
   ChartBarIcon,
   GavelIcon,
   BookOpenIcon,
-  HuggingFaceIcon,
-  HomeIcon,
 } from "./components/ui/icons";
 import { AppFooter } from "./components/landing/landing-page";
 import { BottomNavBar } from "./components/layout/bottom-nav-bar";
-import { MOCK_OPPORTUNITIES } from "./lib/constants";
 import { FundingRoundDetailModal } from "./components/modals/funding-round-detail-modal";
 import { OutputsLibrary } from "./components/dashboard/outputs-library";
-import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { ApplyToFundingModal } from "./components/modals/apply-to-funding-modal";
 import { ProofOfReproducibilityModal } from "./components/modals/proof-of-reproducibility-modal";
 
+/**
+ * Sidebar component that displays navigation items based on user role
+ * Shows different menu items for researchers vs funders
+ */
 const Sidebar = ({
   activePage,
   onNavigate,
@@ -57,29 +49,32 @@ const Sidebar = ({
 }) => {
   const { userRole } = useAppContext();
 
+  // Navigation items for researchers - includes project management and funding opportunities
   const researcherNavItems = [
     { id: "outputs", label: "Reproduced Projects", icon: BookOpenIcon },
     {
       id: "projects",
       label: "My Projects",
       icon: FileTextIcon,
-      notificationCount: draftProjectsCount,
+      notificationCount: draftProjectsCount, // Shows count of draft projects
     },
     {
       id: "funding",
       label: "Funding",
       icon: ChartBarIcon,
-      notificationCount: newOpportunitiesCount,
+      notificationCount: newOpportunitiesCount, // Shows count of new funding opportunities
     },
-    { id: "dao", label: "DAO", icon: GavelIcon, disabled: true },
+    { id: "dao", label: "DAO", icon: GavelIcon, disabled: true }, // Coming soon feature
   ];
 
+  // Navigation items for funders - focuses on portfolio management
   const funderNavItems = [
     { id: "dashboard", label: "Dashboard", icon: ChartBarIcon },
     { id: "portfolio", label: "Portfolio", icon: FileTextIcon },
-    { id: "dao", label: "DAO", icon: GavelIcon, disabled: true },
+    { id: "dao", label: "DAO", icon: GavelIcon, disabled: true }, // Coming soon feature
   ];
 
+  // Select appropriate nav items based on user role
   let navItems: (
     | (typeof researcherNavItems)[0]
     | (typeof funderNavItems)[0]
@@ -92,9 +87,12 @@ const Sidebar = ({
 
   return (
     <aside className="w-64 bg-background-light dark:bg-background-dark-light border-r border-border dark:border-border-dark flex-shrink-0 flex flex-col hidden lg:flex">
+      {/* Logo section */}
       <div className="h-20 flex items-center px-6 border-b border-border dark:border-border-dark">
         <AppLogo />
       </div>
+
+      {/* Navigation menu */}
       <nav className="flex-1 px-4 py-6 space-y-1">
         {navItems.map((item) => (
           <button
@@ -111,11 +109,15 @@ const Sidebar = ({
           >
             <item.icon className="w-5 h-5" />
             <span>{item.label}</span>
+
+            {/* Notification badge for items with counts */}
             {"notificationCount" in item && item.notificationCount > 0 && (
               <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-status-danger text-white text-xs font-bold">
                 {item.notificationCount}
               </span>
             )}
+
+            {/* "Soon" badge for disabled items */}
             {(item as any).disabled && (
               <span className="ml-auto text-xs font-bold bg-hf-gray-200 text-hf-gray-500 dark:bg-hf-gray-700 dark:text-hf-gray-400 px-2 py-0.5 rounded-full">
                 Soon
@@ -128,6 +130,10 @@ const Sidebar = ({
   );
 };
 
+/**
+ * Main application layout wrapper that includes sidebar, header, and footer
+ * Provides consistent layout structure across all authenticated pages
+ */
 const AppLayout = ({
   children,
   activePage,
@@ -142,8 +148,10 @@ const AppLayout = ({
   newOpportunitiesCount: number;
 }) => {
   const { userRole } = useAppContext();
+
   return (
     <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex">
+      {/* Show sidebar for all roles except Impact Owners */}
       {userRole !== UserRole.ImpactOwner && (
         <Sidebar
           activePage={activePage}
@@ -152,12 +160,16 @@ const AppLayout = ({
           newOpportunitiesCount={newOpportunitiesCount}
         />
       )}
+
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header onNavigate={onNavigate} />
         <main className="flex-grow overflow-y-auto">
           <div className="pb-16 lg:pb-0">{children}</div>
         </main>
         <AppFooter />
+
+        {/* Mobile navigation bar */}
         <BottomNavBar
           activePage={activePage}
           onNavigate={onNavigate}
@@ -169,6 +181,10 @@ const AppLayout = ({
   );
 };
 
+/**
+ * Public layout for unauthenticated users
+ * Simpler layout without sidebar, used for guest browsing and landing pages
+ */
 const PublicLayout = ({
   children,
   selectedProject,
@@ -181,8 +197,10 @@ const PublicLayout = ({
   onBackToLibrary?: () => void;
 }) => {
   const { goToLandingPage } = useAppContext();
+
   return (
     <div className="min-h-screen bg-background dark:bg-background-dark font-sans flex flex-col">
+      {/* Simple header with login/signup buttons */}
       <header className="relative z-30 h-20 flex-shrink-0 bg-background-light/80 dark:bg-background-dark-light/80 backdrop-blur-lg border-b border-border dark:border-border-dark flex items-center justify-between px-6 lg:px-8">
         <AppLogo />
         <div className="flex items-center space-x-2">
@@ -206,107 +224,21 @@ const PublicLayout = ({
   );
 };
 
-// Helper function to convert API project to frontend project format
-const convertApiProjectToFrontendProject = (
-  apiProject: ApiProject
-): Project => {
-  // Create outputs array with HuggingFace repo if it exists
-  const outputs: Output[] = [];
-  if (apiProject.huggingface?.repo_url) {
-    outputs.push({
-      id: `${apiProject._id}`,
-      type: "Code",
-      timestamp: apiProject.updated_at,
-      description: `${apiProject.title} - HuggingFace Repository`,
-      data: {
-        url: apiProject.huggingface.repo_url,
-        fileName: apiProject.huggingface.files || "model.py",
-        cid: apiProject.huggingface.contents_cid,
-      },
-      metrics: {
-        downloads: Math.floor(Math.random() * 5000),
-        stars: Math.floor(Math.random() * 200),
-        citations: Math.floor(Math.random() * 30),
-      },
-    });
-  }
-
-  // Create reproducibilities array with proper structure
-  const reproducibilities: Reproducibility[] = [];
-  if (apiProject.por) {
-    reproducibilities.push({
-      id: `${apiProject._id}-por`,
-      timestamp: apiProject.updated_at,
-      evidence: outputs, // Reference the outputs we created
-      notes: apiProject.por.por_cid ? `${apiProject.por.por_cid}` : "",
-      verifier: apiProject.researcher_id, // Use researcher as verifier for now
-      status: apiProject.por.por_cid ? PoRStatus.Success : PoRStatus.Waiting,
-    });
-  }
-
-  return {
-    id: apiProject._id,
-    ownerId: apiProject.researcher_id,
-    title: apiProject.title,
-    description: apiProject.paper?.abstract || apiProject.title,
-    tags: [apiProject.field],
-    status: apiProject.por?.por_cid
-      ? ProjectStatus.Reproducible
-      : ProjectStatus.InReview,
-    domain: ResearchDomain.Robotics,
-    coverImageUrl: undefined,
-    cid: apiProject.por?.por_cid || "",
-    hypercertFraction: 0,
-    startDate: apiProject.created_at,
-    endDate: apiProject.updated_at,
-    lastOutputDate: apiProject.updated_at,
-    reproducibilities: reproducibilities,
-    fundingPool:
-      apiProject.por && apiProject.por.por_cid
-        ? Math.floor(Math.random() * 9000) + 1000
-        : 0,
-    fundingPrice:
-      apiProject.por && apiProject.por.por_cid
-        ? Math.floor(Math.random() * 9000) + 1000
-        : 0,
-    impactScore: 0,
-    outputs: outputs,
-    reproducibilityRequirements: [],
-    organization:
-      apiProject.researcher?.profile?.firstName &&
-      apiProject.researcher?.profile?.lastName
-        ? `${apiProject.researcher.profile.firstName} ${apiProject.researcher.profile.lastName}`
-        : apiProject.researcher?.username || "Unknown",
-    additionalInfoUrl: apiProject.paper?.doi
-      ? `https://doi.org/${apiProject.paper.doi}`
-      : apiProject.huggingface?.repo_url,
-    impactAssetOwners: [],
-    scientificMetrics: apiProject.paper?.doi
-      ? {
-          citations: { value: 0, trend: 0 },
-          arxivDownloads: { value: 0, trend: 0 },
-        }
-      : undefined,
-    adoptionMetrics: apiProject.huggingface?.repo_url
-      ? {
-          githubStars: { value: 0, trend: 0 },
-          githubForks: { value: 0, trend: 0 },
-          dependencies: { value: 0, trend: 0 },
-          huggingFaceDownloads: { value: 0, trend: 0 },
-        }
-      : undefined,
-    stars: undefined,
-    license: undefined,
-  };
-};
-
+/**
+ * Main App component - handles routing and state management
+ * Orchestrates the entire application flow based on authentication status and user role
+ */
 export function App() {
+  // Static page routing for public pages
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = React.useState<StaticPage>("landing");
+
+  // Loading and selection states
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
 
+  // Get app context and API functions
   const {
     userRole,
     projects,
@@ -324,6 +256,7 @@ export function App() {
 
   const api = useApi();
 
+  // Project selection and navigation state
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(
     null
   );
@@ -331,6 +264,7 @@ export function App() {
     userRole === UserRole.Researcher ? "outputs" : "dashboard"
   );
 
+  // Guest browsing handlers
   const handleGuestSelectProject = (project: Project) => {
     setGuestSelectedProject(project);
   };
@@ -339,9 +273,9 @@ export function App() {
     setGuestSelectedProject(null);
   };
 
-  // Modal states
-  const [isNewProjectModalOpen, setIsNewProjectModalOpen] =
-    React.useState(false);
+  // ===== MODAL STATE MANAGEMENT =====
+  // Handles all the different modals that can be opened throughout the app
+
   const [
     isReproducibilityDetailModalOpen,
     setIsReproducibilityDetailModalOpen,
@@ -351,22 +285,17 @@ export function App() {
     React.useState(false);
   const [isApplyFundingModalOpen, setIsApplyFundingModalOpen] =
     React.useState(false);
+  const [isProofOfReproModalOpen, setIsProofOfReproModalOpen] =
+    React.useState(false);
+
+  // Modal data state - tracks which project/data is being operated on
   const [projectToApply, setProjectToApply] = React.useState<Project | null>(
     null
   );
   const [selectedFundingRound, setSelectedFundingRound] =
     React.useState<FundingRound | null>(null);
-  const [isProofOfReproModalOpen, setIsProofOfReproModalOpen] =
-    React.useState(false);
   const [selectedProjectForProof, setSelectedProjectForProof] =
     React.useState<Project | null>(null);
-
-  // New wizard modal state
-  const [isCreateProjectWizardOpen, setIsCreateProjectWizardOpen] =
-    React.useState(false);
-  const [wizardInitialOutputs, setWizardInitialOutputs] = React.useState<
-    HuggingFaceOutput[]
-  >([]);
 
   const [reproducibilityModalData, setReproducibilityModalData] =
     React.useState<{
@@ -375,26 +304,27 @@ export function App() {
       projectId: string;
     } | null>(null);
 
-  // Load projects from API
+  // ===== PROJECT LOADING FROM API =====
+  /**
+   * Loads projects from the backend API
+   * Uses the new unified Project schema that matches MongoDB structure
+   */
   const loadProjectsFromApi = React.useCallback(async () => {
-    if (isLoadingProjects) return;
+    if (isLoadingProjects) return; // Prevent duplicate requests
 
     setIsLoadingProjects(true);
     try {
       const result = await api.fetchProjects({ limit: 50 });
       console.log("Fetched projects from API:", result);
+
       if (!result || !result.projects) {
         throw new Error("Invalid response from server");
       }
-      const convertedProjects = result.projects.map(
-        convertApiProjectToFrontendProject
-      );
-      console.log("Converted projects:", convertedProjects);
-      setProjects(convertedProjects);
-      // addToast(
-      //   `Loaded ${convertedProjects.length} projects from server`,
-      //   "success"
-      // );
+
+      // Projects from API already match our unified Project interface
+      // No conversion needed since we updated the schema
+      setProjects(result.projects);
+      console.log("Set projects:", result.projects);
     } catch (error) {
       console.error("Failed to load projects:", error);
       addToast("Failed to load projects from server", "error");
@@ -403,27 +333,24 @@ export function App() {
     }
   }, [api, setProjects, addToast, isLoadingProjects]);
 
-  // Load projects when component mounts or when authentication status changes
+  // Load projects when component mounts or authentication status changes
   React.useEffect(() => {
     if (isAuthenticated || isGuestBrowsing) {
       loadProjectsFromApi();
     }
   }, [isAuthenticated, isGuestBrowsing]);
 
-  // --- NOTIFICATION COUNT LOGIC ---
-  const newOpportunitiesCount = React.useMemo(
-    () => MOCK_OPPORTUNITIES.filter((op) => op.isNew).length,
-    []
-  );
-
+  // Count draft projects for the current researcher
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;
     return projects.filter(
       (p) =>
-        p.ownerId === currentUser.walletAddress &&
-        p.status === ProjectStatus.Draft
+        p.researcher_id === currentUser._id && // Updated to use new schema field
+        p.project_status === ProjectStatus.Draft // Updated to use new schema field
     ).length;
   }, [projects, currentUser, userRole]);
+
+  // ===== NAVIGATION HANDLERS =====
 
   const handleStaticNavigate = (page: StaticPage) => {
     setStaticPage(page);
@@ -431,13 +358,15 @@ export function App() {
   };
 
   const handleSelectProject = (project: Project) => {
-    console.log("handleSelectProject called with:", project.title, project.id);
+    console.log("handleSelectProject called with:", project.title, project._id);
     setSelectedProject(project);
   };
 
   const handleBackToDashboard = () => {
     setSelectedProject(null);
   };
+
+  // ===== REPRODUCIBILITY HANDLERS =====
 
   const handleViewReproducibility = (
     reproducibility: Reproducibility,
@@ -446,20 +375,10 @@ export function App() {
     if (!currentUser) return;
     setReproducibilityModalData({
       reproducibility,
-      isOwner: project.ownerId === currentUser.walletAddress,
-      projectId: project.id,
+      isOwner: project.researcher_id === currentUser._id, // Updated to use new schema
+      projectId: project._id, // Updated to use new schema
     });
     setIsReproducibilityDetailModalOpen(true);
-  };
-
-  const handleViewDashboardContribution = (
-    reproducibility: Reproducibility,
-    projectId: string
-  ) => {
-    const project = projects.find((p) => p.id === projectId);
-    if (project) {
-      handleViewReproducibility(reproducibility, project);
-    }
   };
 
   const handleCloseReproducibilityModal = () => {
@@ -481,14 +400,18 @@ export function App() {
     handleCloseReproducibilityModal();
   };
 
+  // ===== DASHBOARD NAVIGATION =====
+
   const handleDashboardNavigation = (page: string) => {
     if (page === "landing") {
       goToLandingPage();
       return;
     }
-    setSelectedProject(null);
+    setSelectedProject(null); // Clear selected project when navigating
     setActiveDashboardPage(page);
   };
+
+  // ===== FUNDING ROUND HANDLERS =====
 
   const handleOpenFundingRoundDetail = (round: FundingRound) => {
     setSelectedFundingRound(round);
@@ -504,12 +427,7 @@ export function App() {
     handleSelectProject(project);
   };
 
-  const handleOpenCreateProjectWizard = (
-    initialOutputs: HuggingFaceOutput[]
-  ) => {
-    setWizardInitialOutputs(initialOutputs);
-    setIsCreateProjectWizardOpen(true);
-  };
+  // ===== MODAL HANDLERS =====
 
   const handleOpenApplyFundingModal = (project: Project) => {
     setProjectToApply(project);
@@ -521,6 +439,7 @@ export function App() {
     setIsProofOfReproModalOpen(true);
   };
 
+  // Set default dashboard page based on user role
   React.useEffect(() => {
     if (userRole === UserRole.Researcher) {
       setActiveDashboardPage("outputs");
@@ -531,6 +450,9 @@ export function App() {
     }
   }, [userRole]);
 
+  // ===== RENDER LOGIC =====
+
+  // Force landing page display (admin override)
   if (forceShowLanding) {
     console.log("Rendering landing page");
     return (
@@ -538,7 +460,9 @@ export function App() {
     );
   }
 
+  // ===== UNAUTHENTICATED USER FLOW =====
   if (!isAuthenticated) {
+    // Guest browsing - can view projects but not interact
     if (isGuestBrowsing) {
       return (
         <PublicLayout>
@@ -550,29 +474,28 @@ export function App() {
                 </div>
               </div>
             ) : guestSelectedProject ? (
+              // Show project detail for guests with limited functionality
               <ProjectDetailView
                 project={guestSelectedProject}
                 onBack={handleGuestBackToLibrary}
                 onPorSubmitClick={() => {
-                  // For guests, maybe show a "Please login" message
                   addToast(
                     "Please login to submit proof of reproducibility",
                     "info"
                   );
                 }}
                 onViewReproducibility={() => {
-                  // For guests, maybe show a "Please login" message
                   addToast(
                     "Please login to view reproducibility details",
                     "info"
                   );
                 }}
                 onGetProofClick={() => {
-                  // For guests, maybe show a "Please login" message
                   addToast("Please login to access proof features", "info");
                 }}
               />
             ) : (
+              // Show project library for guest browsing
               <OutputsLibrary
                 allProjects={projects}
                 onSelectProject={handleGuestSelectProject}
@@ -582,18 +505,22 @@ export function App() {
         </PublicLayout>
       );
     }
+
+    // Static public pages
     if (staticPage === "howitworks") {
       return (
         <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
       );
     }
+
+    // Default landing page
     return (
       <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
     );
   }
 
+  // Loading state while user data is being fetched
   if (!currentUser) {
-    // This state should be very brief after connection
     console.log("No current user, showing loading");
     return (
       <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
@@ -601,9 +528,13 @@ export function App() {
       </div>
     );
   }
+
+  // ===== AUTHENTICATED USER FLOW =====
   console.log("About to render main AppLayout");
+
   return (
     <>
+      {/* Main application layout */}
       <AppLayout
         activePage={activeDashboardPage}
         onNavigate={handleDashboardNavigation}
@@ -611,23 +542,28 @@ export function App() {
         newOpportunitiesCount={newOpportunitiesCount}
       >
         <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
+          {/* Loading indicator */}
           {isLoadingProjects && (
             <div className="mb-4 text-center text-text-secondary dark:text-dark-text-secondary">
               Loading projects from server...
             </div>
           )}
+
+          {/* Main content routing */}
           {(() => {
             console.log("Dashboard render check:", {
               selectedProject,
               userRole,
               activeDashboardPage,
             });
-            return selectedProject ? (
-              <>
-                {console.log(
-                  "About to render ProjectDetailView for:",
-                  selectedProject.title
-                )}
+
+            // Show project detail view if a project is selected
+            if (selectedProject) {
+              console.log(
+                "About to render ProjectDetailView for:",
+                selectedProject.title
+              );
+              return (
                 <ProjectDetailView
                   project={selectedProject}
                   onBack={handleBackToDashboard}
@@ -637,49 +573,48 @@ export function App() {
                   }
                   onGetProofClick={() => handleOpenProofModal(selectedProject)}
                 />
-              </>
-            ) : userRole === UserRole.Researcher ? (
-              <ResearcherDashboard
-                key={`researcher-${activeDashboardPage}`}
-                projects={projects}
-                onSelectProject={handleSelectProject}
-                onNewProject={() => setIsNewProjectModalOpen(true)}
-                currentUser={currentUser}
-                activePage={activeDashboardPage}
-                onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
-                onNavigate={handleDashboardNavigation}
-                onApplyToFunding={handleOpenApplyFundingModal}
-              />
-            ) : userRole === UserRole.ImpactOwner ? (
-              <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
-            ) : (
-              <FunderDashboard
-                key={`funder-${activeDashboardPage}`}
-                projects={projects}
-                onSelectProject={handleSelectProject}
-                activePage={activeDashboardPage}
-                onNavigate={handleDashboardNavigation}
-                onViewInfo={handleOpenFundingRoundDetail}
-              />
-            );
+              );
+            }
+
+            // Show appropriate dashboard based on user role
+            // if (userRole === UserRole.Researcher) {
+            //   return (
+            //     <ResearcherDashboard
+            //       key={`researcher-${activeDashboardPage}`}
+            //       projects={projects}
+            //       onSelectProject={handleSelectProject}
+            //       currentUser={currentUser}
+            //       activePage={activeDashboardPage}
+            //       onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
+            //       onNavigate={handleDashboardNavigation}
+            //       onApplyToFunding={handleOpenApplyFundingModal}
+            //     />
+            //   );
+            // } else if (userRole === UserRole.ImpactOwner) {
+            //   return (
+            //     <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
+            //   );
+            // } else {
+            //   // Funder dashboard
+            //   return (
+            //     <FunderDashboard
+            //       key={`funder-${activeDashboardPage}`}
+            //       projects={projects}
+            //       onSelectProject={handleSelectProject}
+            //       activePage={activeDashboardPage}
+            //       onNavigate={handleDashboardNavigation}
+            //       onViewInfo={handleOpenFundingRoundDetail}
+            //     />
+            //   );
+            // }
           })()}
         </div>
       </AppLayout>
 
-      {isNewProjectModalOpen && (
-        <NewProjectModal
-          onClose={() => setIsNewProjectModalOpen(false)}
-          onAddProject={handleAddProject}
-        />
-      )}
+      {/* ===== MODAL COMPONENTS ===== */}
+      {/* All modals are conditionally rendered based on their state */}
 
-      {isCreateProjectWizardOpen && (
-        <CreateProjectWizardModal
-          initialOutputs={wizardInitialOutputs}
-          onClose={() => setIsCreateProjectWizardOpen(false)}
-        />
-      )}
-
+      {/* Apply for funding modal */}
       {isApplyFundingModalOpen && projectToApply && (
         <ApplyToFundingModal
           project={projectToApply}
@@ -687,6 +622,7 @@ export function App() {
         />
       )}
 
+      {/* Funding round detail modal */}
       {isFundingRoundDetailModalOpen && selectedFundingRound && (
         <FundingRoundDetailModal
           round={selectedFundingRound}
@@ -695,14 +631,16 @@ export function App() {
         />
       )}
 
+      {/* Submit proof of reproducibility modal */}
       {isPorModalOpen && selectedProject && (
         <SubmitPorModal
           project={selectedProject}
           onClose={() => setIsPorModalOpen(false)}
-          onSubmit={(data) => onPorSubmitAndExit(selectedProject.id, data)}
+          onSubmit={(data) => onPorSubmitAndExit(selectedProject._id, data)}
         />
       )}
 
+      {/* View reproducibility details modal */}
       {isReproducibilityDetailModalOpen && reproducibilityModalData && (
         <ReproducibilityDetailModal
           reproducibility={reproducibilityModalData.reproducibility}
@@ -714,6 +652,7 @@ export function App() {
         />
       )}
 
+      {/* Get proof of reproducibility modal */}
       {isProofOfReproModalOpen && selectedProjectForProof && (
         <ProofOfReproducibilityModal
           project={selectedProjectForProof}

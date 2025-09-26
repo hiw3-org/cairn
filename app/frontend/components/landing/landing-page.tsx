@@ -13,7 +13,7 @@ import {
   ChevronDownIcon,
   MenuIcon,
   CloseIcon,
-  GavelIcon,
+  GvelIcon,
   GoogleIcon,
   SparklesIcon,
   MetaMaskIcon,

@@ -12,29 +12,26 @@ import {
   Project,
   ToastInfo,
   UserProfile,
-  Reproducibility,
   Output,
-  ProjectStatus,
   PoRStatus,
   FundingEvent,
-  ImpactAssetOwner,
   FundingRound,
   RoundApplicant,
   Notification,
-  HuggingFaceOutput,
   ResearchDomain,
 } from "../lib/types";
-import {
-  MOCK_PROJECTS,
-  MOCK_USERS,
-  RESEARCHER_WALLET_ALICE,
-  MOCK_FUNDING_HISTORY,
-  CURRENT_USER_WALLET,
-  MOCK_FUNDING_ROUNDS,
-  MOCK_NOTIFICATIONS,
-  REPRODUCIBILITY_TEMPLATES,
-  MOCK_HUGGINGFACE_OUTPUTS,
-} from "../lib/constants";
+// Removed mock imports - will use API data instead
+// import {
+//   MOCK_PROJECTS,
+//   MOCK_USERS,
+//   RESEARCHER_WALLET_ALICE,
+//   MOCK_FUNDING_HISTORY,
+//   CURRENT_USER_WALLET,
+//   MOCK_FUNDING_ROUNDS,
+//   MOCK_NOTIFICATIONS,
+//   REPRODUCIBILITY_TEMPLATES,
+//   MOCK_HUGGINGFACE_OUTPUTS,
+// } from "../lib/constants";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -122,21 +119,28 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDarkMode, setIsDarkModeState] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>(UserRole.Researcher);
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]); // Start with empty array
   const [huggingFaceOutputs, setHuggingFaceOutputs] = useState<
     HuggingFaceOutput[]
-  >(MOCK_HUGGINGFACE_OUTPUTS);
-  const [fundingHistory, setFundingHistory] =
-    useState<FundingEvent[]>(MOCK_FUNDING_HISTORY);
-  const [fundingRounds, setFundingRounds] =
-    useState<FundingRound[]>(MOCK_FUNDING_ROUNDS);
+  >([]); // Start with empty array
+
+  // Commented out mock data initialization
+  // const [fundingHistory, setFundingHistory] = useState<FundingEvent[]>(MOCK_FUNDING_HISTORY);
+  // const [fundingRounds, setFundingRounds] = useState<FundingRound[]>(MOCK_FUNDING_ROUNDS);
+  const [fundingHistory, setFundingHistory] = useState<FundingEvent[]>([]);
+  const [fundingRounds, setFundingRounds] = useState<FundingRound[]>([]);
+
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>(
-    MOCK_NOTIFICATIONS.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
-  );
-  const [usdcBalance, setUsdcBalance] = useState(250000); // Mock wallet balance
+
+  // Commented out mock notifications
+  // const [notifications, setNotifications] = useState<Notification[]>(
+  //   MOCK_NOTIFICATIONS.sort(
+  //     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  //   )
+  // );
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const [usdcBalance, setUsdcBalance] = useState(0); // Start with 0 instead of mock balance
 
   // Auth & Navigation State
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
@@ -182,20 +186,32 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (method: "huggingface" | "metamask") => {
     setForceShowLanding(false);
     setIsGuestBrowsing(false);
-    const mockAccount = CURRENT_USER_WALLET;
 
-    let userProfile = MOCK_USERS.find(
-      (u) => u.walletAddress.toLowerCase() === mockAccount.toLowerCase()
-    );
-    if (!userProfile) {
-      userProfile = {
-        walletAddress: mockAccount,
-        name: "Test User",
-        porContributedCount: 0,
-        isVerified: true,
-        role: method === "huggingface" ? UserRole.Researcher : UserRole.Funder,
-      };
-    }
+    // TODO: Replace with real authentication
+    // const mockAccount = CURRENT_USER_WALLET;
+    const mockAccount = "0x1234567890abcdef"; // Temporary for demo
+
+    // TODO: Replace with real user lookup from API
+    // let userProfile = MOCK_USERS.find(
+    //   (u) => u.walletAddress.toLowerCase() === mockAccount.toLowerCase()
+    // );
+    // if (!userProfile) {
+    //   userProfile = {
+    //     walletAddress: mockAccount,
+    //     name: "Test User",
+    //     porContributedCount: 0,
+    //     isVerified: true,
+    //     role: method === "huggingface" ? UserRole.Researcher : UserRole.Funder,
+    //   };
+    // }
+
+    // Temporary user profile for demo
+    const userProfile: UserProfile = {
+      _id: "temp-user-id",
+      username: "demo_user",
+      email: "demo@example.com",
+      role: method === "huggingface" ? UserRole.Researcher : UserRole.Funder,
+    };
 
     setCurrentUser(userProfile);
     setConnectedWallet(mockAccount);
@@ -260,6 +276,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addToast(`Project draft "${project.title}" created!`, "success");
   };
 
+  // TODO: This function needs significant updates to work with new schema
+  // Currently commented out the mock-dependent parts
   const handleCreateProjectFromHuggingFace = (
     hfOutputs: HuggingFaceOutput[]
   ): string => {
@@ -267,43 +285,21 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const newProjectId = `proj-${Date.now()}`;
 
+    // TODO: Update this to create projects using the new backend schema
+    // This function currently uses many mock constants that need to be replaced
+    /*
     const newProject: Project = {
-      id: newProjectId,
-      ownerId: currentUser.walletAddress,
+      _id: newProjectId,
       title: `Project from ${hfOutputs[0].name}`,
+      researcher_id: currentUser._id || "",
+      field: "ml", // Default field
       description: `A new project created by importing ${hfOutputs.length} output(s) from Hugging Face.`,
-      domain: ResearchDomain.Simulation, // Default domain
-      tags: hfOutputs
-        .flatMap((o) => [o.type, ...o.name.split("-").slice(0, 2)])
-        .slice(0, 4),
-      status: ProjectStatus.Draft,
-      cid: `Qm...${Date.now().toString().slice(-4)}`,
-      hypercertFraction: 0,
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-        .toISOString()
-        .split("T")[0],
-      lastOutputDate: new Date().toISOString().split("T")[0],
-      reproducibilities: [],
-      fundingPool: 0,
-      impactScore: 0,
-      outputs: hfOutputs.map((hfOutput) => ({
-        id: `out-${hfOutput.id}`,
-        type:
-          hfOutput.type === "model"
-            ? "Code"
-            : hfOutput.type === "dataset"
-            ? "Dataset"
-            : "Others",
-        timestamp: new Date().toISOString().split("T")[0],
-        description: `Hugging Face ${hfOutput.type}: ${hfOutput.name}`,
-        data: {
-          url: `https://huggingface.co/${hfOutput.name}`,
-        },
-      })),
-      reproducibilityRequirements:
-        REPRODUCIBILITY_TEMPLATES[ResearchDomain.Simulation],
-      impactAssetOwners: [],
+      project_status: "Draft",
+      por_status: "InReview",
+      funded_amount: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Add other required fields based on new schema
     };
 
     setProjects((prev) => [newProject, ...prev]);
@@ -318,21 +314,23 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       `Successfully created new project draft: "${newProject.title}"`,
       "success"
     );
+    */
 
+    // Temporary placeholder
+    addToast("Project creation from HuggingFace is currently disabled", "info");
     return newProjectId;
   };
 
   const handleSubmitForReproducibility = (projectId: string) => {
     addToast("Submitting for reproducibility evaluation...", "info");
 
-    // 1. Set status to Pending
+    // Update to use new schema field names
     setProjects((prev) =>
       prev.map((p) =>
-        p.id === projectId
-          ? { ...p, status: ProjectStatus.PendingEvaluation }
-          : p
+        p._id === projectId ? { ...p, project_status: "Pending Evaluation" } : p
       )
     );
+
     setHuggingFaceOutputs((prev) =>
       prev.map((o) =>
         o.cairnProjectId === projectId
@@ -341,12 +339,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       )
     );
 
-    // 2. Simulate evaluation delay
+    // Simulate evaluation delay
     setTimeout(() => {
-      // 3. Set status to Reproducible
       setProjects((prev) =>
         prev.map((p) =>
-          p.id === projectId ? { ...p, status: ProjectStatus.Reproducible } : p
+          p._id === projectId ? { ...p, project_status: "Evaluated" } : p
         )
       );
       setHuggingFaceOutputs((prev) =>
@@ -354,81 +351,60 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           o.cairnProjectId === projectId ? { ...o, status: "Reproducible" } : o
         )
       );
-      addToast("Project is now Reproducible!", "success");
-    }, 5000); // 5-second mock delay
+      addToast("Project evaluation completed!", "success");
+    }, 5000);
   };
 
+  // TODO: This function needs to be updated to work with new project schema
+  // The new schema doesn't have a 'reproducibilities' array
   const handlePorSubmit = (
     projectId: string,
     reproducibilityData: { notes: string; evidence: Output[] }
   ) => {
     if (!currentUser) return;
+
+    // TODO: Update this to work with the new backend schema
+    // The new Project schema doesn't have reproducibilities array
+    /*
     setProjects((prevProjects) =>
       prevProjects.map((p) => {
-        if (p.id === projectId) {
-          const newReproducibility: Reproducibility = {
-            id: `rep-${Date.now()}`,
-            timestamp: new Date().toISOString().split("T")[0],
-            verifier: currentUser.walletAddress,
-            notes: reproducibilityData.notes,
-            evidence: reproducibilityData.evidence.map((e) => ({
-              ...e,
-              id: e.id.replace("staged", "final"),
-            })),
-            status: PoRStatus.Waiting,
-          };
+        if (p._id === projectId) {
+          // Update POR status instead of adding to reproducibilities array
           return {
             ...p,
-            reproducibilities: [...p.reproducibilities, newReproducibility],
+            por_status: "Phase1", // Or appropriate status
           };
         }
         return p;
       })
     );
-    setCurrentUser((prevUser) => ({
-      ...prevUser!,
-      porContributedCount: prevUser!.porContributedCount + 1,
-    }));
-    addToast("PoR submitted! Your contribution is recorded.", "success");
+    */
+
+    addToast(
+      "PoR submission functionality needs to be updated for new schema",
+      "info"
+    );
   };
 
+  // TODO: Update this function for new schema
   const handleDispute = (projectId: string, reproducibilityId: string) => {
-    let reproducibilityAuthor = "";
-    setProjects((prevProjects) =>
-      prevProjects.map((p) => {
-        if (p.id === projectId) {
-          const updatedReproducibilities = p.reproducibilities.map((r) => {
-            if (r.id === reproducibilityId) {
-              reproducibilityAuthor = r.verifier;
-              return { ...r, status: PoRStatus.Disputed };
-            }
-            return r;
-          });
-          return { ...p, reproducibilities: updatedReproducibilities };
-        }
-        return p;
-      })
+    // TODO: Implement dispute logic for new schema
+    addToast(
+      "Dispute functionality needs to be updated for new schema",
+      "info"
     );
-    if (reproducibilityAuthor) {
-      addToast(
-        `Submission from ${reproducibilityAuthor.substring(
-          0,
-          8
-        )}... has been flagged for review.`,
-        "info"
-      );
-    }
   };
 
   const handleInstantFund = (projectId: string, amount: number) => {
     let projectTitle = "";
     setProjects((prevProjects) =>
       prevProjects.map((p) => {
-        if (p.id === projectId) {
+        if (p._id === projectId) {
+          // Updated to use _id
           projectTitle = p.title;
           const updatedProject = {
             ...p,
-            fundingPool: p.fundingPool + amount,
+            funded_amount: (p.funded_amount || 0) + amount, // Updated field name
           };
           addToast(
             `Successfully funded $${amount.toLocaleString()} to "${p.title}"!`,
@@ -447,7 +423,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         projectTitle,
         amount,
         timestamp: new Date().toISOString().split("T")[0],
-        funderWallet: currentUser.walletAddress,
+        funderWallet: currentUser._id || "unknown", // Updated field
         txHash: `0x${Date.now().toString(16)}${Math.random()
           .toString(16)
           .substring(2, 12)}`,
@@ -456,31 +432,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // TODO: Update this function for new schema
   const handleClaimOwnership = (projectId: string) => {
     if (!currentUser) return;
 
-    let projectTitle = "";
-    const updatedProjects = projects.map((p) => {
-      if (p.id === projectId) {
-        projectTitle = p.title;
-        const updatedOwners = p.impactAssetOwners.map((owner) => {
-          if (owner.walletAddress === currentUser.walletAddress) {
-            return { ...owner, claimed: true };
-          }
-          return owner;
-        });
-        return { ...p, impactAssetOwners: updatedOwners };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    addToast(
-      `Successfully claimed ownership for project: ${projectTitle}`,
-      "success"
-    );
+    // TODO: The new schema doesn't have impactAssetOwners
+    // This functionality needs to be redesigned
+    addToast("Ownership claiming needs to be updated for new schema", "info");
   };
 
+  // TODO: Update this function for new schema
   const handleRegisterClaim = async (
     projectCid: string,
     projectOwnerAddress: string
@@ -490,76 +451,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
 
-    let projectToClaim: Project | undefined;
-
-    if (projectCid && projectOwnerAddress) {
-      projectToClaim = projects.find(
-        (p) =>
-          p.cid === projectCid &&
-          p.ownerId.toLowerCase() === projectOwnerAddress.toLowerCase()
-      );
-    } else if (projectCid) {
-      projectToClaim = projects.find((p) => p.cid === projectCid);
-    } else if (projectOwnerAddress) {
-      const foundProjects = projects.filter(
-        (p) => p.ownerId.toLowerCase() === projectOwnerAddress.toLowerCase()
-      );
-      if (foundProjects.length > 1) {
-        addToast(
-          "Multiple projects found for this owner. Please also provide a Project UID.",
-          "info"
-        );
-        return false;
-      }
-      projectToClaim = foundProjects[0];
-    }
-
-    if (!projectToClaim) {
-      addToast(
-        "Project not found. Please check the provided details.",
-        "error"
-      );
-      return false;
-    }
-
-    const project = projectToClaim;
-
-    const existingClaim = project.impactAssetOwners.find(
-      (o) => o.walletAddress === currentUser.walletAddress
-    );
-
-    if (existingClaim) {
-      addToast(
-        "You already have an ownership claim for this project. It is listed below.",
-        "info"
-      );
-      return true;
-    }
-
-    const newClaim: ImpactAssetOwner = {
-      walletAddress: currentUser.walletAddress,
-      contribution: "Registered Claimant",
-      ownershipPercentage: 2.5, // Mock percentage
-      claimed: false,
-    };
-
-    setProjects((prevProjects) =>
-      prevProjects.map((p) => {
-        if (p.id === project.id) {
-          return {
-            ...p,
-            impactAssetOwners: [...p.impactAssetOwners, newClaim],
-          };
-        }
-        return p;
-      })
-    );
-
-    addToast(
-      `Successfully registered claim for "${project.title}"! You can now claim it below.`,
-      "success"
-    );
-    return true;
+    // TODO: Update for new schema - projects don't have cid or ownerId fields
+    addToast("Claim registration needs to be updated for new schema", "info");
+    return false;
   };
 
   const handleCreateFundingRound = (
@@ -625,13 +519,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updatedProjects = projects.map((p) => {
       const fundingInfo = applicantsToFund.find(
-        (app) => app.projectId === p.id
+        (app) => app.projectId === p._id // Updated to use _id
       );
       if (fundingInfo && fundingInfo.fundingAmount) {
         return {
           ...p,
-          fundingPool: p.fundingPool + fundingInfo.fundingAmount,
-          status: ProjectStatus.Funded,
+          funded_amount: (p.funded_amount || 0) + fundingInfo.fundingAmount, // Updated field
+          project_status: "Funded", // Updated field
         };
       }
       return p;
@@ -648,12 +542,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addToast(`Successfully distributed funds for "${round.title}"!`, "success");
   };
 
+  // TODO: Update this function for new schema
   const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {
+    // This function references hypercertFraction which doesn't exist in new schema
     if (fraction >= 0.75) return "High";
     if (fraction >= 0.3) return "Medium";
     return "Low";
   };
 
+  // TODO: Update this function for new schema
   const handleApplyToFundingRound = (
     projectId: string,
     roundId: string,
@@ -664,19 +561,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     let applicantData: RoundApplicant | null = null;
 
     const updatedProjects = projects.map((p) => {
-      if (p.id === projectId) {
+      if (p._id === projectId) {
+        // Updated to use _id
         projectTitle = p.title;
         applicantData = {
-          projectId: p.id,
+          projectId: p._id, // Updated to use _id
           projectTitle: p.title,
-          verifiedPors: p.reproducibilities.filter(
-            (r) => r.status === PoRStatus.Success
-          ).length,
-          impactLevel: getImpactLevel(p.hypercertFraction),
-          hfUpvotes: p.stars || 0,
-          communityScore: p.impactScore,
+          verifiedPors: 0, // TODO: Calculate from new schema
+          impactLevel: "Medium", // TODO: Calculate from new schema
+          hfUpvotes: 0, // TODO: Get from new schema
+          communityScore: 0, // TODO: Calculate from new schema
         };
-        return { ...p, status: ProjectStatus.InReview };
+        return { ...p, project_status: "Pending Evaluation" }; // Updated field
       }
       return p;
     });

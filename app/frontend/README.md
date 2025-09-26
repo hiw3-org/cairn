@@ -33,8 +33,6 @@ The frontend provides dashboards for researchers, funders and guest to interact 
 
 ## Key Technologies
 
-- **w3up-client**: A library for working with IPFS-based storage services.
-- **ethers**: A library for connecting to blockchain networks and enabling decentralized features.
 - **React**: Provides a component-based architecture for building interactive UIs.
 - **TypeScript**: Adds static typing to JavaScript, improving code quality and maintainability.
 - **Vite**: Offers lightning-fast development server and optimized production builds.
@@ -75,8 +73,6 @@ Visit: [Cairn app](https://cairn-app-9vb6z.ondigitalocean.app/) <br>
 
 ## Learn More
 
-- [W3up-client](https://docs.storacha.network/)
-- [Ethers Docs](https://docs.ethers.org/v5/)
 - [React Documentation](https://react.dev/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Vite Guide](https://vitejs.dev/guide/)

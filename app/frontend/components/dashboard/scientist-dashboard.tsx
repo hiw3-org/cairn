@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Project,
@@ -7,8 +5,6 @@ import {
   UserProfile,
   Reproducibility,
   PoRStatus,
-  Opportunity,
-  FundingRound,
   HuggingFaceOutput,
 } from "../../lib/types";
 import {
@@ -36,11 +32,6 @@ import {
 import { StatusBadge } from "../ui/status-badge";
 import { useAppContext } from "../../context/app-provider";
 import { Tooltip } from "../ui/tooltip";
-import {
-  MOCK_FUNDING_ROUNDS,
-  MOCK_OPPORTUNITIES,
-  MOCK_USERS,
-} from "../../lib/constants";
 import { OutputsLibrary } from "./outputs-library";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
@@ -728,42 +719,23 @@ const FundingOpportunitiesDashboard = ({
   projects: Project[];
   currentUser: UserProfile;
 }) => {
-  const { allOpportunities, allTopics } = useMemo(() => {
-    const rounds = MOCK_FUNDING_ROUNDS.filter(
-      (r) => r.status === "Open" || r.status === "Voting"
-    ).map((r) => ({
-      id: r.id,
-      type: "Round" as const,
-      title: r.title,
-      issuer: r.funderName || "Community Round",
-      amount: `$${r.poolSize.toLocaleString()}`,
-      poolSize: r.poolSize,
-      deadline: r.applicationDeadline,
-      tags: r.topics,
-      isNew: false,
-      url: "#",
-      creationDate: r.creationDate,
-    }));
+  
+  //     title: o.title,
+  //     issuer: o.issuer,
+  //     amount: `${o.amount} ${o.currency}`,
+  //     poolSize: parseAmount(o.amount),
+  //     deadline: o.deadline,
+  //     tags: [],
+  //     isNew: o.isNew,
+  //     url: o.url,
+  //     creationDate: o.creationDate,
+  //   }));
 
-    const opportunities = MOCK_OPPORTUNITIES.map((o) => ({
-      id: o.id,
-      type: "Opportunity" as const,
-      title: o.title,
-      issuer: o.issuer,
-      amount: `${o.amount} ${o.currency}`,
-      poolSize: parseAmount(o.amount),
-      deadline: o.deadline,
-      tags: [],
-      isNew: o.isNew,
-      url: o.url,
-      creationDate: o.creationDate,
-    }));
+  //   const combined = [...rounds, ...opportunities];
+  //   const topics = new Set(rounds.flatMap((r) => r.tags));
 
-    const combined = [...rounds, ...opportunities];
-    const topics = new Set(rounds.flatMap((r) => r.tags));
-
-    return { allOpportunities: combined, allTopics: Array.from(topics).sort() };
-  }, []);
+  //   return { allOpportunities: combined, allTopics: Array.from(topics).sort() };
+  // }, []);
 
   const [filterType, setFilterType] = useState("All");
   const [sortKey, setSortKey] = useState("deadline");
@@ -813,24 +785,6 @@ const FundingOpportunitiesDashboard = ({
       });
   }, [allOpportunities, filterType, sortKey, activeTopics]);
 
-  const myApplications = useMemo(() => {
-    if (!currentUser) return [];
-    const myProjectIds = new Set(
-      projects
-        .filter((p) => p.ownerId === currentUser.walletAddress)
-        .map((p) => p.id)
-    );
-    return MOCK_FUNDING_ROUNDS.flatMap((round) =>
-      (round.applicants || [])
-        .filter((applicant) => myProjectIds.has(applicant.projectId))
-        .map((applicant) => ({
-          roundTitle: round.title,
-          projectTitle: applicant.projectTitle,
-          status: round.status,
-          roundId: round.id,
-        }))
-    );
-  }, [projects, currentUser]);
 
   const kpis = {
     openRounds: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").length,
