@@ -719,26 +719,7 @@ const FundingOpportunitiesDashboard = ({
   projects: Project[];
   currentUser: UserProfile;
 }) => {
-  // const { allOpportunities, allTopics } = useMemo(() => {
-  //   const rounds = MOCK_FUNDING_ROUNDS.filter(
-  //     (r) => r.status === "Open" || r.status === "Voting"
-  //   ).map((r) => ({
-  //     id: r.id,
-  //     type: "Round" as const,
-  //     title: r.title,
-  //     issuer: r.funderName || "Community Round",
-  //     amount: `$${r.poolSize.toLocaleString()}`,
-  //     poolSize: r.poolSize,
-  //     deadline: r.applicationDeadline,
-  //     tags: r.topics,
-  //     isNew: false,
-  //     url: "#",
-  //     creationDate: r.creationDate,
-  //   }));
-
-  //   const opportunities = MOCK_OPPORTUNITIES.map((o) => ({
-  //     id: o.id,
-  //     type: "Opportunity" as const,
+  
   //     title: o.title,
   //     issuer: o.issuer,
   //     amount: `${o.amount} ${o.currency}`,
