@@ -785,24 +785,6 @@ const FundingOpportunitiesDashboard = ({
       });
   }, [allOpportunities, filterType, sortKey, activeTopics]);
 
-  // const myApplications = useMemo(() => {
-  //   if (!currentUser) return [];
-  //   const myProjectIds = new Set(
-  //     projects
-  //       .filter((p) => p.ownerId === currentUser.walletAddress)
-  //       .map((p) => p.id)
-  //   );
-  //   return MOCK_FUNDING_ROUNDS.flatMap((round) =>
-  //     (round.applicants || [])
-  //       .filter((applicant) => myProjectIds.has(applicant.projectId))
-  //       .map((applicant) => ({
-  //         roundTitle: round.title,
-  //         projectTitle: applicant.projectTitle,
-  //         status: round.status,
-  //         roundId: round.id,
-  //       }))
-  //   );
-  // }, [projects, currentUser]);
 
   const kpis = {
     openRounds: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").length,
