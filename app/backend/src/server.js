@@ -19,6 +19,7 @@ const passport = require("passport");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const filecoinRoutes = require("./routes/filecoinRoutes");
+const huggingfaceRoutes = require("./routes/huggingfaceRoutes");
 
 const app = express();
 
@@ -74,6 +75,7 @@ const apiVersion = process.env.API_VERSION || "v1";
 app.use(`/api/${apiVersion}/users`, userRoutes);
 app.use(`/api/${apiVersion}/projects`, projectRoutes);
 app.use(`/api/${apiVersion}/filecoin`, filecoinRoutes);
+app.use(`/api/${apiVersion}/integrations/huggingface`, huggingfaceRoutes);
 
 // Catch-all route for undefined endpoints
 app.all("*", (req, res) => {
