@@ -278,7 +278,7 @@ export const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l-6-3.75v7.5l6-3.75z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 5.25h15a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25-2.25h-15a2.25 2.25 0 01-2.25-2.25v-9A2.25 2.25 0 014.5 5.25z" />
+        <rect x="3" y="5.25" width="18" height="13.5" rx="2.25" stroke="currentColor" strokeWidth="1.5" fill="none" />
     </svg>
 );
 
