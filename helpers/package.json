@@ -10,6 +10,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@filoz/synapse-sdk": "^0.28.0",
+    "archiver": "^7.0.1",
     "dotenv": "^17.0.1",
     "ethers": "^6.15.0"
   }
