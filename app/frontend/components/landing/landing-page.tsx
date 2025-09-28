@@ -25,7 +25,7 @@ import {
 import { LandingHeaderLogo, AppLogo } from "../ui/logo";
 import React, { useState } from "react";
 import { useAppContext } from "../../context/app-provider";
-import { useContract } from "../../context/contract-context";
+import { useApi } from "../../context/api-context";
 import { UserRole } from "../../lib/types";
 import { Modal } from "../ui/modal";
 
@@ -37,7 +37,8 @@ const AuthModal = ({
   initialMode?: "login" | "signup";
 }) => {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
-  const { login, signUp } = useAppContext();
+  const { handleLoginSuccess } = useAppContext();
+  const { signupUser, loginUser, isLoading, error } = useApi(); // Use API context
 
   // Signup state
   const [signupStep, setSignupStep] = useState(1);
@@ -59,49 +60,128 @@ const AuthModal = ({
   const [orcid, setOrcid] = useState("");
   const [twitter, setTwitter] = useState("");
   const [github, setGithub] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
 
-  const handleHuggingFaceLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    login("huggingface");
-    onClose();
-  };
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
-  const handleMetaMaskLogin = () => {
-    login("metamask");
-    onClose();
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const user = await loginUser(loginEmail, loginPassword);
+      handleLoginSuccess(user); 
+      console.log("Login successful:", user);
+      onClose();
+      // The API context handles token storage automatically
+    } catch (error) {
+      console.error("Login failed:", error);
+      // Error is handled by API context and available in the error state
+    }
   };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    // Prepare research interests as array
-    const interestsArray = researchInterests
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    await signUp({
-      email,
-      username,
-      password,
-      address,
-      profile: {
-        firstName,
-        lastName,
-        institution,
-        department,
-        researchInterests: interestsArray,
-        bio,
-        website,
-        orcid,
-        twitter,
-        github,
-      },
-    });
-    setIsSubmitting(false);
-    setSignupSuccess(true);
+    
+    try {
+      // Prepare research interests as array
+      const interestsArray = researchInterests
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      // Use the API context signup method
+      const user = await signupUser({
+        email,
+        username,
+        password,
+        address,
+        profile: {
+          firstName,
+          lastName,
+          institution,
+          department,
+          researchInterests: interestsArray,
+          bio,
+          website,
+          orcid,
+          twitter,
+          github,
+        },
+      });
+
+      console.log("Signup successful:", user);
+      setSignupSuccess(true);
+      // The API context handles token storage automatically
+    } catch (error) {
+      console.error("Signup failed:", error);
+      // Error is handled by API context and available in the error state
+    }
   };
+
+  const renderLoginForm = () => (
+    <form onSubmit={handleLoginSubmit} className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
+          Log in to your account
+        </h3>
+        <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
+          Enter your credentials to continue.
+        </p>
+      </div>
+      
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Email</label>
+        <input
+          type="email"
+          value={loginEmail}
+          onChange={(e) => setLoginEmail(e.target.value)}
+          required
+          className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Password</label>
+        <input
+          type="password"
+          value={loginPassword}
+          onChange={(e) => setLoginPassword(e.target.value)}
+          required
+          className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
+      >
+        {isLoading ? (
+          <SpinnerIcon className="animate-spin w-5 h-5" />
+        ) : (
+          <span>Log In</span>
+        )}
+      </button>
+
+      <p className="text-center text-sm">
+        Don't have an account?{" "}
+        <button
+          type="button"
+          onClick={() => setMode("signup")}
+          className="font-semibold text-primary hover:underline"
+        >
+          Apply to join
+        </button>
+      </p>
+    </form>
+  );
 
   const renderSignupForm = () => (
     <form
@@ -118,6 +198,13 @@ const AuthModal = ({
       <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
         Submit your application to join the CAIRN platform. Your application will be manually reviewed.
       </p>
+      
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       {signupStep === 1 ? (
         <>
           <div>
@@ -278,10 +365,10 @@ const AuthModal = ({
           </div>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isLoading}
             className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
           >
-            {isSubmitting ? (
+            {isLoading ? (
               <SpinnerIcon className="animate-spin w-5 h-5" />
             ) : (
               <span>Submit Application</span>
@@ -351,58 +438,6 @@ const AuthModal = ({
     </div>
   );
 
-  // const renderLoginOptions = () => (
-  //   <div className="space-y-6">
-  //     <div>
-  //       <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
-  //         Log in to your account
-  //       </h3>
-  //       <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-  //         Connect with your preferred account to continue.
-  //       </p>
-  //     </div>
-  //     <div className="space-y-4">
-  //       <button
-  //         onClick={handleHuggingFaceLogin}
-  //         className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 transition-colors"
-  //       >
-  //         <HuggingFaceIcon className="w-8 h-8 text-yellow-500" />
-  //         <div className="text-left">
-  //           <p className="font-semibold text-text dark:text-text-dark">
-  //             Continue as Researcher
-  //           </p>
-  //           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-  //             Login with Hugging Face
-  //           </p>
-  //         </div>
-  //       </button>
-  //       <button
-  //         onClick={handleMetaMaskLogin}
-  //         className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 transition-colors"
-  //       >
-  //         <MetaMaskIcon className="w-8 h-8" />
-  //         <div className="text-left">
-  //           <p className="font-semibold text-text dark:text-text-dark">
-  //             Continue as Funder
-  //           </p>
-  //           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-  //             Login with MetaMask
-  //           </p>
-  //         </div>
-  //       </button>
-  //     </div>
-  //     <p className="text-center text-sm">
-  //       Don't have an account?{" "}
-  //       <button
-  //         onClick={() => setMode("signup")}
-  //         className="font-semibold text-primary hover:underline"
-  //       >
-  //         Apply to join
-  //       </button>
-  //     </p>
-  //   </div>
-  // );
-
   const renderSignupSuccess = () => (
     <div className="text-center p-8">
       <CheckCircleIcon className="w-16 h-16 text-status-success mx-auto" />
@@ -437,12 +472,13 @@ const AuthModal = ({
         {signupSuccess
           ? renderSignupSuccess()
           : mode === "login"
-          ? renderLoginOptions()
+          ? renderLoginForm()  // Use the new login form instead of renderLoginOptions
           : renderSignupForm()}
       </div>
     </Modal>
   );
 };
+
 
 const LandingHeader = ({
   onNavigate,

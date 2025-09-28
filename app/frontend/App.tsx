@@ -2,9 +2,9 @@ import React from "react";
 import { LandingPage } from "./components/landing/landing-page";
 import { HowItWorksPage } from "./components/how-it-works/how-it-works-page";
 import Header from "./components/layout/header";
-// import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
-// import { FunderDashboard } from "./components/dashboard/funder-dashboard";
-// import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
+import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
+import { FunderDashboard } from "./components/dashboard/funder-dashboard";
+import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
 import { ProjectDetailView } from "./components/projects/project-detail-view";
 import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
@@ -350,6 +350,12 @@ export function App() {
     ).length;
   }, [projects, currentUser, userRole]);
 
+  const newOpportunitiesCount = React.useMemo(() => {
+  // For now, return 0 as a placeholder
+  // TODO: Calculate based on funding rounds or opportunities from your app context
+  return 0;
+}, []);
+
   // ===== NAVIGATION HANDLERS =====
 
   const handleStaticNavigate = (page: StaticPage) => {
@@ -577,36 +583,36 @@ export function App() {
             }
 
             // Show appropriate dashboard based on user role
-            // if (userRole === UserRole.Researcher) {
-            //   return (
-            //     <ResearcherDashboard
-            //       key={`researcher-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       currentUser={currentUser}
-            //       activePage={activeDashboardPage}
-            //       onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
-            //       onNavigate={handleDashboardNavigation}
-            //       onApplyToFunding={handleOpenApplyFundingModal}
-            //     />
-            //   );
-            // } else if (userRole === UserRole.ImpactOwner) {
-            //   return (
-            //     <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
-            //   );
-            // } else {
-            //   // Funder dashboard
-            //   return (
-            //     <FunderDashboard
-            //       key={`funder-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       activePage={activeDashboardPage}
-            //       onNavigate={handleDashboardNavigation}
-            //       onViewInfo={handleOpenFundingRoundDetail}
-            //     />
-            //   );
-            // }
+            if (userRole === UserRole.Researcher) {
+              return (
+                <ResearcherDashboard
+                  key={`researcher-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  currentUser={currentUser}
+                  activePage={activeDashboardPage}
+                  onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
+                  onNavigate={handleDashboardNavigation}
+                  onApplyToFunding={handleOpenApplyFundingModal}
+                />
+              );
+            } else if (userRole === UserRole.ImpactOwner) {
+              return (
+                <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
+              );
+            } else {
+              // Funder dashboard
+              return (
+                <FunderDashboard
+                  key={`funder-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  activePage={activeDashboardPage}
+                  onNavigate={handleDashboardNavigation}
+                  onViewInfo={handleOpenFundingRoundDetail}
+                />
+              );
+            }
           })()}
         </div>
       </AppLayout>

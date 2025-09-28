@@ -12,6 +12,42 @@ import {
   PaginatedResponse,
 } from "../lib/types";
 
+// HuggingFace integration types
+interface HFStatus {
+  connected: boolean;
+  username?: string;
+  userId?: string;
+  connectedAt?: string;
+  lastSync?: string;
+  scopes?: string[];
+}
+
+interface HFRepo {
+  id: string;
+  name: string;
+  fullName: string;
+  private: boolean;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+}
+
+interface HFDataset {
+  id: string;
+  name: string;
+  fullName: string;
+  private: boolean;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+}
+
 interface ApiContextType {
   // Auth
   loginUser: (email: string, password: string) => Promise<ApiUserProfile>;
@@ -41,6 +77,14 @@ interface ApiContextType {
     page?: number;
     limit?: number;
   }) => Promise<{ users: ApiUserProfile[]; pagination: any }>;
+
+  // HuggingFace Integration
+  initiateHFAuth: () => Promise<{ authUrl: string }>;
+  getHFStatus: () => Promise<HFStatus>;
+  disconnectHF: () => Promise<void>;
+  getHFRepos: (limit?: number) => Promise<HFRepo[]>;
+  getHFDatasets: (limit?: number) => Promise<HFDataset[]>;
+  refreshHFConnection: () => Promise<any>;
 
   // Loading states
   isLoading: boolean;
@@ -116,6 +160,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
+      console.log('Sending to backend:', userData);
       const response = await fetch(`${API_BASE}/users/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -300,6 +345,152 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
+  // HuggingFace Integration functions
+  const initiateHFAuth = async (): Promise<{ authUrl: string }> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/integrations/huggingface/auth`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<{ authUrl: string }> = await response.json();
+
+      if (data.success && data.authUrl) {
+        return { authUrl: data.authUrl };
+      } else {
+        throw new Error(data.message || "Failed to initiate HuggingFace auth");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to initiate HuggingFace authentication");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getHFStatus = async (): Promise<HFStatus> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/integrations/huggingface/status`, {
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<HFStatus> = await response.json();
+
+      if (data.success) {
+        return data.connected ? data.data : { connected: false };
+      } else {
+        throw new Error(data.message || "Failed to get HuggingFace status");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to get HuggingFace status");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const disconnectHF = async (): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/integrations/huggingface/disconnect`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<any> = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to disconnect HuggingFace");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to disconnect HuggingFace");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getHFRepos = async (limit: number = 20): Promise<HFRepo[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/repos?limit=${limit}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
+      const data: ApiResponse<HFRepo[]> = await response.json();
+
+      if (data.success && data.data) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Failed to get HuggingFace repositories");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to get HuggingFace repositories");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getHFDatasets = async (limit: number = 20): Promise<HFDataset[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/datasets?limit=${limit}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
+      const data: ApiResponse<HFDataset[]> = await response.json();
+
+      if (data.success && data.data) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Failed to get HuggingFace datasets");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to get HuggingFace datasets");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshHFConnection = async (): Promise<any> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/integrations/huggingface/refresh`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+
+      const data: ApiResponse<any> = await response.json();
+
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Failed to refresh HuggingFace connection");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to refresh HuggingFace connection");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Admin functions
   const fetchAllUsers = async (params?: { page?: number; limit?: number }) => {
     setIsLoading(true);
@@ -341,6 +532,12 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     getProjectsByField,
     createProject,
     fetchAllUsers,
+    initiateHFAuth,
+    getHFStatus,
+    disconnectHF,
+    getHFRepos,
+    getHFDatasets,
+    refreshHFConnection,
     isLoading,
     error,
   };
