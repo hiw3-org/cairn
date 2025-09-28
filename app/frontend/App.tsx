@@ -591,7 +591,7 @@ export function App() {
                   onSelectProject={handleSelectProject}
                   currentUser={currentUser}
                   activePage={activeDashboardPage}
-                  onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
+                  // onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
                   onNavigate={handleDashboardNavigation}
                   onApplyToFunding={handleOpenApplyFundingModal}
                 />

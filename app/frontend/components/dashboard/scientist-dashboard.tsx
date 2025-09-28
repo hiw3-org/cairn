@@ -1100,7 +1100,7 @@ export function ResearcherDashboard({
   onSelectProject,
   currentUser,
   activePage,
-  onOpenCreateProjectWizard,
+  // onOpenCreateProjectWizard,
   onNavigate,
   onApplyToFunding,
 }: {
@@ -1109,7 +1109,7 @@ export function ResearcherDashboard({
   onNewProject: () => void;
   currentUser: UserProfile;
   activePage: string;
-  onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
+  // onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
   onNavigate: (page: string) => void;
   onApplyToFunding: (project: Project) => void;
 }) {
