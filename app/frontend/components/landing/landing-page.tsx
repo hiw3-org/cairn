@@ -183,6 +183,8 @@ const AuthModal = ({
     </form>
   );
 
+  const [signupRole, setSignupRole] = useState<UserRole>(UserRole.Researcher);
+
   const renderSignupForm = () => (
     <form
       onSubmit={
@@ -193,199 +195,225 @@ const AuthModal = ({
               setSignupStep(2);
             }
       }
-      className="space-y-4"
+      className="space-y-6"
     >
       <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
         Submit your application to join the CAIRN platform. Your application will be manually reviewed.
       </p>
-      
       {error && (
         <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      {signupStep === 1 ? (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">First Name</label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Last Name</label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setSignupStep(2)}
-            className="w-full bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
-          >
-            Continue
-          </button>
-          <p className="text-center text-sm">
-            Already have an account?{" "}
+      <div className="mx-auto w-full max-w-3xl">
+        {signupStep === 1 ? (
+          <div className="border border-cairn-gray-800 rounded-2xl bg-cairn-gray-900/80 p-10 space-y-6 shadow-lg">
+            <div>
+              <label className="block text-sm font-medium text-cairn-dark-800 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                placeholder="First Name"
+                className="w-full px-4 py-2 mb-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                placeholder="Last Name"
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-1">I am a...</label>
+              <div className="flex gap-4">
+                <label className={`flex-1 flex items-center p-3 border rounded-lg cursor-pointer transition-all
+                  ${signupRole === UserRole.Researcher ? "bg-blue-600/30 border-blue-400" : "border-cairn-gray-700"}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value={UserRole.Researcher}
+                    checked={signupRole === UserRole.Researcher}
+                    onChange={() => setSignupRole(UserRole.Researcher)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-cairn-gray-400"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-100">Researcher</span>
+                </label>
+                <label className={`flex-1 flex items-center p-3 border rounded-lg cursor-pointer transition-all
+                  ${signupRole === UserRole.Funder ? "bg-blue-600/30 border-blue-400" : "border-cairn-gray-700"}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value={UserRole.Funder}
+                    checked={signupRole === UserRole.Funder}
+                    onChange={() => setSignupRole(UserRole.Funder)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-cairn-gray-400"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-100">Funder</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
             <button
               type="button"
-              onClick={() => setMode("login")}
-              className="font-semibold text-primary hover:underline"
+              onClick={() => setSignupStep(2)}
+              className="w-full bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
             >
-              Log In
+              Continue
             </button>
-          </p>
-        </>
-      ) : (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
+            <p className="text-center text-sm text-cairn-gray-300">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className="font-semibold text-blue-400 hover:underline"
+              >
+                Log In
+              </button>
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Wallet Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Institution</label>
-            <input
-              type="text"
-              value={institution}
-              onChange={(e) => setInstitution(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Department</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Research Interests (comma-separated)</label>
-            <input
-              type="text"
-              value={researchInterests}
-              onChange={(e) => setResearchInterests(e.target.value)}
-              required
-              placeholder="e.g., Machine Learning, NLP"
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Bio</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Website</label>
-            <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">ORCID</label>
-            <input
-              type="text"
-              value={orcid}
-              onChange={(e) => setOrcid(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Twitter</label>
-            <input
-              type="text"
-              value={twitter}
-              onChange={(e) => setTwitter(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">GitHub</label>
-            <input
-              type="text"
-              value={github}
-              onChange={(e) => setGithub(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
-          >
-            {isLoading ? (
-              <SpinnerIcon className="animate-spin w-5 h-5" />
-            ) : (
-              <span>Submit Application</span>
-            )}
-          </button>
-          <p className="text-center text-sm">
-            Already have an account?{" "}
+        ) : (
+          <div className="border border-cairn-gray-800 rounded-2xl bg-cairn-gray-900/80 p-10 space-y-6 shadow-lg">
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Wallet Address</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Institution</label>
+              <input
+                type="text"
+                value={institution}
+                onChange={(e) => setInstitution(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Department</label>
+              <input
+                type="text"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Research Interests (comma-separated)</label>
+              <input
+                type="text"
+                value={researchInterests}
+                onChange={(e) => setResearchInterests(e.target.value)}
+                required
+                placeholder="e.g., Machine Learning, NLP"
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Bio</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">References (Optional)</label>
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  placeholder="Website"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                />
+                <input
+                  type="text"
+                  placeholder="ORCID"
+                  value={orcid}
+                  onChange={(e) => setOrcid(e.target.value)}
+                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                />
+                <input
+                  type="text"
+                  placeholder="Twitter"
+                  value={twitter}
+                  onChange={(e) => setTwitter(e.target.value)}
+                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                />
+                <input
+                  type="text"
+                  placeholder="GitHub"
+                  value={github}
+                  onChange={(e) => setGithub(e.target.value)}
+                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                />
+              </div>
+            </div>
             <button
-              type="button"
-              onClick={() => setMode("login")}
-              className="font-semibold text-primary hover:underline"
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
             >
-              Log In
+              {isLoading ? (
+                <SpinnerIcon className="animate-spin w-5 h-5" />
+              ) : (
+                <span>Submit Application</span>
+              )}
             </button>
-          </p>
-        </>
-      )}
+            <p className="text-center text-sm">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className="font-semibold text-primary hover:underline"
+              >
+                Log In
+              </button>
+            </p>
+          </div>
+        )}
+      </div>
     </form>
   );
 
