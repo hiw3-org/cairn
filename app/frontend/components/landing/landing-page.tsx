@@ -40,12 +40,25 @@ const AuthModal = ({
   const { login, signUp } = useAppContext();
 
   // Signup state
-  const [signupName, setSignupName] = useState("");
-  const [signupRole, setSignupRole] = useState<UserRole>(UserRole.Researcher);
-  const [signupAffiliation, setSignupAffiliation] = useState("");
-  const [signupGithub, setSignupGithub] = useState("");
-  const [signupScholar, setSignupScholar] = useState("");
-  const [signupLinkedin, setSignupLinkedin] = useState("");
+  const [signupStep, setSignupStep] = useState(1);
+
+  // Step 1 state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Step 2 state
+  const [username, setUsername] = useState("");
+  const [address, setAddress] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [department, setDepartment] = useState("");
+  const [researchInterests, setResearchInterests] = useState("");
+  const [bio, setBio] = useState("");
+  const [website, setWebsite] = useState("");
+  const [orcid, setOrcid] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [github, setGithub] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
 
@@ -62,256 +75,232 @@ const AuthModal = ({
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupName || !signupRole || !signupAffiliation) return;
     setIsSubmitting(true);
+    // Prepare research interests as array
+    const interestsArray = researchInterests
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     await signUp({
-      name: signupName,
-      role: signupRole,
-      affiliation: signupAffiliation,
-      github: signupGithub,
-      scholar: signupScholar,
-      linkedin: signupLinkedin,
+      email,
+      username,
+      password,
+      address,
+      profile: {
+        firstName,
+        lastName,
+        institution,
+        department,
+        researchInterests: interestsArray,
+        bio,
+        website,
+        orcid,
+        twitter,
+        github,
+      },
     });
     setIsSubmitting(false);
     setSignupSuccess(true);
   };
 
   const renderSignupForm = () => (
-    <div className="space-y-6">
-      <div className="text-center space-y-4">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold text-text dark:text-text-dark">
-            Join the CAIRN Platform
-          </h3>
-          <p className="text-text-secondary dark:text-text-dark-secondary mt-2">
-            We're preparing something special for researchers and funders.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/20">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>Coming Soon</span>
-          </div>
-          <h4 className="text-lg font-semibold text-text dark:text-text-dark">
-            Applications Opening Soon
-          </h4>
-          <p className="text-text-secondary dark:text-text-dark-secondary">
-            We're putting the finishing touches on our researcher and funder
-            onboarding experience. Get ready to contribute to reproducible
-            science on the blockchain.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 border border-border dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark-light">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-blue-600 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-            </div>
-            <h5 className="font-semibold text-text dark:text-text-dark">
-              For Researchers
-            </h5>
-          </div>
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            Submit your projects, get them reproduced, and earn funding through
-            verified results.
-          </p>
-        </div>
-
-        <div className="p-4 border border-border dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark-light">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                />
-              </svg>
-            </div>
-            <h5 className="font-semibold text-text dark:text-text-dark">
-              For Funders
-            </h5>
-          </div>
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            Invest in reproducible research and support the future of open
-            science.
-          </p>
-        </div>
-      </div>
-
-      <p className="text-center text-sm text-text-secondary dark:text-text-dark-secondary">
-        Already have an account?{" "}
-        <span className="font-semibold text-gray-400 cursor-not-allowed">
-          Login coming soon
-        </span>
+    <form
+      onSubmit={
+        signupStep === 2
+          ? handleSignupSubmit
+          : (e) => {
+              e.preventDefault();
+              setSignupStep(2);
+            }
+      }
+      className="space-y-4"
+    >
+      <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
+        Submit your application to join the CAIRN platform. Your application will be manually reviewed.
       </p>
-    </div>
+      {signupStep === 1 ? (
+        <>
+          <div>
+            <label className="block text-sm font-medium mb-1">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setSignupStep(2)}
+            className="w-full bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
+          >
+            Continue
+          </button>
+          <p className="text-center text-sm">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className="font-semibold text-primary hover:underline"
+            >
+              Log In
+            </button>
+          </p>
+        </>
+      ) : (
+        <>
+          <div>
+            <label className="block text-sm font-medium mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Wallet Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Institution</label>
+            <input
+              type="text"
+              value={institution}
+              onChange={(e) => setInstitution(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Department</label>
+            <input
+              type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Research Interests (comma-separated)</label>
+            <input
+              type="text"
+              value={researchInterests}
+              onChange={(e) => setResearchInterests(e.target.value)}
+              required
+              placeholder="e.g., Machine Learning, NLP"
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Bio</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              required
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Website</label>
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">ORCID</label>
+            <input
+              type="text"
+              value={orcid}
+              onChange={(e) => setOrcid(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Twitter</label>
+            <input
+              type="text"
+              value={twitter}
+              onChange={(e) => setTwitter(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">GitHub</label>
+            <input
+              type="text"
+              value={github}
+              onChange={(e) => setGithub(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
+          >
+            {isSubmitting ? (
+              <SpinnerIcon className="animate-spin w-5 h-5" />
+            ) : (
+              <span>Submit Application</span>
+            )}
+          </button>
+          <p className="text-center text-sm">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className="font-semibold text-primary hover:underline"
+            >
+              Log In
+            </button>
+          </p>
+        </>
+      )}
+    </form>
   );
-
-  // const renderSignupForm = () => (
-  // <form onSubmit={handleSignupSubmit} className="space-y-4">
-  //   <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-  //     Submit your application to join the CAIRN platform. Your application
-  //     will be manually reviewed.
-  //   </p>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       Full Name
-  //     </label>
-  //     <input
-  //       type="text"
-  //       value={signupName}
-  //       onChange={(e) => setSignupName(e.target.value)}
-  //       required
-  //       className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //     />
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       I am a...
-  //     </label>
-  //     <div className="flex gap-4">
-  //       <label className="flex-1 flex items-center p-3 border border-border dark:border-border-dark rounded-lg cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary">
-  //         <input
-  //           type="radio"
-  //           name="role"
-  //           value={UserRole.Researcher}
-  //           checked={signupRole === UserRole.Researcher}
-  //           onChange={() => setSignupRole(UserRole.Researcher)}
-  //           className="h-4 w-4 text-primary focus:ring-primary border-cairn-gray-400"
-  //         />
-  //         <span className="ml-3 text-sm font-medium text-text dark:text-text-dark">
-  //           Researcher
-  //         </span>
-  //       </label>
-  //       <label className="flex-1 flex items-center p-3 border border-border dark:border-border-dark rounded-lg cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary">
-  //         <input
-  //           type="radio"
-  //           name="role"
-  //           value={UserRole.Funder}
-  //           checked={signupRole === UserRole.Funder}
-  //           onChange={() => setSignupRole(UserRole.Funder)}
-  //           className="h-4 w-4 text-primary focus:ring-primary border-cairn-gray-400"
-  //         />
-  //         <span className="ml-3 text-sm font-medium text-text dark:text-text-dark">
-  //           Funder
-  //         </span>
-  //       </label>
-  //     </div>
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       Affiliation
-  //     </label>
-  //     <input
-  //       type="text"
-  //       placeholder="e.g., University of Cambridge"
-  //       value={signupAffiliation}
-  //       onChange={(e) => setSignupAffiliation(e.target.value)}
-  //       required
-  //       className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //     />
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       References (Optional)
-  //     </label>
-  //     <div className="space-y-2">
-  //       <input
-  //         type="text"
-  //         placeholder="GitHub Profile URL"
-  //         value={signupGithub}
-  //         onChange={(e) => setSignupGithub(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //       <input
-  //         type="text"
-  //         placeholder="Google Scholar Profile URL"
-  //         value={signupScholar}
-  //         onChange={(e) => setSignupScholar(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //       <input
-  //         type="text"
-  //         placeholder="LinkedIn Profile URL"
-  //         value={signupLinkedin}
-  //         onChange={(e) => setSignupLinkedin(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //     </div>
-  //   </div>
-  //   <button
-  //     type="submit"
-  //     disabled={isSubmitting}
-  //     className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
-  //   >
-  //     {isSubmitting ? (
-  //       <SpinnerIcon className="animate-spin w-5 h-5" />
-  //     ) : (
-  //       <span>Submit Application</span>
-  //     )}
-  //   </button>
-  //   <p className="text-center text-sm">
-  //     Already have an account?{" "}
-  //     <button
-  //       onClick={() => setMode("login")}
-  //       className="font-semibold text-primary hover:underline"
-  //     >
-  //       Log In
-  //     </button>
-  //   </p>
-  // </form>
-  // );
 
   const renderLoginOptions = () => (
     <div className="space-y-6">
