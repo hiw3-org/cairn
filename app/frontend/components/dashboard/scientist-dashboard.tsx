@@ -5,7 +5,6 @@ import {
   UserProfile,
   Reproducibility,
   PoRStatus,
-  HuggingFaceOutput,
 } from "../../lib/types";
 import {
   PlusIcon,
@@ -33,6 +32,7 @@ import { StatusBadge } from "../ui/status-badge";
 import { useAppContext } from "../../context/app-provider";
 import { Tooltip } from "../ui/tooltip";
 import { OutputsLibrary } from "./outputs-library";
+import { CreateProjectWizardModal } from "../modals/create-project-wizard-modal";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -46,69 +46,55 @@ const HuggingFaceSyncView = ({
   onOpenCreateProjectWizard,
 }: {
   onSelectProject: (p: Project) => void;
-  onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
+  onOpenCreateProjectWizard: (outputs: Project[]) => void;
 }) => {
-  const { projects, huggingFaceOutputs, setHuggingFaceOutputs } =
-    useAppContext();
+  const { projects } = useAppContext();
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  // Add this state for selected outputs
   const [selectedOutputIds, setSelectedOutputIds] = useState<string[]>([]);
 
-  // This effect ensures that if a project status changes, the HF output status is updated.
-  useEffect(() => {
-    const projectStatusMap = new Map(projects.map((p) => [p.id, p.status]));
-    setHuggingFaceOutputs((currentOutputs) =>
-      currentOutputs.map((o) => {
-        if (o.cairnProjectId) {
-          const projectStatus = projectStatusMap.get(o.cairnProjectId);
-          if (projectStatus) {
-            let newStatus: HuggingFaceOutput["status"] = "Imported";
-            if (projectStatus === ProjectStatus.PendingEvaluation)
-              newStatus = "Pending Evaluation";
-            else if (
-              projectStatus === ProjectStatus.Reproducible ||
-              projectStatus === ProjectStatus.Funded ||
-              projectStatus === ProjectStatus.InReview
-            )
-              newStatus = "Reproducible";
-
-            if (newStatus !== o.status) {
-              return { ...o, status: newStatus };
-            }
-          }
-        }
-        return o;
-      })
-    );
-  }, [projects, setHuggingFaceOutputs]);
+  // Transform projects into a format for the HF-style table
+  const projectsForDisplay = useMemo(() => {
+    return projects.map((p) => ({
+      id: p._id,
+      name: p.title,
+      type: p.field || "unknown", // Use field as type
+      downloads: Math.floor(Math.random() * 10000), // Fake for now
+      likes: Math.floor(Math.random() * 1000), // Fake for now
+      lastModified: new Date(p.updated_at).toLocaleDateString(),
+      status: p.project_status === "Draft" ? "Not Imported" : "Imported",
+      cairnProjectId: p._id,
+      huggingfaceUrl: p.huggingface?.repo_url || null,
+    }));
+  }, [projects]);
 
   // Filter and Sort State
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<
-    "all" | "model" | "dataset" | "space"
-  >("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "Imported" | "Not Imported" | "Pending Evaluation" | "Reproducible"
+    "all" | "Draft" | "Imported" | "Pending Evaluation" | "Reproducible"
   >("all");
   const [sortKey, setSortKey] = useState<
     "downloads" | "likes" | "lastModified"
   >("downloads");
 
   const handleOpenWizard = () => {
-    const selectedOutputs = huggingFaceOutputs.filter((o) =>
-      selectedOutputIds.includes(o.id)
+    const selectedProjects = projects.filter((p) =>
+      selectedProjectIds.includes(p._id)
     );
-    if (selectedOutputs.length > 0) {
-      onOpenCreateProjectWizard(selectedOutputs);
+    if (selectedProjects.length > 0) {
+      onOpenCreateProjectWizard(selectedProjects);
     }
   };
 
-  const filteredAndSortedOutputs = useMemo(() => {
-    return huggingFaceOutputs
-      .filter((o) => {
+  const filteredAndSortedProjects = useMemo(() => {
+    return projectsForDisplay
+      .filter((p) => {
         const searchMatch =
           searchTerm === "" ||
-          o.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const typeMatch = typeFilter === "all" || o.type === typeFilter;
-        const statusMatch = statusFilter === "all" || o.status === statusFilter;
+          p.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const typeMatch = typeFilter === "all" || p.type === typeFilter;
+        const statusMatch = statusFilter === "all" || p.status === statusFilter;
         return searchMatch && typeMatch && statusMatch;
       })
       .sort((a, b) => {
@@ -125,12 +111,12 @@ const HuggingFaceSyncView = ({
             return b.downloads - a.downloads;
         }
       });
-  }, [huggingFaceOutputs, searchTerm, typeFilter, statusFilter, sortKey]);
+  }, [projectsForDisplay, searchTerm, typeFilter, statusFilter, sortKey]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedOutputIds(
-        filteredAndSortedOutputs
+        filteredAndSortedProjects
           .filter((o) => o.status === "Not Imported")
           .map((o) => o.id)
       );
@@ -344,7 +330,7 @@ const HuggingFaceSyncView = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border dark:divide-border-dark">
-              {filteredAndSortedOutputs.map((output) => {
+              {filteredAndSortedProjects.map((output) => {
                 const isImported = output.status !== "Not Imported";
                 return (
                   <tr
@@ -366,14 +352,16 @@ const HuggingFaceSyncView = ({
                     </td>
                     <td className="p-4 font-semibold text-text-primary dark:text-dark-text-primary flex items-center space-x-2">
                       <span>{output.name}</span>
-                      <a
-                        href={`https://huggingface.co/${output.name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-text-secondary hover:text-primary"
-                      >
-                        <ExternalLinkIcon className="w-4 h-4" />
-                      </a>
+                      {output.huggingfaceUrl && (
+                        <a
+                          href={output.huggingfaceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-secondary hover:text-primary"
+                        >
+                          <ExternalLinkIcon className="w-4 h-4" />
+                        </a>
+                      )}
                     </td>
                     <td className="p-4 capitalize">{output.type}</td>
                     <td className="p-4 text-right font-mono">
@@ -414,7 +402,7 @@ const HuggingFaceSyncView = ({
               })}
             </tbody>
           </table>
-          {filteredAndSortedOutputs.length === 0 && (
+          {filteredAndSortedProjects.length === 0 && (
             <div className="text-center py-16 px-6">
               <p className="font-semibold text-text-primary dark:text-dark-text-primary">
                 No outputs match your filters.
@@ -471,11 +459,11 @@ const ProjectCard = ({
 }) => {
   const verifiedPors = useMemo(
     () =>
-      project.reproducibilities.filter((r) => r.status === PoRStatus.Success)
-        .length,
+      (project.reproducibilities || []).filter(
+        (r) => r.status === PoRStatus.Success
+      ).length,
     [project.reproducibilities]
   );
-
   const renderAction = () => {
     switch (project.status) {
       case ProjectStatus.Draft:
@@ -525,7 +513,7 @@ const ProjectCard = ({
           <StatusBadge status={project.status} />
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
-          {project.tags.slice(0, 3).map((tag) => (
+          {(project.tags || []).slice(0, 3).map((tag) => (
             <span
               key={tag}
               className="text-xs bg-hf-gray-100 dark:bg-hf-gray-800 px-2 py-0.5 rounded-full"
@@ -539,7 +527,7 @@ const ProjectCard = ({
           <Tooltip text="Outputs Submitted">
             <div className="flex items-center space-x-2">
               <UploadCloudIcon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
-              <span className="font-semibold">{project.outputs.length}</span>
+              <span className="font-semibold">{project.outputs}</span>
             </div>
           </Tooltip>
           <Tooltip text="Verified PoRs">
@@ -719,7 +707,6 @@ const FundingOpportunitiesDashboard = ({
   projects: Project[];
   currentUser: UserProfile;
 }) => {
-  
   //     title: o.title,
   //     issuer: o.issuer,
   //     amount: `${o.amount} ${o.currency}`,
@@ -784,7 +771,6 @@ const FundingOpportunitiesDashboard = ({
         }
       });
   }, [allOpportunities, filterType, sortKey, activeTopics]);
-
 
   const kpis = {
     openRounds: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").length,
@@ -1098,22 +1084,32 @@ const ProjectsView = ({
 export function ResearcherDashboard({
   projects,
   onSelectProject,
+  onNewProject, // ← Add to destructured props
   currentUser,
   activePage,
-  // onOpenCreateProjectWizard,
   onNavigate,
   onApplyToFunding,
 }: {
   projects: Project[];
   onSelectProject: (p: Project) => void;
-  onNewProject: () => void;
+  onNewProject: () => void; // ← Make sure it's in the type definition
   currentUser: UserProfile;
   activePage: string;
-  // onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
   onNavigate: (page: string) => void;
   onApplyToFunding: (project: Project) => void;
 }) {
   const { handleSubmitForReproducibility } = useAppContext();
+
+  // Add modal state
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [wizardOutputs, setWizardOutputs] = useState<HuggingFaceOutput[]>([]);
+
+  // Handler for opening wizard with selected outputs
+  const onOpenCreateProjectWizard = (outputs: HuggingFaceOutput[]) => {
+    setWizardOutputs(outputs);
+    setIsWizardOpen(true);
+  };
+
   const myProjects = useMemo(
     () => projects.filter((p) => p.ownerId === currentUser.walletAddress),
     [projects, currentUser.walletAddress]
@@ -1128,13 +1124,13 @@ export function ResearcherDashboard({
           myProjects={myProjects}
           onSelectProject={onSelectProject}
           onNavigate={onNavigate}
-          onNewProject={onNewProject}
+          onNewProject={onNewProject} // ← Pass the prop from parent
           onApplyToFunding={onApplyToFunding}
           onSubmitForReproducibility={handleSubmitForReproducibility}
         />
         <HuggingFaceSyncView
           onSelectProject={onSelectProject}
-          onOpenCreateProjectWizard={onOpenCreateProjectWizard}
+          onOpenCreateProjectWizard={onOpenCreateProjectWizard} // ← Now this exists
         />
       </div>
     );
@@ -1161,12 +1157,20 @@ export function ResearcherDashboard({
     );
   }
 
-  return <div className="animate-fade-in">{content}</div>;
+  return (
+    <div className="animate-fade-in">
+      {content}
+      {isWizardOpen && (
+        <CreateProjectWizardModal
+          initialOutputs={wizardOutputs}
+          onClose={() => setIsWizardOpen(false)}
+        />
+      )}
+    </div>
+  );
 }
-import { StatusBadge } from "../ui/status-badge";
+
 import { GenerativePlaceholder } from "../ui/generative-placeholder";
-import { useAppContext } from "../../context/app-provider";
-import { Tooltip } from "../ui/tooltip";
 import { ImpactLevelBadge } from "../ui/impact-level-badge";
 
 const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {

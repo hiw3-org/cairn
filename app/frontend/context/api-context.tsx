@@ -1,15 +1,15 @@
 // context/api-context.tsx
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 import {
-  ApiUserProfile,
-  ApiProject,
   SignupData,
   CreateProjectData,
   ApiResponse,
   PaginatedResponse,
+  UserProfile,
+  Project,
 } from "../lib/types";
 
 // HuggingFace integration types
@@ -50,10 +50,11 @@ interface HFDataset {
 
 interface ApiContextType {
   // Auth
-  loginUser: (email: string, password: string) => Promise<ApiUserProfile>;
-  signupUser: (userData: SignupData) => Promise<ApiUserProfile>;
-  getCurrentUser: () => Promise<ApiUserProfile>;
-  logoutUser: () => void;
+  loginUser: (email: string, password: string) => Promise<UserProfile>;
+  signupUser: (userData: SignupData) => Promise<UserProfile>;
+  getCurrentUser: () => Promise<UserProfile>;
+  logoutUser: () => Promise<void>;
+  checkAuthStatus: () => Promise<boolean>;
 
   // Projects
   fetchProjects: (params?: {
@@ -61,22 +62,22 @@ interface ApiContextType {
     limit?: number;
     field?: string;
     researcher_id?: string;
-  }) => Promise<{ projects: ApiProject[]; pagination: any }>;
-  getProjectById: (id: string) => Promise<ApiProject>;
+  }) => Promise<{ projects: Project[]; pagination: any }>;
+  getProjectById: (id: string) => Promise<Project>;
   getProjectsByField: (
     field: string,
     params?: {
       page?: number;
       limit?: number;
     }
-  ) => Promise<{ projects: ApiProject[]; pagination: any }>;
-  createProject: (projectData: CreateProjectData) => Promise<ApiProject>;
+  ) => Promise<{ projects: Project[]; pagination: any }>;
+  createProject: (projectData: CreateProjectData) => Promise<Project>;
 
   // Users (admin only)
   fetchAllUsers: (params?: {
     page?: number;
     limit?: number;
-  }) => Promise<{ users: ApiUserProfile[]; pagination: any }>;
+  }) => Promise<{ users: UserProfile[]; pagination: any }>;
 
   // HuggingFace Integration
   initiateHFAuth: () => Promise<{ authUrl: string }>;
@@ -105,12 +106,10 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
   const API_BASE =
     apiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
-  // Helper function to get auth headers
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
+  // Helper function to get headers (no auth token needed anymore)
+  const getHeaders = () => {
     return {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
     };
   };
 
@@ -121,29 +120,29 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     throw new Error(errorMessage);
   };
 
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
   // Auth functions
   const loginUser = async (
     email: string,
     password: string
-  ): Promise<ApiUserProfile> => {
+  ): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE}/users/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data: ApiResponse<{
-        user: ApiUserProfile;
-        token: string;
-        refreshToken: string;
-      }> = await response.json();
+      const data: ApiResponse<{ user: UserProfile }> = await response.json();
 
       if (data.status === "success" && data.data) {
-        localStorage.setItem("token", data.data.token);
-        localStorage.setItem("refreshToken", data.data.refreshToken);
         return data.data.user;
       } else {
         throw new Error(data.message || "Login failed");
@@ -156,26 +155,21 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const signupUser = async (userData: SignupData): Promise<ApiUserProfile> => {
+  const signupUser = async (userData: SignupData): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log('Sending to backend:', userData);
+      console.log("Sending to backend:", userData);
       const response = await fetch(`${API_BASE}/users/signup`, {
         method: "POST",
+        credentials: "include", // Important: sends/receives cookies
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
 
-      const data: ApiResponse<{
-        user: ApiUserProfile;
-        token: string;
-        refreshToken: string;
-      }> = await response.json();
+      const data: ApiResponse<{ user: UserProfile }> = await response.json();
 
       if (data.status === "success" && data.data) {
-        localStorage.setItem("token", data.data.token);
-        localStorage.setItem("refreshToken", data.data.refreshToken);
         return data.data.user;
       } else {
         throw new Error(data.message || "Signup failed");
@@ -188,15 +182,16 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const getCurrentUser = async (): Promise<ApiUserProfile> => {
+  const getCurrentUser = async (): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE}/users/me`, {
-        headers: getAuthHeaders(),
+        credentials: "include", // Important: sends cookies
+        headers: getHeaders(),
       });
 
-      const data: ApiResponse<{ user: ApiUserProfile }> = await response.json();
+      const data: ApiResponse<{ user: UserProfile }> = await response.json();
 
       if (data.status === "success" && data.data) {
         return data.data.user;
@@ -211,10 +206,39 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const logoutUser = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
+  const checkAuthStatus = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE}/users/me`, {
+        credentials: "include",
+        headers: getHeaders(),
+      });
+
+      if (response.ok) {
+        const data: ApiResponse<{ user: UserProfile }> = await response.json();
+        return data.status === "success";
+      }
+      return false;
+    } catch (error) {
+      console.log("Not authenticated");
+      return false;
+    }
+  };
+
+  const logoutUser = async (): Promise<void> => {
+    setIsLoading(true);
     setError(null);
+    try {
+      await fetch(`${API_BASE}/users/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: getHeaders(),
+      });
+      // Note: No need to clear localStorage anymore
+    } catch (error: any) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Projects functions
@@ -235,10 +259,11 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
         searchParams.append("researcher_id", params.researcher_id);
 
       const response = await fetch(`${API_BASE}/projects?${searchParams}`, {
-        headers: getAuthHeaders(),
+        credentials: "include", // Important: sends cookies
+        headers: getHeaders(),
       });
 
-      const data: PaginatedResponse<ApiProject> = await response.json();
+      const data: PaginatedResponse<Project> = await response.json();
 
       if (data.status === "success" && data.data) {
         return {
@@ -256,15 +281,16 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const getProjectById = async (id: string): Promise<ApiProject> => {
+  const getProjectById = async (id: string): Promise<Project> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE}/projects/${id}`, {
-        headers: getAuthHeaders(),
+        credentials: "include",
+        headers: getHeaders(),
       });
 
-      const data: ApiResponse<{ project: ApiProject }> = await response.json();
+      const data: ApiResponse<{ project: Project }> = await response.json();
 
       if (data.status === "success" && data.data) {
         return data.data.project;
@@ -296,11 +322,12 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       const response = await fetch(
         `${API_BASE}/projects/field/${field}?${searchParams}`,
         {
-          headers: getAuthHeaders(),
+          credentials: "include",
+          headers: getHeaders(),
         }
       );
 
-      const data: PaginatedResponse<ApiProject> = await response.json();
+      const data: PaginatedResponse<Project> = await response.json();
 
       if (data.status === "success" && data.data) {
         return {
@@ -320,17 +347,18 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
   const createProject = async (
     projectData: CreateProjectData
-  ): Promise<ApiProject> => {
+  ): Promise<Project> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE}/projects`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify(projectData),
       });
 
-      const data: ApiResponse<{ project: ApiProject }> = await response.json();
+      const data: ApiResponse<{ project: Project }> = await response.json();
 
       if (data.status === "success" && data.data) {
         return data.data.project;
@@ -345,15 +373,19 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  // HuggingFace Integration functions
+  // HuggingFace Integration functions - all updated with credentials: "include"
   const initiateHFAuth = async (): Promise<{ authUrl: string }> => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/integrations/huggingface/auth`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/auth`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
 
       const data: ApiResponse<{ authUrl: string }> = await response.json();
 
@@ -374,9 +406,13 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/integrations/huggingface/status`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/status`,
+        {
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
 
       const data: ApiResponse<HFStatus> = await response.json();
 
@@ -397,10 +433,14 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/integrations/huggingface/disconnect`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/disconnect`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
 
       const data: ApiResponse<any> = await response.json();
 
@@ -422,7 +462,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       const response = await fetch(
         `${API_BASE}/integrations/huggingface/repos?limit=${limit}`,
         {
-          headers: getAuthHeaders(),
+          credentials: "include",
+          headers: getHeaders(),
         }
       );
 
@@ -431,7 +472,9 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       if (data.success && data.data) {
         return data.data;
       } else {
-        throw new Error(data.message || "Failed to get HuggingFace repositories");
+        throw new Error(
+          data.message || "Failed to get HuggingFace repositories"
+        );
       }
     } catch (error: any) {
       handleApiError(error, "Failed to get HuggingFace repositories");
@@ -448,7 +491,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       const response = await fetch(
         `${API_BASE}/integrations/huggingface/datasets?limit=${limit}`,
         {
-          headers: getAuthHeaders(),
+          credentials: "include",
+          headers: getHeaders(),
         }
       );
 
@@ -471,17 +515,23 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/integrations/huggingface/refresh`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE}/integrations/huggingface/refresh`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
 
       const data: ApiResponse<any> = await response.json();
 
       if (data.success) {
         return data.data;
       } else {
-        throw new Error(data.message || "Failed to refresh HuggingFace connection");
+        throw new Error(
+          data.message || "Failed to refresh HuggingFace connection"
+        );
       }
     } catch (error: any) {
       handleApiError(error, "Failed to refresh HuggingFace connection");
@@ -501,10 +551,11 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       if (params?.limit) searchParams.append("limit", params.limit.toString());
 
       const response = await fetch(`${API_BASE}/users?${searchParams}`, {
-        headers: getAuthHeaders(),
+        credentials: "include",
+        headers: getHeaders(),
       });
 
-      const data: PaginatedResponse<ApiUserProfile> = await response.json();
+      const data: PaginatedResponse<UserProfile> = await response.json();
 
       if (data.status === "success" && data.data) {
         return {
@@ -527,6 +578,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     signupUser,
     getCurrentUser,
     logoutUser,
+    checkAuthStatus,
     fetchProjects,
     getProjectById,
     getProjectsByField,

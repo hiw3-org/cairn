@@ -21,6 +21,8 @@ import {
   ResearchDomain,
 } from "../lib/types";
 
+import { useApi } from "./api-context";
+
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -44,7 +46,9 @@ interface AppContextType {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   huggingFaceOutputs: HuggingFaceOutput[];
-  setHuggingFaceOutputs: React.Dispatch<React.SetStateAction<HuggingFaceOutput[]>>;
+  setHuggingFaceOutputs: React.Dispatch<
+    React.SetStateAction<HuggingFaceOutput[]>
+  >;
   currentUser: UserProfile | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   toasts: ToastInfo[];
@@ -121,7 +125,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDarkMode, setIsDarkModeState] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [huggingFaceOutputs, setHuggingFaceOutputs] = useState<HuggingFaceOutput[]>([]);
+  const [huggingFaceOutputs, setHuggingFaceOutputs] = useState<
+    HuggingFaceOutput[]
+  >([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [fundingHistory, setFundingHistory] = useState<FundingEvent[]>([]);
   const [fundingRounds, setFundingRounds] = useState<FundingRound[]>([]);
@@ -134,6 +140,26 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [forceShowLanding, setForceShowLanding] = useState(false);
   const [isGuestBrowsing, setIsGuestBrowsing] = useState(false);
+
+  const api = useApi();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await api.checkAuthStatus();
+        if (isAuth) {
+          const user = await api.getCurrentUser();
+          handleLoginSuccess(user); // Use your existing function
+        }
+      } catch (error) {
+        console.log("Not authenticated");
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const setIsDarkMode = (dark: boolean) => {
     setIsDarkModeState(dark);
@@ -168,46 +194,53 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Updated handleLoginSuccess function
   const handleLoginSuccess = (user: UserProfile) => {
-    console.log('handleLoginSuccess called with user:', user);
-    
+    console.log("handleLoginSuccess called with user:", user);
+
     // Set the current user
     setCurrentUser(user);
-    
+
     // Map backend role string to frontend UserRole enum
     let frontendRole: UserRole;
-    
+
     switch (user.role) {
-      case 'researcher':
+      case "researcher":
         frontendRole = UserRole.Researcher;
         break;
-      case 'funder':
+      case "funder":
         frontendRole = UserRole.Funder;
         break;
-      case 'admin':
+      case "admin":
         frontendRole = UserRole.Admin;
         break;
       default:
-        console.warn('Unknown user role:', user.role, 'defaulting to Researcher');
+        console.warn(
+          "Unknown user role:",
+          user.role,
+          "defaulting to Researcher"
+        );
         frontendRole = UserRole.Researcher;
         break;
     }
-    
+
     // Set the user role in app context
     setUserRole(frontendRole);
-    
+
     // Set authentication status
     setIsAuthenticated(true);
-    
+
     // Clear any guest browsing state
     setIsGuestBrowsing(false);
-    
+
     // Clear any forced landing page state
     setForceShowLanding(false);
-    
+
     // Optional: Show success toast
-    addToast(`Welcome back, ${user.profile?.firstName || user.username}!`, 'success');
-    
-    console.log('Login success - Role set to:', frontendRole, 'User:', user);
+    addToast(
+      `Welcome back, ${user.profile?.firstName || user.username}!`,
+      "success"
+    );
+
+    console.log("Login success - Role set to:", frontendRole, "User:", user);
   };
 
   const connectWallet = async (role?: UserRole) => {
