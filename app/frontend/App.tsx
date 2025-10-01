@@ -238,6 +238,7 @@ export function App() {
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
+  const hasLoadedHFData = React.useRef(false);
 
   // Get app context and API functions
   const {
@@ -253,6 +254,9 @@ export function App() {
     isGuestBrowsing,
     setProjects,
     addToast,
+    setHfModels,
+    setHfDatasets,
+    setHfLastSync,
   } = useAppContext();
 
   const api = useApi();
@@ -346,6 +350,45 @@ export function App() {
     }
   }, [isAuthenticated, isGuestBrowsing]);
 
+  // ===== HUGGINGFACE DATA LOADING =====
+  /**
+   * Loads HuggingFace repos and datasets if user has connected their account
+   * This enriches the UI with real data from their HF profile
+   */
+  // Load HuggingFace data when user connects their account
+  React.useEffect(() => {
+    const fetchHFData = async () => {
+      // Only fetch once per session
+      if (hasLoadedHFData.current) return;
+      if (!currentUser?.integrations?.huggingface?.connected) return;
+
+      hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
+
+      try {
+        console.log("Fetching HuggingFace data...");
+        const [repos, datasets] = await Promise.all([
+          api.getHFRepos(50),
+          api.getHFDatasets(50),
+        ]);
+
+        setHfModels(repos);
+        setHfDatasets(datasets);
+        setHfLastSync(new Date());
+
+        console.log("Loaded HuggingFace data:", { repos, datasets });
+        // Store in context - make sure setHfRepos and setHfDatasets exist in your context
+        // For now, just log it
+        addToast("HuggingFace data synced successfully", "success");
+      } catch (error) {
+        console.error("Failed to load HuggingFace data:", error);
+        hasLoadedHFData.current = false; // Reset on error so they can retry
+      }
+    };
+
+    if (isAuthenticated && currentUser?.integrations?.huggingface?.connected) {
+      fetchHFData();
+    }
+  }, [isAuthenticated, currentUser?.integrations?.huggingface?.connected]);
   // Count draft projects for the current researcher
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;

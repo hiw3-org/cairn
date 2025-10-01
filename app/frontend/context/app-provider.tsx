@@ -13,12 +13,13 @@ import {
   ToastInfo,
   UserProfile,
   Output,
-  PoRStatus,
   FundingEvent,
   FundingRound,
   RoundApplicant,
   Notification,
-  ResearchDomain,
+  ProjectStatus,
+  HFModel,
+  HFDataset,
 } from "../lib/types";
 
 import { useApi } from "./api-context";
@@ -90,11 +91,17 @@ interface AppContextType {
     attachments: File[]
   ) => void;
   notifications: Notification[];
-  usdcBalance: number;
   handleCreateProjectFromHuggingFace: (
     hfOutputs: HuggingFaceOutput[]
   ) => string;
   handleMintImpactAsset: (roundId: string) => Promise<void>;
+
+  hfModels: HFModel[];
+  setHfModels: React.Dispatch<React.SetStateAction<HFModel[]>>;
+  hfDatasets: HFDataset[];
+  setHfDatasets: React.Dispatch<React.SetStateAction<HFDataset[]>>;
+  hfLastSync: Date | null;
+  setHfLastSync: React.Dispatch<React.SetStateAction<Date | null>>;
 
   // Auth & Navigation
   connectedWallet: string | null;
@@ -133,13 +140,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [fundingRounds, setFundingRounds] = useState<FundingRound[]>([]);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [usdcBalance, setUsdcBalance] = useState(0);
 
   // Auth & Navigation State
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [forceShowLanding, setForceShowLanding] = useState(false);
   const [isGuestBrowsing, setIsGuestBrowsing] = useState(false);
+
+  const [hfModels, setHfModels] = useState<HFModel[]>([]);
+  const [hfDatasets, setHfDatasets] = useState<HFDataset[]>([]);
+  const [hfLastSync, setHfLastSync] = useState<Date | null>(null);
 
   const api = useApi();
 
@@ -149,7 +159,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         const isAuth = await api.checkAuthStatus();
         if (isAuth) {
           const user = await api.getCurrentUser();
-          handleLoginSuccess(user); // Use your existing function
+          handleLoginSuccess(user, true); // Pass true for initial load
         }
       } catch (error) {
         console.log("Not authenticated");
@@ -193,15 +203,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   // Updated handleLoginSuccess function
-  const handleLoginSuccess = (user: UserProfile) => {
+  const handleLoginSuccess = (user: UserProfile, isInitialLoad = false) => {
     console.log("handleLoginSuccess called with user:", user);
-
-    // Set the current user
     setCurrentUser(user);
 
-    // Map backend role string to frontend UserRole enum
     let frontendRole: UserRole;
-
     switch (user.role) {
       case "researcher":
         frontendRole = UserRole.Researcher;
@@ -222,28 +228,23 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         break;
     }
 
-    // Set the user role in app context
     setUserRole(frontendRole);
-
-    // Set authentication status
     setIsAuthenticated(true);
-
-    // Clear any guest browsing state
     setIsGuestBrowsing(false);
-
-    // Clear any forced landing page state
     setForceShowLanding(false);
 
-    // Optional: Show success toast
-    addToast(
-      `Welcome back, ${user.profile?.firstName || user.username}!`,
-      "success"
-    );
+    // Only show toast for actual logins, not initial page load
+    if (!isInitialLoad) {
+      addToast(
+        `Welcome back, ${user.profile?.firstName || user.username}!`,
+        "success"
+      );
+    }
 
     console.log("Login success - Role set to:", frontendRole, "User:", user);
   };
 
-  const connectWallet = async (role?: UserRole) => {
+  const connectWallet = async () => {
     // TODO: Implement wallet connection logic
     addToast("Wallet connection functionality to be implemented", "info");
   };
@@ -346,7 +347,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     setProjects((prev) =>
       prev.map((p) =>
-        p._id === projectId ? { ...p, project_status: "Pending Evaluation" } : p
+        p._id === projectId
+          ? { ...p, project_status: ProjectStatus.PendingEvaluation }
+          : p
       )
     );
 
@@ -361,7 +364,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setTimeout(() => {
       setProjects((prev) =>
         prev.map((p) =>
-          p._id === projectId ? { ...p, project_status: "Evaluated" } : p
+          p._id === projectId
+            ? { ...p, project_status: ProjectStatus.Evaluated }
+            : p
         )
       );
       setHuggingFaceOutputs((prev) =>
@@ -513,7 +518,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         return {
           ...p,
           funded_amount: (p.funded_amount || 0) + fundingInfo.fundingAmount,
-          project_status: "Funded",
+          project_status: ProjectStatus.Funded,
         };
       }
       return p;
@@ -550,7 +555,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           hfUpvotes: 0,
           communityScore: 0,
         };
-        return { ...p, project_status: "Pending Evaluation" };
+        return { ...p, project_status: ProjectStatus.PendingEvaluation };
       }
       return p;
     });
@@ -617,7 +622,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     handleDistributeRoundFunds,
     handleApplyToFundingRound,
     notifications,
-    usdcBalance,
     connectedWallet,
     setConnectedWallet,
     connectWallet,
@@ -633,6 +637,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     enterAppAsGuest,
     handleCreateProjectFromHuggingFace,
     handleMintImpactAsset,
+    hfModels,
+    setHfModels,
+    hfDatasets,
+    setHfDatasets,
+    hfLastSync,
+    setHfLastSync,
   };
 
   return (

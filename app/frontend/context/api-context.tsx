@@ -10,6 +10,8 @@ import {
   PaginatedResponse,
   UserProfile,
   Project,
+  HFModel,
+  HFDataset,
 } from "../lib/types";
 
 // HuggingFace integration types
@@ -20,32 +22,6 @@ interface HFStatus {
   connectedAt?: string;
   lastSync?: string;
   scopes?: string[];
-}
-
-interface HFRepo {
-  id: string;
-  name: string;
-  fullName: string;
-  private: boolean;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  downloads: number;
-  likes: number;
-  tags: string[];
-}
-
-interface HFDataset {
-  id: string;
-  name: string;
-  fullName: string;
-  private: boolean;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  downloads: number;
-  likes: number;
-  tags: string[];
 }
 
 interface ApiContextType {
@@ -83,7 +59,7 @@ interface ApiContextType {
   initiateHFAuth: () => Promise<{ authUrl: string }>;
   getHFStatus: () => Promise<HFStatus>;
   disconnectHF: () => Promise<void>;
-  getHFRepos: (limit?: number) => Promise<HFRepo[]>;
+  getHFRepos: (limit?: number) => Promise<HFModel[]>;
   getHFDatasets: (limit?: number) => Promise<HFDataset[]>;
   refreshHFConnection: () => Promise<any>;
 
@@ -192,6 +168,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       });
 
       const data: ApiResponse<{ user: UserProfile }> = await response.json();
+
+      console.log("Current user data:", data);
 
       if (data.status === "success" && data.data) {
         return data.data.user;
@@ -389,8 +367,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<{ authUrl: string }> = await response.json();
 
-      if (data.success && data.authUrl) {
-        return { authUrl: data.authUrl };
+      if (data.status === "success" && data.data && data.data.authUrl) {
+        return { authUrl: data.data.authUrl };
       } else {
         throw new Error(data.message || "Failed to initiate HuggingFace auth");
       }
@@ -416,8 +394,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<HFStatus> = await response.json();
 
-      if (data.success) {
-        return data.connected ? data.data : { connected: false };
+      if (data.status === "success" && data.data) {
+        return data.data;
       } else {
         throw new Error(data.message || "Failed to get HuggingFace status");
       }
@@ -444,7 +422,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<any> = await response.json();
 
-      if (!data.success) {
+      if (data.status !== "success") {
         throw new Error(data.message || "Failed to disconnect HuggingFace");
       }
     } catch (error: any) {
@@ -469,7 +447,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<HFRepo[]> = await response.json();
 
-      if (data.success && data.data) {
+      if (data.status === "success" && data.data) {
         return data.data;
       } else {
         throw new Error(
@@ -498,7 +476,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<HFDataset[]> = await response.json();
 
-      if (data.success && data.data) {
+      if (data.status === "success" && data.data) {
         return data.data;
       } else {
         throw new Error(data.message || "Failed to get HuggingFace datasets");
@@ -526,7 +504,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<any> = await response.json();
 
-      if (data.success) {
+      if (data.status === "success") {
         return data.data;
       } else {
         throw new Error(

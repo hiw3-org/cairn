@@ -169,6 +169,7 @@ router.get(
           address: user.address,
           role: user.role,
           profile: user.profile,
+          integrations: user.integrations,
           permissions: user.permissions,
           isActive: user.isActive,
           lastLogin: user.lastLogin,
