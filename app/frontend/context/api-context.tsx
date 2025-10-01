@@ -62,6 +62,7 @@ interface ApiContextType {
   getHFRepos: (limit?: number) => Promise<HFModel[]>;
   getHFDatasets: (limit?: number) => Promise<HFDataset[]>;
   refreshHFConnection: () => Promise<any>;
+  searchArxiv: (query: string, maxResults?: number) => Promise<any>;
 
   // Loading states
   isLoading: boolean;
@@ -433,7 +434,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const getHFRepos = async (limit: number = 20): Promise<HFRepo[]> => {
+  const getHFRepos = async (limit: number = 20): Promise<HFModel[]> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -445,7 +446,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
         }
       );
 
-      const data: ApiResponse<HFRepo[]> = await response.json();
+      const data: ApiResponse<HFModel[]> = await response.json();
 
       if (data.status === "success" && data.data) {
         return data.data;
@@ -519,6 +520,37 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
+  const searchArxiv = async (
+    query: string,
+    maxResults: number = 5
+  ): Promise<any> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/arxiv/search?query=${encodeURIComponent(
+          query
+        )}&max_results=${maxResults}`,
+        {
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to search arXiv");
+      }
+
+      const xmlText = await response.text();
+      return xmlText;
+    } catch (error: any) {
+      handleApiError(error, "Failed to search arXiv");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Admin functions
   const fetchAllUsers = async (params?: { page?: number; limit?: number }) => {
     setIsLoading(true);
@@ -570,6 +602,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     refreshHFConnection,
     isLoading,
     error,
+    searchArxiv,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
