@@ -102,7 +102,7 @@ const HelpRail = ({ step }: { step: number }) => {
   const tips = [
     "Review the Hugging Face assets you selected. These will form the initial outputs for your new CAIRN project.",
     "Provide a clear title and description. Good metadata helps funders and other researchers discover your work.",
-    "Strengthen your project by linking to existing papers, code, or supplementary materials. This increases your impact score.",
+    "Add existing research papers directly from ArXiv or link them to your project from other archives.",
     "Review all details before creating your project. You can save a draft to complete it later.",
   ];
   return (
@@ -215,44 +215,6 @@ const Step2_ProjectBasics = ({
   </div>
 );
 
-const MOCK_ARXIV_PAPERS = [
-  {
-    id: "2305.12863",
-    title: "A Survey of Large Language Models",
-    url: "https://arxiv.org/abs/2305.12863",
-  },
-  {
-    id: "1706.03762",
-    title: "Attention Is All You Need",
-    url: "https://arxiv.org/abs/1706.03762",
-  },
-  {
-    id: "2203.02155",
-    title: "A ConvNet for the 2020s",
-    url: "https://arxiv.org/abs/2203.02155",
-  },
-  {
-    id: "2005.14165",
-    title: "Language Models are Few-Shot Learners",
-    url: "https://arxiv.org/abs/2005.14165",
-  },
-  {
-    id: "1409.1556",
-    title: "Very Deep Convolutional Networks for Large-Scale Image Recognition",
-    url: "https://arxiv.org/abs/1409.1556",
-  },
-  {
-    id: "1512.03385",
-    title: "Deep Residual Learning for Image Recognition",
-    url: "https://arxiv.org/abs/1512.03385",
-  },
-  {
-    id: "2106.09685",
-    title:
-      "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
-    url: "https://arxiv.org/abs/2106.09685",
-  },
-];
 
 const Step3_AddResearchPapers = ({
   data,
@@ -401,24 +363,9 @@ const Step3_AddResearchPapers = ({
     <div className="space-y-4">
       <h3 className="text-xl font-semibold">Add Research Papers</h3>
       <p className="text-sm text-text-secondary">
-        Link papers from any repository or search ArXiv directly.
+        Search ArXiv directly or link research papers from any other repository.
       </p>
 
-      {/* General Paper URL */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Paper URL</label>
-        <input
-          type="url"
-          placeholder="https://researchgate.net/..."
-          onBlur={(e) => {
-            if (e.target.value) {
-              handleAddPaperUrl(e.target.value);
-              e.target.value = ""; // Clear after adding
-            }
-          }}
-          className="w-full h-11 px-3 border rounded-lg bg-transparent"
-        />
-      </div>
 
       {/* ArXiv Search */}
       <div className="relative" ref={searchRef}>
@@ -461,11 +408,27 @@ const Step3_AddResearchPapers = ({
         )}
       </div>
 
+      {/* General Paper URL */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Other Research Paper URL</label>
+        <input
+          type="url"
+          placeholder="https://researchgate.net/..."
+          onBlur={(e) => {
+            if (e.target.value) {
+              handleAddPaperUrl(e.target.value);
+              e.target.value = ""; // Clear after adding
+            }
+          }}
+          className="w-full h-11 px-3 border rounded-lg bg-transparent"
+        />
+      </div>
+
       {/* Added Artifacts List */}
       {data.artifacts.length > 0 && (
         <div className="space-y-2 pt-4">
           <h4 className="text-sm font-semibold">
-            Added Papers ({data.artifacts.length})
+            Added Research Papers ({data.artifacts.length})
           </h4>
           {data.artifacts.map((a: any) => (
             <div
@@ -521,7 +484,7 @@ const Step4_Review = ({ data }: { data: any }) => (
         )}
       </div>
       <div>
-        <h4 className="font-semibold">Papers ({data.artifacts.length})</h4>
+        <h4 className="font-semibold">Research Papers ({data.artifacts.length})</h4>
         {data.artifacts.map((a: any) => (
           <p key={a.id} className="text-sm">
             - {a.title}
