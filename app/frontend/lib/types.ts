@@ -315,7 +315,7 @@ export interface SignupData {
 
 export interface CreateProjectData {
   title: string;
-  researcher_id: string;
+  researcher_id?: string;
   field: "llm" | "vision" | "nlp" | "robotics" | "ml" | "ai" | "other";
   description?: string;
   paper?: {
