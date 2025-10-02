@@ -20,7 +20,6 @@ const generateRefreshToken = (userId) => {
   );
 };
 
-// NEW: Middleware to protect routes (reads from cookie)
 const authenticate = asyncHandler(async (req, res, next) => {
   // Read token from cookie
   const token = req.cookies.auth_token;
@@ -66,7 +65,6 @@ const localAuth = (req, res, next) => {
 };
 
 // Middleware to check user roles
-// NOTE: You'll need to fetch full user from DB if role isn't in token
 const authorize = (...roles) => {
   return asyncHandler(async (req, res, next) => {
     if (!req.user) {

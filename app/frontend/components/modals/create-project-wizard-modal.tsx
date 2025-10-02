@@ -25,6 +25,7 @@ import {
   SearchIcon,
   EyeIcon,
 } from "../ui/icons";
+import { log } from "util";
 
 const WIZARD_STEPS = [
   { id: 1, name: "Selected Outputs", icon: HuggingFaceIcon },
@@ -189,8 +190,8 @@ const Step2_ProjectBasics = ({
           Research Domain
         </label>
         <select
-          value={data.field}
-          onChange={(e) => setData({ ...data, field: e.target.value })}
+          value={data.domain}
+          onChange={(e) => setData({ ...data, domain: e.target.value })}
           className="w-full h-11 px-3 border rounded-lg bg-transparent"
         >
           {RESEARCH_DOMAINS.map((d) => (
@@ -479,7 +480,8 @@ export const CreateProjectWizardModal = ({
   initialOutputs: any[];
   onClose: () => void;
 }) => {
-  const { handleCreateProjectFromHuggingFace } = useAppContext();
+  const { addToast } = useAppContext();
+  const api = useApi();
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -502,14 +504,39 @@ export const CreateProjectWizardModal = ({
 
   const handleCreate = async () => {
     setIsSubmitting(true);
-    // Simulate async operation
-    await new Promise((res) => setTimeout(res, 2000));
-    handleCreateProjectFromHuggingFace(wizardData.outputs);
-    setIsSubmitting(false);
-    onClose();
+    try {
+      const projectData = {
+        title: wizardData.title,
+        description: wizardData.description,
+        field: wizardData.domain,
+        // Just send the URL as publication_url
+        publication_url:
+          wizardData.artifacts.length > 0
+            ? wizardData.artifacts[0].url
+            : undefined,
+        huggingface: wizardData.outputs[0]
+          ? {
+              repository_url: wizardData.outputs[0].huggingfaceUrl,
+              license: wizardData.license,
+            }
+          : undefined,
+      };
+
+      console.log("Sending project data:", projectData);
+
+      const createdProject = await api.createProject(projectData);
+
+      addToast(`Project "${createdProject.title}" created successfully!`);
+      onClose();
+    } catch (error: any) {
+      console.error("Failed to create project:", error);
+      addToast(error.message || "Failed to create project. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const renderStepContent = () => {
+  const renderStepContent = (): React.ReactNode => {
     switch (currentStep) {
       case 1:
         return (

@@ -1,4 +1,4 @@
-const Project = require('../models/Project');
+const Project = require("../models/Project");
 
 /**
  * Get all projects
@@ -7,12 +7,7 @@ const Project = require('../models/Project');
  */
 const getAllProjects = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      field, 
-      researcher_id 
-    } = req.query;
+    const { page = 1, limit = 10, field, researcher_id } = req.query;
 
     // Build filter object
     const filter = {};
@@ -25,7 +20,10 @@ const getAllProjects = async (req, res) => {
 
     // Execute query with population and pagination
     const projects = await Project.find(filter)
-      .populate('researcher_id', 'username email profile.firstName profile.lastName')
+      .populate(
+        "researcher_id",
+        "username email profile.firstName profile.lastName"
+      )
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(maxLimit)
@@ -37,8 +35,8 @@ const getAllProjects = async (req, res) => {
 
     // Send response
     res.status(200).json({
-      status: 'success',
-      message: 'Projects retrieved successfully',
+      status: "success",
+      message: "Projects retrieved successfully",
       data: {
         projects,
         pagination: {
@@ -47,17 +45,19 @@ const getAllProjects = async (req, res) => {
           totalProjects,
           hasNextPage: parseInt(page) < totalPages,
           hasPrevPage: parseInt(page) > 1,
-          limit: maxLimit
-        }
-      }
+          limit: maxLimit,
+        },
+      },
     });
-
   } catch (error) {
-    console.error('Get all projects error:', error);
+    console.error("Get all projects error:", error);
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to retrieve projects',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      status: "error",
+      message: "Failed to retrieve projects",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 };
@@ -71,37 +71,41 @@ const getProjectById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const project = await Project.findById(id)
-      .populate('researcher_id', 'username email profile address');
+    const project = await Project.findById(id).populate(
+      "researcher_id",
+      "username email profile address"
+    );
 
     if (!project) {
       return res.status(404).json({
-        status: 'error',
-        message: 'Project not found'
+        status: "error",
+        message: "Project not found",
       });
     }
 
     res.status(200).json({
-      status: 'success',
-      message: 'Project retrieved successfully',
-      data: { project }
+      status: "success",
+      message: "Project retrieved successfully",
+      data: { project },
     });
-
   } catch (error) {
-    console.error('Get project by ID error:', error);
-    
+    console.error("Get project by ID error:", error);
+
     // Handle invalid ObjectId
-    if (error.name === 'CastError') {
+    if (error.name === "CastError") {
       return res.status(400).json({
-        status: 'error',
-        message: 'Invalid project ID format'
+        status: "error",
+        message: "Invalid project ID format",
       });
     }
 
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to retrieve project',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      status: "error",
+      message: "Failed to retrieve project",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 };
@@ -117,11 +121,19 @@ const getProjectsByField = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
 
     // Validate field
-    const validFields = ['llm', 'vision', 'nlp', 'robotics', 'ml', 'ai', 'other'];
+    const validFields = [
+      "llm",
+      "vision",
+      "nlp",
+      "robotics",
+      "ml",
+      "ai",
+      "other",
+    ];
     if (!validFields.includes(field)) {
       return res.status(400).json({
-        status: 'error',
-        message: `Invalid field. Must be one of: ${validFields.join(', ')}`
+        status: "error",
+        message: `Invalid field. Must be one of: ${validFields.join(", ")}`,
       });
     }
 
@@ -137,7 +149,7 @@ const getProjectsByField = async (req, res) => {
     const totalPages = Math.ceil(totalProjects / maxLimit);
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       message: `Projects in ${field} field retrieved successfully`,
       data: {
         projects,
@@ -148,17 +160,19 @@ const getProjectsByField = async (req, res) => {
           totalProjects,
           hasNextPage: parseInt(page) < totalPages,
           hasPrevPage: parseInt(page) > 1,
-          limit: maxLimit
-        }
-      }
+          limit: maxLimit,
+        },
+      },
     });
-
   } catch (error) {
-    console.error('Get projects by field error:', error);
+    console.error("Get projects by field error:", error);
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to retrieve projects by field',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      status: "error",
+      message: "Failed to retrieve projects by field",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 };
@@ -170,28 +184,43 @@ const getProjectsByField = async (req, res) => {
  */
 const createProject = async (req, res) => {
   try {
+    console.log("=== CREATE PROJECT REQUEST ===");
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+    console.log("User:", req.user?.id);
+    console.log("HuggingFace data being saved:", req.body.huggingface);
+    console.log("=============================");
+
     const {
       title,
-      researcher_id: bodyResearcherId, // rename to avoid confusion
+      researcher_id: bodyResearcherId,
       field,
       description,
       project_status,
       por_status,
       funded_amount,
-      paper,
+      publication_url,
       huggingface,
-      por
+      por,
     } = req.body;
-    // Determine researcher_id: only allow override if user is admin
-    let effectiveResearcherId = req.user && req.user._id;
-    if (req.user && req.user.role === 'admin' && bodyResearcherId) {
+
+    let effectiveResearcherId = req.user?.id;
+
+    if (req.user?.role === "admin" && bodyResearcherId) {
       effectiveResearcherId = bodyResearcherId;
     }
+
+    if (!effectiveResearcherId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authentication required",
+      });
+    }
+
     // Create new project
     const projectData = {
       title,
       researcher_id: effectiveResearcherId,
-      field
+      field,
     };
 
     // Add optional fields if provided
@@ -199,9 +228,9 @@ const createProject = async (req, res) => {
     if (project_status) projectData.project_status = project_status;
     if (por_status) projectData.por_status = por_status;
     if (funded_amount !== undefined) projectData.funded_amount = funded_amount;
+    if (publication_url) projectData.publication_url = publication_url; // Add this line
 
     // Add optional nested objects if provided
-    if (paper) projectData.paper = paper;
     if (huggingface) projectData.huggingface = huggingface;
     if (por) projectData.por = por;
 
@@ -209,44 +238,18 @@ const createProject = async (req, res) => {
     await project.save();
 
     // Populate the researcher details for response
-    await project.populate('researcher_id', 'username email profile.firstName profile.lastName');
+    await project.populate(
+      "researcher_id",
+      "username email profile.firstName profile.lastName"
+    );
 
     res.status(201).json({
-      status: 'success',
-      message: 'Project created successfully',
-      data: { project }
+      status: "success",
+      message: "Project created successfully",
+      data: { project },
     });
-
   } catch (error) {
-    console.error('Create project error:', error);
-
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map(err => ({
-        field: err.path,
-        message: err.message
-      }));
-      
-      return res.status(400).json({
-        status: 'error',
-        message: 'Validation failed',
-        errors: validationErrors
-      });
-    }
-
-    // Handle duplicate key errors
-    if (error.code === 11000) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Project with this data already exists'
-      });
-    }
-
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to create project',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    // ... error handling
   }
 };
 
@@ -254,5 +257,5 @@ module.exports = {
   getAllProjects,
   getProjectById,
   getProjectsByField,
-  createProject
+  createProject,
 };

@@ -54,19 +54,23 @@ const HuggingFaceSyncView = ({
   const hfOutputsForDisplay = useMemo(() => {
     const modelsAsOutputs = hfModels.map((model) => ({
       id: model._id,
-      name: model.id, // e.g., "Lunar8543/testModel"
+      name: model.id,
       type: "model" as const,
       downloads: model.downloads,
       likes: model.likes,
       lastModified: new Date(model.createdAt).toLocaleDateString(),
-      // Check if this model is already imported as a project
+      // FIX: Check both repo_url and repository_url fields
       status: projects.some(
-        (p) => p.huggingface?.repo_url === `https://huggingface.co/${model.id}`
+        (p) =>
+          p.huggingface?.repo_url === `https://huggingface.co/${model.id}` ||
+          p.huggingface?.repository_url === `https://huggingface.co/${model.id}`
       )
         ? "Imported"
         : "Not Imported",
       cairnProjectId: projects.find(
-        (p) => p.huggingface?.repo_url === `https://huggingface.co/${model.id}`
+        (p) =>
+          p.huggingface?.repo_url === `https://huggingface.co/${model.id}` ||
+          p.huggingface?.repository_url === `https://huggingface.co/${model.id}`
       )?._id,
       huggingfaceUrl: `https://huggingface.co/${model.id}`,
       tags: model.tags,
@@ -75,7 +79,7 @@ const HuggingFaceSyncView = ({
 
     const datasetsAsOutputs = hfDatasets.map((dataset) => ({
       id: dataset._id,
-      name: dataset.id, // e.g., "Lunar8543/testDataset"
+      name: dataset.id,
       type: "dataset" as const,
       downloads: dataset.downloads,
       likes: dataset.likes,
@@ -83,14 +87,18 @@ const HuggingFaceSyncView = ({
       status: projects.some(
         (p) =>
           p.huggingface?.repo_url ===
-          `https://huggingface.co/datasets/${dataset.id}`
+            `https://huggingface.co/datasets/${dataset.id}` ||
+          p.huggingface?.repository_url ===
+            `https://huggingface.co/datasets/${dataset.id}`
       )
         ? "Imported"
         : "Not Imported",
       cairnProjectId: projects.find(
         (p) =>
           p.huggingface?.repo_url ===
-          `https://huggingface.co/datasets/${dataset.id}`
+            `https://huggingface.co/datasets/${dataset.id}` ||
+          p.huggingface?.repository_url ===
+            `https://huggingface.co/datasets/${dataset.id}`
       )?._id,
       huggingfaceUrl: `https://huggingface.co/datasets/${dataset.id}`,
       tags: dataset.tags,
@@ -459,18 +467,18 @@ const ProjectCard = ({
   const verifiedPors = !!project.por?.por_cid;
 
   const renderAction = () => {
-    switch (project.status) {
-      case ProjectStatus.Draft:
+    switch (project.project_status) {
+      case "Draft":
+      case "Pending Evaluation":
         return (
           <button
-            onClick={onSubmitForReproducibility}
-            disabled={project.outputs.length === 0}
-            className="flex-1 bg-primary-light text-primary font-semibold py-2 px-3 rounded-lg hover:bg-blue-200 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 transition-all duration-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+            className="flex-1 bg-hf-gray-200 dark:bg-hf-gray-700 text-hf-gray-500 dark:text-hf-gray-400 font-semibold py-2 px-3 rounded-lg cursor-not-allowed transition-all duration-300 text-sm opacity-50"
           >
-            Submit for Reproducibility
+            Apply to Funding
           </button>
         );
-      case ProjectStatus.Reproducible:
+      case "Evaluated":
         return (
           <button
             onClick={onApplyClick}
@@ -479,7 +487,7 @@ const ProjectCard = ({
             Apply to Funding
           </button>
         );
-      case ProjectStatus.Funded:
+      case "Funded":
         return (
           <button className="flex-1 bg-primary-light text-primary font-semibold py-2 px-3 rounded-lg hover:bg-blue-200 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 transition-all duration-300 text-sm">
             View Round
@@ -498,7 +506,8 @@ const ProjectCard = ({
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md border border-border dark:border-border-dark overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 dark:hover:border-primary/70">
+    <div className="relative bg-background-light dark:bg-background-dark-light rounded-xl shadow-md border border-border dark:border-border-dark overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 dark:hover:border-primary/70">
+      {" "}
       <div className="p-5 flex-grow">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary pr-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
@@ -513,7 +522,7 @@ const ProjectCard = ({
         </div>
 
         <div className="mt-4 flex items-center space-x-6 text-sm">
-          <Tooltip text="Outputs Submitted">
+          <Tooltip text="Code on Filecoin">
             <div className="flex items-center space-x-2">
               <UploadCloudIcon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
               {project.huggingface?.repo_cid ? (
@@ -523,7 +532,7 @@ const ProjectCard = ({
               )}
             </div>
           </Tooltip>
-          <Tooltip text="Verified PoRs">
+          <Tooltip text="Verified PoR">
             <div className="flex items-center space-x-2">
               {verifiedPors ? (
                 <CheckCircleIcon className="w-4 h-4 text-status-success ml-1" />
@@ -544,7 +553,6 @@ const ProjectCard = ({
           </Tooltip>
         </div>
       </div>
-
       <div className="border-t border-border dark:border-border-dark mt-auto p-3 flex items-center justify-between gap-2">
         <button
           onClick={() => onSelectProject(project)}
@@ -980,13 +988,11 @@ const FundingOpportunitiesDashboard = ({
   );
 };
 
-// --- New Project Management View ---
+// --- Project Management View ---
 
 const ProjectsView = ({
   myProjects,
   onSelectProject,
-  onNavigate,
-  onNewProject,
   onApplyToFunding,
   onSubmitForReproducibility,
 }: {
@@ -1109,11 +1115,13 @@ export function ResearcherDashboard({
     setIsWizardOpen(true);
   };
 
-  const myProjects = useMemo(
-    () => projects.filter((p) => p.researcher_id === currentUser._id),
-    [projects, currentUser._id]
-  );
-
+  const myProjects = useMemo(() => {
+    const filtered = projects.filter((p) => {
+      const matches = p.researcher_id?._id === currentUser.id;
+      return matches;
+    });
+    return filtered;
+  }, [projects, currentUser._id]);
   let content;
 
   if (activePage === "projects") {
@@ -2243,9 +2251,9 @@ export function ScientistDashboard({
   const myProjects = useMemo(
     () =>
       projects.filter(
-        (p) => p.ownerId?.toLowerCase() === currentUser.walletAddress
+        (p) => p.researcher_id?._id === currentUser._id // Changed from ownerId
       ),
-    [projects, currentUser.walletAddress]
+    [projects, currentUser._id] // Changed from walletAddress
   );
 
   React.useEffect(() => {
