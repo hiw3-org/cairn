@@ -210,7 +210,7 @@ const AuthModal = ({
         {signupStep === 1 ? (
           <div className="border border-cairn-gray-800 rounded-2xl bg-cairn-gray-900/80 p-10 space-y-6 shadow-lg">
             <div>
-              <label className="block text-sm font-medium text-cairn-dark-800 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-text-primary dark:text-text-dark-primary mb-1">Full Name</label>
               <input
                 type="text"
                 value={firstName}
