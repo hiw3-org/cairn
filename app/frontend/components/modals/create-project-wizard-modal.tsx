@@ -102,7 +102,7 @@ const HelpRail = ({ step }: { step: number }) => {
   const tips = [
     "Review the Hugging Face assets you selected. These will form the initial outputs for your new CAIRN project.",
     "Provide a clear title and description. Good metadata helps funders and other researchers discover your work.",
-    "Strengthen your project by linking to existing papers, code, or supplementary materials. This increases your impact score.",
+    "Add existing research papers directly from ArXiv or link them to your project from other archives.",
     "Review all details before creating your project. You can save a draft to complete it later.",
   ];
   return (
@@ -215,45 +215,6 @@ const Step2_ProjectBasics = ({
   </div>
 );
 
-const MOCK_ARXIV_PAPERS = [
-  {
-    id: "2305.12863",
-    title: "A Survey of Large Language Models",
-    url: "https://arxiv.org/abs/2305.12863",
-  },
-  {
-    id: "1706.03762",
-    title: "Attention Is All You Need",
-    url: "https://arxiv.org/abs/1706.03762",
-  },
-  {
-    id: "2203.02155",
-    title: "A ConvNet for the 2020s",
-    url: "https://arxiv.org/abs/2203.02155",
-  },
-  {
-    id: "2005.14165",
-    title: "Language Models are Few-Shot Learners",
-    url: "https://arxiv.org/abs/2005.14165",
-  },
-  {
-    id: "1409.1556",
-    title: "Very Deep Convolutional Networks for Large-Scale Image Recognition",
-    url: "https://arxiv.org/abs/1409.1556",
-  },
-  {
-    id: "1512.03385",
-    title: "Deep Residual Learning for Image Recognition",
-    url: "https://arxiv.org/abs/1512.03385",
-  },
-  {
-    id: "2106.09685",
-    title:
-      "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
-    url: "https://arxiv.org/abs/2106.09685",
-  },
-];
-
 const Step3_AddResearchPapers = ({
   data,
   setData,
@@ -265,11 +226,12 @@ const Step3_AddResearchPapers = ({
   const [arxivQuery, setArxivQuery] = React.useState("");
   const [arxivResults, setArxivResults] = React.useState<
     {
-      id: string;
+      arxiv_id: string;
       title: string;
       url: string;
-      authors: string;
-      summary: string;
+      authors: string[];
+      published: string;
+      categories: string[];
     }[]
   >([]);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
@@ -281,43 +243,8 @@ const Step3_AddResearchPapers = ({
 
     setIsSearching(true);
     try {
-      // Use the API context method
-      const xmlText = await api.searchArxiv(query, 5);
-
-      // Parse XML response
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-
-      const entries = xmlDoc.querySelectorAll("entry");
-      const papers = Array.from(entries).map((entry) => {
-        const id = entry.querySelector("id")?.textContent || "";
-        const title =
-          entry
-            .querySelector("title")
-            ?.textContent?.trim()
-            .replace(/\s+/g, " ") || "";
-        const summary =
-          entry
-            .querySelector("summary")
-            ?.textContent?.trim()
-            .replace(/\s+/g, " ") || "";
-
-        const authorNodes = entry.querySelectorAll("author name");
-        const authors = Array.from(authorNodes)
-          .map((node) => node.textContent)
-          .join(", ");
-
-        const arxivId = id.split("/abs/")[1] || id;
-
-        return {
-          id: arxivId,
-          title,
-          url: `https://arxiv.org/abs/${arxivId}`,
-          authors,
-          summary:
-            summary.substring(0, 200) + (summary.length > 200 ? "..." : ""),
-        };
-      });
+      // Use the new API method
+      const papers = await api.searchArxivByTitle(query, 5);
 
       setArxivResults(papers);
       setIsDropdownOpen(papers.length > 0);
@@ -330,7 +257,6 @@ const Step3_AddResearchPapers = ({
     }
   };
 
-  // Debounced search effect with 1 second delay
   React.useEffect(() => {
     if (arxivQuery.length < 3) {
       setArxivResults([]);
@@ -340,7 +266,7 @@ const Step3_AddResearchPapers = ({
 
     const handler = setTimeout(() => {
       searchArxiv(arxivQuery);
-    }, 1000); // 1 second debounce
+    }, 1000);
 
     return () => {
       clearTimeout(handler);
@@ -367,7 +293,6 @@ const Step3_AddResearchPapers = ({
     url: string;
     title: string;
   }) => {
-    // Prevent duplicates
     if (!data.artifacts.some((a: any) => a.url === item.url)) {
       setData({ ...data, artifacts: [...data.artifacts, item] });
     }
@@ -375,7 +300,7 @@ const Step3_AddResearchPapers = ({
 
   const handleSelectArxiv = (paper: (typeof arxivResults)[0]) => {
     handleAddArtifact({
-      id: paper.id,
+      id: paper.arxiv_id,
       type: "arxiv",
       url: paper.url,
       title: paper.title,
@@ -387,7 +312,6 @@ const Step3_AddResearchPapers = ({
 
   const handleAddPaperUrl = (url: string) => {
     if (!url) return;
-    // Mock fetching title
     const mockTitle = `Paper from ${new URL(url).hostname}`;
     handleAddArtifact({
       id: Date.now().toString(),
@@ -401,29 +325,13 @@ const Step3_AddResearchPapers = ({
     <div className="space-y-4">
       <h3 className="text-xl font-semibold">Add Research Papers</h3>
       <p className="text-sm text-text-secondary">
-        Link papers from any repository or search ArXiv directly.
+        Search ArXiv directly or link research papers from any other repository.
       </p>
-
-      {/* General Paper URL */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Paper URL</label>
-        <input
-          type="url"
-          placeholder="https://researchgate.net/..."
-          onBlur={(e) => {
-            if (e.target.value) {
-              handleAddPaperUrl(e.target.value);
-              e.target.value = ""; // Clear after adding
-            }
-          }}
-          className="w-full h-11 px-3 border rounded-lg bg-transparent"
-        />
-      </div>
 
       {/* ArXiv Search */}
       <div className="relative" ref={searchRef}>
         <label className="block text-sm font-medium mb-1">
-          Search ArXiv by Title or Keywords
+          Search ArXiv by Title
         </label>
         <div className="relative">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
@@ -439,21 +347,33 @@ const Step3_AddResearchPapers = ({
           )}
         </div>
         {isDropdownOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-background-light dark:bg-background-dark-light border rounded-lg shadow-lg max-h-96 overflow-y-auto">
+          <div className="absolute z-10 w-full mt-1 bg-background-light dark:bg-background-dark-light border rounded-lg shadow-lg max-h-[500px] overflow-y-auto">
             <ul>
               {arxivResults.map((paper) => (
                 <li
-                  key={paper.id}
+                  key={paper.arxiv_id}
                   onClick={() => handleSelectArxiv(paper)}
                   className="p-3 hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 cursor-pointer border-b border-border dark:border-border-dark last:border-b-0"
                 >
                   <p className="font-semibold text-sm">{paper.title}</p>
                   <p className="text-xs text-text-secondary mt-1">
-                    {paper.authors}
+                    {paper.authors.join(", ")}
                   </p>
                   <p className="text-xs text-text-secondary mt-1">
-                    arXiv:{paper.id}
+                    arXiv:{paper.arxiv_id}
                   </p>
+                  {paper.categories.length > 0 && (
+                    <div className="flex gap-1 mt-1">
+                      {paper.categories.slice(0, 3).map((cat) => (
+                        <span
+                          key={cat}
+                          className="text-xs bg-primary-light px-1 py-0.5 rounded"
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -461,11 +381,29 @@ const Step3_AddResearchPapers = ({
         )}
       </div>
 
+      {/* Other Paper URL */}
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Other Research Paper URL
+        </label>
+        <input
+          type="url"
+          placeholder="https://researchgate.net/..."
+          onBlur={(e) => {
+            if (e.target.value) {
+              handleAddPaperUrl(e.target.value);
+              e.target.value = "";
+            }
+          }}
+          className="w-full h-11 px-3 border rounded-lg bg-transparent"
+        />
+      </div>
+
       {/* Added Artifacts List */}
       {data.artifacts.length > 0 && (
         <div className="space-y-2 pt-4">
           <h4 className="text-sm font-semibold">
-            Added Papers ({data.artifacts.length})
+            Added Research Papers ({data.artifacts.length})
           </h4>
           {data.artifacts.map((a: any) => (
             <div
@@ -521,7 +459,9 @@ const Step4_Review = ({ data }: { data: any }) => (
         )}
       </div>
       <div>
-        <h4 className="font-semibold">Papers ({data.artifacts.length})</h4>
+        <h4 className="font-semibold">
+          Research Papers ({data.artifacts.length})
+        </h4>
         {data.artifacts.map((a: any) => (
           <p key={a.id} className="text-sm">
             - {a.title}

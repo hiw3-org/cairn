@@ -64,38 +64,15 @@ const projectSchema = new mongoose.Schema(
       default: 0,
     },
 
-    paper: {
-      doi: {
-        type: String,
-        trim: true,
-        validate: {
-          validator: function (v) {
-            if (!v) return true; // Optional field
-            return /^10\.\d{4,}\/[-._;()\/:a-zA-Z0-9]+$/.test(v);
-          },
-          message: "Invalid DOI format",
+    publication_url: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          if (!v) return true; // Optional field
+          return /^https?:\/\/.+/.test(v);
         },
-      },
-      arxiv_id: {
-        type: String,
-        trim: true,
-        validate: {
-          validator: function (v) {
-            if (!v) return true; // Optional field
-            return /^\d{4}\.\d{4,5}(v\d+)?$/.test(v);
-          },
-          message: "Invalid arXiv ID format",
-        },
-      },
-      title: {
-        type: String,
-        trim: true,
-        maxlength: [300, "Paper title cannot exceed 300 characters"],
-      },
-      abstract: {
-        type: String,
-        trim: true,
-        maxlength: [5000, "Abstract cannot exceed 5000 characters"],
+        message: "Publication URL must be a valid HTTP/HTTPS URL",
       },
     },
 
@@ -152,7 +129,7 @@ const projectSchema = new mongoose.Schema(
             // Basic CID validation (starts with 'Qm' or 'baf' for IPFS CIDs)
             return /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{56})$/.test(v);
           },
-          message: "Invalid CID format",
+          message: "Invalid IPFS CID format",
         },
       },
     },
