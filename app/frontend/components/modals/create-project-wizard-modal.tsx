@@ -381,7 +381,7 @@ const Step3_AddResearchPapers = ({
         )}
       </div>
 
-      {/* Other Paper URL */}
+      {/* General Paper URL */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Other Research Paper URL
@@ -392,7 +392,7 @@ const Step3_AddResearchPapers = ({
           onBlur={(e) => {
             if (e.target.value) {
               handleAddPaperUrl(e.target.value);
-              e.target.value = "";
+              e.target.value = ""; // Clear after adding
             }
           }}
           className="w-full h-11 px-3 border rounded-lg bg-transparent"
