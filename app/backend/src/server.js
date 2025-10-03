@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
+const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
@@ -19,6 +20,7 @@ const passport = require("passport");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const filecoinRoutes = require("./routes/filecoinRoutes");
+const huggingfaceRoutes = require("./routes/huggingfaceRoutes");
 
 const app = express();
 
@@ -38,6 +40,7 @@ const limiter = rateLimit({
 });
 
 // Middleware
+app.use(cookieParser()); // Parse cookies
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
 app.use(limiter); // Rate limiting
@@ -74,6 +77,7 @@ const apiVersion = process.env.API_VERSION || "v1";
 app.use(`/api/${apiVersion}/users`, userRoutes);
 app.use(`/api/${apiVersion}/projects`, projectRoutes);
 app.use(`/api/${apiVersion}/filecoin`, filecoinRoutes);
+app.use(`/api/${apiVersion}/integrations/huggingface`, huggingfaceRoutes);
 
 // Catch-all route for undefined endpoints
 app.all("*", (req, res) => {

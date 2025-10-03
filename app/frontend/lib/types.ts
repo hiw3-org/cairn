@@ -156,11 +156,50 @@ export interface UserProfile {
     twitter?: string;
     orcid_id?: string;
   };
+  integrations?: {
+    huggingface?: {
+      connected: boolean;
+      username?: string;
+      userId?: string;
+      connectedAt?: string;
+      lastSync?: string;
+      scopes?: string[];
+      tokenExpiry?: string;
+    };
+  };
   permissions?: string[];
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface HFModel {
+  _id: string;
+  id: string; // e.g., "Lunar8543/testModel"
+  modelId: string;
+  likes: number;
+  downloads: number;
+  trendingScore: number;
+  private: boolean;
+  tags: string[];
+  createdAt: string;
+}
+
+export interface HFDataset {
+  _id: string;
+  id: string; // e.g., "Lunar8543/testDataset"
+  author: string;
+  disabled: boolean;
+  gated: boolean;
+  lastModified: string;
+  likes: number;
+  downloads: number;
+  trendingScore: number;
+  private: boolean;
+  sha: string;
+  tags: string[];
+  createdAt: string;
 }
 
 export interface FundingEvent {

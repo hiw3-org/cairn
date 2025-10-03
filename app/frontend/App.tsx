@@ -2,13 +2,14 @@ import React from "react";
 import { LandingPage } from "./components/landing/landing-page";
 import { HowItWorksPage } from "./components/how-it-works/how-it-works-page";
 import Header from "./components/layout/header";
-// import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
-// import { FunderDashboard } from "./components/dashboard/funder-dashboard";
-// import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
+import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
+import { FunderDashboard } from "./components/dashboard/funder-dashboard";
+import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
 import { ProjectDetailView } from "./components/projects/project-detail-view";
 import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { useAppContext } from "./context/app-provider";
+import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { useApi } from "./context/api-context";
 import {
   UserRole,
@@ -111,11 +112,11 @@ const Sidebar = ({
             <span>{item.label}</span>
 
             {/* Notification badge for items with counts */}
-            {"notificationCount" in item && item.notificationCount > 0 && (
+            {/* {"notificationCount" in item && item.notificationCount > 0 && (
               <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-status-danger text-white text-xs font-bold">
                 {item.notificationCount}
               </span>
-            )}
+            )} */}
 
             {/* "Soon" badge for disabled items */}
             {(item as any).disabled && (
@@ -237,6 +238,7 @@ export function App() {
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
+  const hasLoadedHFData = React.useRef(false);
 
   // Get app context and API functions
   const {
@@ -252,6 +254,9 @@ export function App() {
     isGuestBrowsing,
     setProjects,
     addToast,
+    setHfModels,
+    setHfDatasets,
+    setHfLastSync,
   } = useAppContext();
 
   const api = useApi();
@@ -263,6 +268,12 @@ export function App() {
   const [activeDashboardPage, setActiveDashboardPage] = React.useState(
     userRole === UserRole.Researcher ? "outputs" : "dashboard"
   );
+
+  const [isNewProjectWizardOpen, setIsNewProjectWizardOpen] =
+    React.useState(false);
+  const [newProjectOutputs, setNewProjectOutputs] = React.useState<
+    HuggingFaceOutput[]
+  >([]);
 
   // Guest browsing handlers
   const handleGuestSelectProject = (project: Project) => {
@@ -322,7 +333,6 @@ export function App() {
       }
 
       // Projects from API already match our unified Project interface
-      // No conversion needed since we updated the schema
       setProjects(result.projects);
       console.log("Set projects:", result.projects);
     } catch (error) {
@@ -340,6 +350,45 @@ export function App() {
     }
   }, [isAuthenticated, isGuestBrowsing]);
 
+  // ===== HUGGINGFACE DATA LOADING =====
+  /**
+   * Loads HuggingFace repos and datasets if user has connected their account
+   * This enriches the UI with real data from their HF profile
+   */
+  // Load HuggingFace data when user connects their account
+  React.useEffect(() => {
+    const fetchHFData = async () => {
+      // Only fetch once per session
+      if (hasLoadedHFData.current) return;
+      if (!currentUser?.integrations?.huggingface?.connected) return;
+
+      hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
+
+      try {
+        console.log("Fetching HuggingFace data...");
+        const [repos, datasets] = await Promise.all([
+          api.getHFRepos(50),
+          api.getHFDatasets(50),
+        ]);
+
+        setHfModels(repos);
+        setHfDatasets(datasets);
+        setHfLastSync(new Date());
+
+        console.log("Loaded HuggingFace data:", { repos, datasets });
+        // Store in context - make sure setHfRepos and setHfDatasets exist in your context
+        // For now, just log it
+        addToast("HuggingFace data synced successfully", "success");
+      } catch (error) {
+        console.error("Failed to load HuggingFace data:", error);
+        hasLoadedHFData.current = false; // Reset on error so they can retry
+      }
+    };
+
+    if (isAuthenticated && currentUser?.integrations?.huggingface?.connected) {
+      fetchHFData();
+    }
+  }, [isAuthenticated, currentUser?.integrations?.huggingface?.connected]);
   // Count draft projects for the current researcher
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;
@@ -349,6 +398,12 @@ export function App() {
         p.project_status === ProjectStatus.Draft // Updated to use new schema field
     ).length;
   }, [projects, currentUser, userRole]);
+
+  const newOpportunitiesCount = React.useMemo(() => {
+    // For now, return 0 as a placeholder
+    // TODO: Calculate based on funding rounds or opportunities from your app context
+    return 0;
+  }, []);
 
   // ===== NAVIGATION HANDLERS =====
 
@@ -360,6 +415,11 @@ export function App() {
   const handleSelectProject = (project: Project) => {
     console.log("handleSelectProject called with:", project.title, project._id);
     setSelectedProject(project);
+  };
+
+  const handleOpenNewProjectModal = () => {
+    setNewProjectOutputs([]); // Start with no outputs
+    setIsNewProjectWizardOpen(true);
   };
 
   const handleBackToDashboard = () => {
@@ -530,8 +590,6 @@ export function App() {
   }
 
   // ===== AUTHENTICATED USER FLOW =====
-  console.log("About to render main AppLayout");
-
   return (
     <>
       {/* Main application layout */}
@@ -577,36 +635,36 @@ export function App() {
             }
 
             // Show appropriate dashboard based on user role
-            // if (userRole === UserRole.Researcher) {
-            //   return (
-            //     <ResearcherDashboard
-            //       key={`researcher-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       currentUser={currentUser}
-            //       activePage={activeDashboardPage}
-            //       onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
-            //       onNavigate={handleDashboardNavigation}
-            //       onApplyToFunding={handleOpenApplyFundingModal}
-            //     />
-            //   );
-            // } else if (userRole === UserRole.ImpactOwner) {
-            //   return (
-            //     <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
-            //   );
-            // } else {
-            //   // Funder dashboard
-            //   return (
-            //     <FunderDashboard
-            //       key={`funder-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       activePage={activeDashboardPage}
-            //       onNavigate={handleDashboardNavigation}
-            //       onViewInfo={handleOpenFundingRoundDetail}
-            //     />
-            //   );
-            // }
+            if (userRole === UserRole.Researcher) {
+              return (
+                <ResearcherDashboard
+                  key={`researcher-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  currentUser={currentUser}
+                  activePage={activeDashboardPage}
+                  onNewProject={handleOpenNewProjectModal}
+                  onNavigate={handleDashboardNavigation}
+                  onApplyToFunding={handleOpenApplyFundingModal}
+                />
+              );
+            } else if (userRole === UserRole.ImpactOwner) {
+              return (
+                <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
+              );
+            } else {
+              // Funder dashboard
+              return (
+                <FunderDashboard
+                  key={`funder-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  activePage={activeDashboardPage}
+                  onNavigate={handleDashboardNavigation}
+                  onViewInfo={handleOpenFundingRoundDetail}
+                />
+              );
+            }
           })()}
         </div>
       </AppLayout>
@@ -619,6 +677,14 @@ export function App() {
         <ApplyToFundingModal
           project={projectToApply}
           onClose={() => setIsApplyFundingModalOpen(false)}
+        />
+      )}
+
+      {/* Create new project wizard modal */}
+      {isNewProjectWizardOpen && (
+        <CreateProjectWizardModal
+          initialOutputs={newProjectOutputs}
+          onClose={() => setIsNewProjectWizardOpen(false)}
         />
       )}
 

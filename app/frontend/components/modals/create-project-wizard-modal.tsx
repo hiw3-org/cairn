@@ -1,27 +1,41 @@
-
 "use client";
 
-import React from 'react';
-import { Project, ResearchDomain, ProjectStatus, Output, HuggingFaceOutput, OutputType } from '../../lib/types';
-import { Modal } from '../ui/modal';
-import { RESEARCH_DOMAINS, REPRODUCIBILITY_TEMPLATES } from '../../lib/constants';
-import { useAppContext } from '../../context/app-provider';
-import { 
-    InfoIcon, SpinnerIcon, CheckCircleIcon, ChevronRightIcon, ChevronLeftIcon,
-    HuggingFaceIcon, TrashIcon, GitHubIcon, FileTextIcon, UploadCloudIcon,
-    ClipboardCheckIcon, ScaleIcon, LightbulbIcon
-} from '../ui/icons';
+import React from "react";
+import {
+  Project,
+  ResearchDomain,
+  ProjectStatus,
+  Output,
+  HuggingFaceOutput,
+  OutputType,
+} from "../../lib/types";
+import { Modal } from "../ui/modal";
+import { useAppContext } from "../../context/app-provider";
+import {
+  InfoIcon,
+  SpinnerIcon,
+  CheckCircleIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  HuggingFaceIcon,
+  TrashIcon,
+  GitHubIcon,
+  FileTextIcon,
+  UploadCloudIcon,
+  ClipboardCheckIcon,
+  ScaleIcon,
+  LightbulbIcon,
+} from "../ui/icons";
 
 const WIZARD_STEPS = [
     { id: 1, name: 'Selected Outputs', icon: HuggingFaceIcon },
     { id: 2, name: 'Project Basics', icon: FileTextIcon },
-    { id: 3, name: 'Attach Artifacts', icon: UploadCloudIcon },
-    { id: 4, name: 'Reproducibility', icon: ClipboardCheckIcon },
-    { id: 5, name: 'Review & Create', icon: CheckCircleIcon },
+    { id: 3, name: 'Add Research papers', icon: UploadCloudIcon },
+    { id: 4, name: 'Review & Create', icon: CheckCircleIcon },
 ];
 
 const WizardStepper = ({ currentStep }: { currentStep: number }) => (
-    <nav aria-label="Progress">
+    <nav aria-label="Progress" className="pb-4">
         <ol role="list" className="flex items-center">
             {WIZARD_STEPS.map((step, stepIdx) => (
                 <li key={step.name} className={`relative ${stepIdx !== WIZARD_STEPS.length - 1 ? 'flex-1' : ''}`}>
@@ -53,7 +67,7 @@ const WizardStepper = ({ currentStep }: { currentStep: number }) => (
                             </div>
                         </>
                     )}
-                     <span className="absolute top-10 w-max -translate-x-1/2 left-1/2 text-center text-xs font-semibold text-text-secondary dark:text-dark-text-secondary">{step.name}</span>
+                     <span className="absolute top-10 left-0 right-0 px-1 text-center text-xs font-semibold text-text-secondary dark:text-dark-text-secondary">{step.name}</span>
                 </li>
             ))}
         </ol>
@@ -65,7 +79,6 @@ const HelpRail = ({ step }: { step: number }) => {
         "Review the Hugging Face assets you selected. These will form the initial outputs for your new CAIRN project.",
         "Provide a clear title and description. Good metadata helps funders and other researchers discover your work.",
         "Strengthen your project by linking to existing papers, code, or supplementary materials. This increases your impact score.",
-        "Completing this checklist is not required, but it significantly improves your project's reproducibility and credibility.",
         "Review all details before creating your project. You can save a draft to complete it later."
     ];
     return (
@@ -92,7 +105,7 @@ const Step1_SelectedOutputs = ({ outputs, onRemove }: { outputs: HuggingFaceOutp
                         <HuggingFaceIcon className="w-6 h-6 text-yellow-500" />
                         <div>
                             <p className="font-semibold text-text-primary dark:text-dark-text-primary">{o.name}</p>
-                            <p className="text-sm text-text-secondary dark:text-text-dark-secondary capitalize">{o.type}</p>
+                            <p className="text-sm text-text-secondary dark:text-dark-text-secondary capitalize">{o.type}</p>
                         </div>
                     </div>
                     <button onClick={() => onRemove(o.id)} className="p-1.5 rounded-full hover:bg-hf-gray-200 dark:hover:bg-hf-gray-700">
@@ -133,70 +146,144 @@ const Step2_ProjectBasics = ({ data, setData }: { data: any, setData: Function }
     </div>
 );
 
-const Step3_AttachArtifacts = ({ data, setData }: { data: any, setData: Function }) => {
-    const handleAddUrl = (type: 'arxiv' | 'github', url: string) => {
-        // Mock fetching
-        // FIX: Ensure artifact ID is a string to match the 'Output' type.
-        const newItem = { id: Date.now().toString(), type, url, title: `Fetched Title for ${url}`};
-        setData({ ...data, artifacts: [...data.artifacts, newItem] });
+const MOCK_ARXIV_PAPERS = [
+    { id: '2305.12863', title: 'A Survey of Large Language Models', url: 'https://arxiv.org/abs/2305.12863' },
+    { id: '1706.03762', title: 'Attention Is All You Need', url: 'https://arxiv.org/abs/1706.03762' },
+    { id: '2203.02155', title: 'A ConvNet for the 2020s', url: 'https://arxiv.org/abs/2203.02155' },
+    { id: '2005.14165', title: 'Language Models are Few-Shot Learners', url: 'https://arxiv.org/abs/2005.14165' },
+    { id: '1409.1556', title: 'Very Deep Convolutional Networks for Large-Scale Image Recognition', url: 'https://arxiv.org/abs/1409.1556' },
+    { id: '1512.03385', title: 'Deep Residual Learning for Image Recognition', url: 'https://arxiv.org/abs/1512.03385' },
+    { id: '2106.09685', title: 'An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale', url: 'https://arxiv.org/abs/2106.09685' }
+];
+
+const Step3_AddResearchPapers = ({ data, setData }: { data: any, setData: Function }) => {
+    const [arxivQuery, setArxivQuery] = React.useState('');
+    const [arxivResults, setArxivResults] = React.useState<typeof MOCK_ARXIV_PAPERS>([]);
+    const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+    const searchRef = React.useRef<HTMLDivElement>(null);
+
+    // Debounced search effect
+    React.useEffect(() => {
+        if (arxivQuery.length < 3) {
+            setArxivResults([]);
+            setIsDropdownOpen(false);
+            return;
+        }
+
+        const handler = setTimeout(() => {
+            const results = MOCK_ARXIV_PAPERS
+                .filter(p => p.title.toLowerCase().includes(arxivQuery.toLowerCase()))
+                .slice(0, 5);
+            setArxivResults(results);
+            setIsDropdownOpen(results.length > 0);
+        }, 300); // 300ms debounce
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [arxivQuery]);
+
+    // Close dropdown on click outside
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+
+    const handleAddArtifact = (item: { id: string, type: 'paper' | 'arxiv', url: string, title: string }) => {
+        // Prevent duplicates
+        if (!data.artifacts.some((a: any) => a.url === item.url)) {
+            setData({ ...data, artifacts: [...data.artifacts, item] });
+        }
+    };
+    
+    const handleSelectArxiv = (paper: typeof MOCK_ARXIV_PAPERS[0]) => {
+        handleAddArtifact({ id: paper.id, type: 'arxiv', url: paper.url, title: paper.title });
+        setArxivQuery('');
+        setArxivResults([]);
+        setIsDropdownOpen(false);
+    }
+    
+    const handleAddPaperUrl = (url: string) => {
+        if (!url) return;
+        // Mock fetching title
+        const mockTitle = `Paper from ${new URL(url).hostname}`;
+        handleAddArtifact({ id: Date.now().toString(), type: 'paper', url, title: mockTitle });
     };
 
     return (
         <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Attach Additional Artifacts</h3>
-            <p className="text-sm text-text-secondary">Link papers, code, or supplementary files.</p>
-            {/* ArXiv */}
-            <div className="flex gap-2">
-                <input type="url" placeholder="https://arxiv.org/abs/..." onBlur={(e) => e.target.value && handleAddUrl('arxiv', e.target.value)} className="w-full h-11 px-3 border rounded-lg bg-transparent" />
+            <h3 className="text-xl font-semibold">Add Research papers</h3>
+            <p className="text-sm text-text-secondary">Link papers from any repository or search ArXiv directly.</p>
+            
+            {/* General Paper URL */}
+            <div>
+                 <label className="block text-sm font-medium mb-1">Paper URL</label>
+                <input 
+                    type="url" 
+                    placeholder="https://researchgate.net/..." 
+                    onBlur={(e) => {
+                        if (e.target.value) {
+                             handleAddPaperUrl(e.target.value);
+                             e.target.value = ''; // Clear after adding
+                        }
+                    }}
+                    className="w-full h-11 px-3 border rounded-lg bg-transparent" 
+                />
             </div>
-            {/* GitHub */}
-            <div className="flex gap-2">
-                <input type="url" placeholder="https://github.com/..." onBlur={(e) => e.target.value && handleAddUrl('github', e.target.value)} className="w-full h-11 px-3 border rounded-lg bg-transparent" />
-            </div>
-             {/* Upload */}
-             <div className="p-4 text-center border-2 border-dashed rounded-lg">
-                <UploadCloudIcon className="mx-auto h-8 w-8 text-text-secondary/50" />
-                <p className="mt-2 text-sm text-text-secondary">Drag & drop files or <button className="font-semibold text-primary">browse</button></p>
-                <p className="text-xs text-text-secondary/70">PDF, ZIP, up to 50MB</p>
-            </div>
-            <div className="space-y-2">
-                {data.artifacts.map((a: any) => (
-                    <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-hf-gray-100 dark:bg-hf-gray-800">
-                        {a.type === 'github' ? <GitHubIcon className="w-5 h-5"/> : <FileTextIcon className="w-5 h-5"/>}
-                        <p className="text-sm truncate mx-2 flex-1">{a.title}</p>
-                        <button onClick={() => setData({...data, artifacts: data.artifacts.filter((art:any) => art.id !== a.id)})} className="p-1 rounded-full"><TrashIcon className="w-4 h-4 text-status-danger"/></button>
+            
+            {/* ArXiv Search */}
+            <div className="relative" ref={searchRef}>
+                 <label className="block text-sm font-medium mb-1">Search ArXiv by Title</label>
+                <div className="relative">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
+                    <input 
+                        type="search" 
+                        placeholder="e.g., Attention Is All You Need" 
+                        value={arxivQuery}
+                        onChange={e => setArxivQuery(e.target.value)}
+                        className="w-full h-11 pl-10 pr-3 border rounded-lg bg-transparent" 
+                    />
+                </div>
+                {isDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-background-light dark:bg-background-dark-light border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <ul>
+                            {arxivResults.map(paper => (
+                                <li key={paper.id} onClick={() => handleSelectArxiv(paper)} className="p-3 hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 cursor-pointer">
+                                    <p className="font-semibold text-sm">{paper.title}</p>
+                                    <p className="text-xs text-text-secondary">{paper.id}</p>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
-                ))}
+                )}
             </div>
+            
+            {/* Added Artifacts List */}
+            {data.artifacts.length > 0 && (
+                <div className="space-y-2 pt-4">
+                     <h4 className="text-sm font-semibold">Added Papers ({data.artifacts.length})</h4>
+                    {data.artifacts.map((a: any) => (
+                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-hf-gray-100 dark:bg-hf-gray-800">
+                           <FileTextIcon className="w-5 h-5 flex-shrink-0"/>
+                            <p className="text-sm truncate mx-2 flex-1" title={a.title}>{a.title}</p>
+                            <button onClick={() => setData({...data, artifacts: data.artifacts.filter((art:any) => art.id !== a.id)})} className="p-1 rounded-full">
+                                <TrashIcon className="w-4 h-4 text-status-danger"/>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 };
 
-const Step4_Reproducibility = ({ data, setData }: { data: any, setData: Function }) => {
-    const toggleCheck = (item: string) => {
-        const currentChecks = data.reproducibilityChecks || [];
-        const newChecks = currentChecks.includes(item) ? currentChecks.filter((c:string) => c !== item) : [...currentChecks, item];
-        setData({ ...data, reproducibilityChecks: newChecks });
-    };
-    const checklist = ["README with instructions", "Environment spec (e.g., Dockerfile, requirements.txt)", "Versioned datasets and models", "Code is licensed"];
-
-    return (
-        <div>
-            <h3 className="text-xl font-semibold mb-2">Reproducibility Readiness</h3>
-            <p className="text-sm text-text-secondary mb-4">This checklist helps ensure others can reproduce your work. It will be displayed on your project page.</p>
-            <div className="space-y-3">
-                {checklist.map(item => (
-                    <label key={item} className="flex items-center p-3 rounded-lg bg-hf-gray-100 dark:bg-hf-gray-800 cursor-pointer">
-                        <input type="checkbox" checked={data.reproducibilityChecks?.includes(item)} onChange={() => toggleCheck(item)} className="h-4 w-4 rounded text-primary"/>
-                        <span className="ml-3 text-sm">{item}</span>
-                    </label>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const Step5_Review = ({ data }: { data: any }) => (
+const Step4_Review = ({ data }: { data: any }) => (
     <div>
         <h3 className="text-xl font-semibold mb-4">Review & Create</h3>
         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -212,10 +299,6 @@ const Step5_Review = ({ data }: { data: any }) => (
             <div>
                 <h4 className="font-semibold">Artifacts ({data.artifacts.length})</h4>
                 {data.artifacts.map((a: any) => <p key={a.id} className="text-sm">- {a.title}</p>)}
-            </div>
-             <div>
-                <h4 className="font-semibold">Reproducibility</h4>
-                {data.reproducibilityChecks?.length > 0 ? data.reproducibilityChecks.map((c:string) => <p key={c} className="text-sm flex items-center"><CheckCircleIcon className="w-4 h-4 mr-2 text-status-success"/>{c}</p>) : <p className="text-sm">No checks completed.</p>}
             </div>
         </div>
     </div>
@@ -236,7 +319,7 @@ export const CreateProjectWizardModal = ({ initialOutputs, onClose }: { initialO
         reproducibilityChecks: [],
     });
 
-    const handleNext = () => setCurrentStep(s => Math.min(s + 1, 5));
+    const handleNext = () => setCurrentStep(s => Math.min(s + 1, 4));
     const handleBack = () => setCurrentStep(s => Math.max(s - 1, 1));
 
     const handleCreate = async () => {
@@ -252,9 +335,8 @@ export const CreateProjectWizardModal = ({ initialOutputs, onClose }: { initialO
         switch (currentStep) {
             case 1: return <Step1_SelectedOutputs outputs={wizardData.outputs} onRemove={(id) => setWizardData({...wizardData, outputs: wizardData.outputs.filter(o => o.id !== id)})} />;
             case 2: return <Step2_ProjectBasics data={wizardData} setData={setWizardData} />;
-            case 3: return <Step3_AttachArtifacts data={wizardData} setData={setWizardData} />;
-            case 4: return <Step4_Reproducibility data={wizardData} setData={setWizardData} />;
-            case 5: return <Step5_Review data={wizardData} />;
+            case 3: return <Step3_AddResearchPapers data={wizardData} setData={setWizardData} />;
+            case 4: return <Step4_Review data={wizardData} />;
             default: return null;
         }
     };
@@ -275,7 +357,7 @@ export const CreateProjectWizardModal = ({ initialOutputs, onClose }: { initialO
                     {currentStep > 1 && <button onClick={handleBack} className="flex items-center space-x-2 font-semibold py-2 px-4 rounded-lg"><ChevronLeftIcon className="w-4 h-4"/><span>Back</span></button>}
                 </div>
                  <div className="flex items-center space-x-2">
-                    {currentStep === 5 ? (
+                    {currentStep === 4 ? (
                         <>
                          <button onClick={onClose} className="font-semibold py-2 px-4 rounded-lg">Save Draft</button>
                          <button onClick={handleCreate} disabled={isSubmitting} className="bg-primary text-white font-semibold py-2 px-4 rounded-lg flex items-center">{isSubmitting && <SpinnerIcon className="w-4 h-4 mr-2 animate-spin"/>}Create Project</button>

@@ -40,6 +40,21 @@ const userSchema = new mongoose.Schema({
     orcid_id: String
   },
 
+  // Third-party integrations
+  integrations: {
+    huggingface: {
+      connected: { type: Boolean, default: false },
+      username: String,
+      userId: String,
+      accessToken: String,
+      refreshToken: String,
+      tokenExpiry: Date,
+      scopes: [String],
+      connectedAt: Date,
+      lastSync: Date
+    }
+  },
+
   // User roles and permissions
   role: {
     type: String,

@@ -5,7 +5,6 @@ import {
   UserProfile,
   Reproducibility,
   PoRStatus,
-  HuggingFaceOutput,
 } from "../../lib/types";
 import {
   PlusIcon,
@@ -22,17 +21,17 @@ import {
   CloseIcon,
   HuggingFaceIcon,
   DownloadIcon,
-  StarIcon,
   SearchIcon,
   ExternalLinkIcon,
   InfoIcon,
-  EyeIcon,
-  ChevronRightIcon,
+  CrossRedIcon,
 } from "../ui/icons";
 import { StatusBadge } from "../ui/status-badge";
 import { useAppContext } from "../../context/app-provider";
 import { Tooltip } from "../ui/tooltip";
 import { OutputsLibrary } from "./outputs-library";
+import { CreateProjectWizardModal } from "../modals/create-project-wizard-modal";
+import { ConnectHuggingFaceModal } from "../modals/hugging-face-connection-modal";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -46,69 +45,80 @@ const HuggingFaceSyncView = ({
   onOpenCreateProjectWizard,
 }: {
   onSelectProject: (p: Project) => void;
-  onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
+  onOpenCreateProjectWizard: (outputs: any[]) => void;
 }) => {
-  const { projects, huggingFaceOutputs, setHuggingFaceOutputs } =
-    useAppContext();
-  const [selectedOutputIds, setSelectedOutputIds] = useState<string[]>([]);
+  const { projects, hfModels, hfDatasets } = useAppContext();
+  const [selectedOutputId, setSelectedOutputId] = useState<string | null>(null); // Changed from array to single value
 
-  // This effect ensures that if a project status changes, the HF output status is updated.
-  useEffect(() => {
-    const projectStatusMap = new Map(projects.map((p) => [p.id, p.status]));
-    setHuggingFaceOutputs((currentOutputs) =>
-      currentOutputs.map((o) => {
-        if (o.cairnProjectId) {
-          const projectStatus = projectStatusMap.get(o.cairnProjectId);
-          if (projectStatus) {
-            let newStatus: HuggingFaceOutput["status"] = "Imported";
-            if (projectStatus === ProjectStatus.PendingEvaluation)
-              newStatus = "Pending Evaluation";
-            else if (
-              projectStatus === ProjectStatus.Reproducible ||
-              projectStatus === ProjectStatus.Funded ||
-              projectStatus === ProjectStatus.InReview
-            )
-              newStatus = "Reproducible";
+  // Combine HF models and datasets into a unified display format
+  const hfOutputsForDisplay = useMemo(() => {
+    const modelsAsOutputs = hfModels.map((model) => ({
+      id: model._id,
+      name: model.id, // e.g., "Lunar8543/testModel"
+      type: "model" as const,
+      downloads: model.downloads,
+      likes: model.likes,
+      lastModified: new Date(model.createdAt).toLocaleDateString(),
+      // Check if this model is already imported as a project
+      status: projects.some(
+        (p) => p.huggingface?.repo_url === `https://huggingface.co/${model.id}`
+      )
+        ? "Imported"
+        : "Not Imported",
+      cairnProjectId: projects.find(
+        (p) => p.huggingface?.repo_url === `https://huggingface.co/${model.id}`
+      )?._id,
+      huggingfaceUrl: `https://huggingface.co/${model.id}`,
+      tags: model.tags,
+      isPrivate: model.private,
+    }));
 
-            if (newStatus !== o.status) {
-              return { ...o, status: newStatus };
-            }
-          }
-        }
-        return o;
-      })
-    );
-  }, [projects, setHuggingFaceOutputs]);
+    const datasetsAsOutputs = hfDatasets.map((dataset) => ({
+      id: dataset._id,
+      name: dataset.id, // e.g., "Lunar8543/testDataset"
+      type: "dataset" as const,
+      downloads: dataset.downloads,
+      likes: dataset.likes,
+      lastModified: new Date(dataset.lastModified).toLocaleDateString(),
+      status: projects.some(
+        (p) =>
+          p.huggingface?.repo_url ===
+          `https://huggingface.co/datasets/${dataset.id}`
+      )
+        ? "Imported"
+        : "Not Imported",
+      cairnProjectId: projects.find(
+        (p) =>
+          p.huggingface?.repo_url ===
+          `https://huggingface.co/datasets/${dataset.id}`
+      )?._id,
+      huggingfaceUrl: `https://huggingface.co/datasets/${dataset.id}`,
+      tags: dataset.tags,
+      isPrivate: dataset.private,
+    }));
+
+    return [...modelsAsOutputs, ...datasetsAsOutputs];
+  }, [hfModels, hfDatasets, projects]);
 
   // Filter and Sort State
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<
-    "all" | "model" | "dataset" | "space"
-  >("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "Imported" | "Not Imported" | "Pending Evaluation" | "Reproducible"
+    "all" | "Not Imported" | "Imported"
   >("all");
   const [sortKey, setSortKey] = useState<
     "downloads" | "likes" | "lastModified"
   >("downloads");
 
-  const handleOpenWizard = () => {
-    const selectedOutputs = huggingFaceOutputs.filter((o) =>
-      selectedOutputIds.includes(o.id)
-    );
-    if (selectedOutputs.length > 0) {
-      onOpenCreateProjectWizard(selectedOutputs);
-    }
-  };
-
   const filteredAndSortedOutputs = useMemo(() => {
-    return huggingFaceOutputs
-      .filter((o) => {
+    return hfOutputsForDisplay
+      .filter((output) => {
         const searchMatch =
           searchTerm === "" ||
-          o.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const typeMatch = typeFilter === "all" || o.type === typeFilter;
-        const statusMatch = statusFilter === "all" || o.status === statusFilter;
+          output.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const typeMatch = typeFilter === "all" || output.type === typeFilter;
+        const statusMatch =
+          statusFilter === "all" || output.status === statusFilter;
         return searchMatch && typeMatch && statusMatch;
       })
       .sort((a, b) => {
@@ -125,24 +135,21 @@ const HuggingFaceSyncView = ({
             return b.downloads - a.downloads;
         }
       });
-  }, [huggingFaceOutputs, searchTerm, typeFilter, statusFilter, sortKey]);
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedOutputIds(
-        filteredAndSortedOutputs
-          .filter((o) => o.status === "Not Imported")
-          .map((o) => o.id)
-      );
-    } else {
-      setSelectedOutputIds([]);
-    }
-  };
+  }, [hfOutputsForDisplay, searchTerm, typeFilter, statusFilter, sortKey]);
 
   const handleSelectOne = (id: string) => {
-    setSelectedOutputIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    setSelectedOutputId((prev) => (prev === id ? null : id));
+  };
+
+  const handleOpenWizard = () => {
+    if (!selectedOutputId) return;
+
+    const selectedOutput = hfOutputsForDisplay.find(
+      (o) => o.id === selectedOutputId
     );
+    if (selectedOutput) {
+      onOpenCreateProjectWizard([selectedOutput]); // Always pass array with single item
+    }
   };
 
   const FilterChip = ({
@@ -168,16 +175,12 @@ const HuggingFaceSyncView = ({
     </button>
   );
 
-  const getStatusColor = (status: HuggingFaceOutput["status"]) => {
+  const getStatusColor = (status: "Not Imported" | "Imported") => {
     switch (status) {
       case "Not Imported":
         return "bg-hf-gray-200 text-hf-gray-700 dark:bg-hf-gray-700 dark:text-hf-gray-200";
       case "Imported":
         return "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300";
-      case "Pending Evaluation":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300";
-      case "Reproducible":
-        return "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300";
       default:
         return "bg-hf-gray-200 text-hf-gray-700 dark:bg-hf-gray-700 dark:text-hf-gray-200";
     }
@@ -258,18 +261,6 @@ const HuggingFaceSyncView = ({
               activeValue={statusFilter}
               setActiveValue={setStatusFilter}
             />
-            <FilterChip
-              label="Pending"
-              value="Pending Evaluation"
-              activeValue={statusFilter}
-              setActiveValue={setStatusFilter}
-            />
-            <FilterChip
-              label="Reproducible"
-              value="Reproducible"
-              activeValue={statusFilter}
-              setActiveValue={setStatusFilter}
-            />
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -282,11 +273,11 @@ const HuggingFaceSyncView = ({
             <option value="likes">Sort by Most Likes</option>
             <option value="lastModified">Sort by Last Modified</option>
           </select>
-          {selectedOutputIds.length > 0 ? (
+          {selectedOutputId ? (
             <div className="flex items-center space-x-4 animate-fade-in">
               <p className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">
                 <span className="bg-primary text-primary-text rounded-md px-2 py-0.5 mr-2">
-                  {selectedOutputIds.length}
+                  1
                 </span>
                 selected
               </p>
@@ -295,10 +286,10 @@ const HuggingFaceSyncView = ({
                 className="font-semibold bg-primary text-primary-text hover:bg-primary-hover transition-colors px-4 py-2 rounded-lg text-sm flex items-center space-x-2"
               >
                 <PlusIcon className="w-5 h-5" />
-                <span>Create Project from Selected</span>
+                <span>Create Project</span>
               </button>
               <button
-                onClick={() => setSelectedOutputIds([])}
+                onClick={() => setSelectedOutputId(null)}
                 className="p-2 rounded-full hover:bg-hf-gray-200 dark:hover:bg-hf-gray-700 text-text-secondary dark:text-text-dark-secondary hover:text-primary dark:hover:text-primary-light"
               >
                 <CloseIcon className="w-5 h-5" />
@@ -308,7 +299,7 @@ const HuggingFaceSyncView = ({
             <div className="flex items-center space-x-2 p-2 rounded-lg bg-primary-light/70 dark:bg-primary/10 text-primary dark:text-primary-light animate-fade-in border border-primary/20">
               <InfoIcon className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm font-semibold">
-                Select outputs using the checkboxes to create a new project.
+                Select one output to create a new project.
               </p>
             </div>
           )}
@@ -320,13 +311,6 @@ const HuggingFaceSyncView = ({
           <table className="w-full text-sm">
             <thead className="bg-hf-gray-50 dark:bg-hf-gray-800/50 text-left text-xs text-text-secondary dark:text-text-dark-secondary uppercase">
               <tr>
-                <th className="p-4 w-12">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    className="h-4 w-4 rounded border-hf-gray-400 text-primary focus:ring-primary"
-                  />
-                </th>
                 <th className="p-4 font-semibold tracking-wider">Name</th>
                 <th className="p-4 font-semibold tracking-wider">Type</th>
                 <th className="p-4 font-semibold tracking-wider text-right">
@@ -346,6 +330,7 @@ const HuggingFaceSyncView = ({
             <tbody className="divide-y divide-border dark:divide-border-dark">
               {filteredAndSortedOutputs.map((output) => {
                 const isImported = output.status !== "Not Imported";
+                const isSelected = selectedOutputId === output.id;
                 return (
                   <tr
                     key={output.id}
@@ -357,23 +342,25 @@ const HuggingFaceSyncView = ({
                   >
                     <td className="p-4">
                       <input
-                        type="checkbox"
-                        checked={selectedOutputIds.includes(output.id)}
+                        type="radio"
+                        checked={isSelected}
                         onChange={() => handleSelectOne(output.id)}
                         disabled={isImported}
-                        className="h-4 w-4 rounded border-hf-gray-400 text-primary focus:ring-primary disabled:cursor-not-allowed"
+                        className="h-4 w-4 text-primary focus:ring-primary disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="p-4 font-semibold text-text-primary dark:text-dark-text-primary flex items-center space-x-2">
                       <span>{output.name}</span>
-                      <a
-                        href={`https://huggingface.co/${output.name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-text-secondary hover:text-primary"
-                      >
-                        <ExternalLinkIcon className="w-4 h-4" />
-                      </a>
+                      {output.huggingfaceUrl && (
+                        <a
+                          href={output.huggingfaceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-secondary hover:text-primary"
+                        >
+                          <ExternalLinkIcon className="w-4 h-4" />
+                        </a>
+                      )}
                     </td>
                     <td className="p-4 capitalize">{output.type}</td>
                     <td className="p-4 text-right font-mono">
@@ -469,12 +456,7 @@ const ProjectCard = ({
   onApplyClick: () => void;
   onSubmitForReproducibility: () => void;
 }) => {
-  const verifiedPors = useMemo(
-    () =>
-      project.reproducibilities.filter((r) => r.status === PoRStatus.Success)
-        .length,
-    [project.reproducibilities]
-  );
+  const verifiedPors = !!project.por?.por_cid;
 
   const renderAction = () => {
     switch (project.status) {
@@ -522,37 +504,41 @@ const ProjectCard = ({
           <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary pr-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
             {project.title}
           </h3>
-          <StatusBadge status={project.status} />
+          <StatusBadge status={project.project_status} />
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
-          {project.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="text-xs bg-hf-gray-100 dark:bg-hf-gray-800 px-2 py-0.5 rounded-full"
-            >
-              {tag}
-            </span>
-          ))}
+          <span className="text-xs bg-hf-gray-100 dark:bg-hf-gray-800 px-2 py-0.5 rounded-full">
+            {project.field}
+          </span>
         </div>
 
         <div className="mt-4 flex items-center space-x-6 text-sm">
           <Tooltip text="Outputs Submitted">
             <div className="flex items-center space-x-2">
               <UploadCloudIcon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
-              <span className="font-semibold">{project.outputs.length}</span>
+              {project.huggingface?.repo_cid ? (
+                <CheckCircleIcon className="w-4 h-4 text-status-success" />
+              ) : (
+                <CrossRedIcon className="w-4 h-4 text-status-error ml-1" />
+              )}
             </div>
           </Tooltip>
           <Tooltip text="Verified PoRs">
             <div className="flex items-center space-x-2">
-              <CheckCircleIcon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
-              <span className="font-semibold">{verifiedPors}</span>
+              {verifiedPors ? (
+                <CheckCircleIcon className="w-4 h-4 text-status-success ml-1" />
+              ) : (
+                <CrossRedIcon className="w-4 h-4 text-status-error ml-1" />
+              )}
+
+              <span className="font-semibold">PoR</span>
             </div>
           </Tooltip>
           <Tooltip text="Funding Raised">
             <div className="flex items-center space-x-2">
               <CurrencyDollarIcon className="w-5 h-5 text-text-secondary dark:text-dark-text-secondary" />
               <span className="font-semibold">
-                {numberFormatter.format(project.fundingPool)}
+                {numberFormatter.format(project.funded_amount || 0)}
               </span>
             </div>
           </Tooltip>
@@ -719,7 +705,6 @@ const FundingOpportunitiesDashboard = ({
   projects: Project[];
   currentUser: UserProfile;
 }) => {
-  
   //     title: o.title,
   //     issuer: o.issuer,
   //     amount: `${o.amount} ${o.currency}`,
@@ -784,7 +769,6 @@ const FundingOpportunitiesDashboard = ({
         }
       });
   }, [allOpportunities, filterType, sortKey, activeTopics]);
-
 
   const kpis = {
     openRounds: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").length,
@@ -1098,30 +1082,45 @@ const ProjectsView = ({
 export function ResearcherDashboard({
   projects,
   onSelectProject,
+  onNewProject, // ← Add to destructured props
   currentUser,
   activePage,
-  onOpenCreateProjectWizard,
   onNavigate,
   onApplyToFunding,
 }: {
   projects: Project[];
   onSelectProject: (p: Project) => void;
-  onNewProject: () => void;
+  onNewProject: () => void; // ← Make sure it's in the type definition
   currentUser: UserProfile;
   activePage: string;
-  onOpenCreateProjectWizard: (outputs: HuggingFaceOutput[]) => void;
   onNavigate: (page: string) => void;
   onApplyToFunding: (project: Project) => void;
 }) {
-  const { handleSubmitForReproducibility } = useAppContext();
+  const { handleSubmitForReproducibility, addToast } = useAppContext();
+
+  // Add modal state
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [wizardOutputs, setWizardOutputs] = useState<[]>([]);
+  const [isHFModalOpen, setIsHFModalOpen] = useState(false);
+
+  // Handler for opening wizard with selected outputs
+  const onOpenCreateProjectWizard = (outputs: []) => {
+    setWizardOutputs(outputs);
+    setIsWizardOpen(true);
+  };
+
   const myProjects = useMemo(
-    () => projects.filter((p) => p.ownerId === currentUser.walletAddress),
-    [projects, currentUser.walletAddress]
+    () => projects.filter((p) => p.researcher_id === currentUser._id),
+    [projects, currentUser._id]
   );
 
   let content;
 
   if (activePage === "projects") {
+    // Check if user has HuggingFace permissions
+    const hasHuggingFacePermission =
+      currentUser.integrations?.huggingface?.connected === true;
+
     content = (
       <div className="space-y-12">
         <ProjectsView
@@ -1132,10 +1131,31 @@ export function ResearcherDashboard({
           onApplyToFunding={onApplyToFunding}
           onSubmitForReproducibility={handleSubmitForReproducibility}
         />
-        <HuggingFaceSyncView
-          onSelectProject={onSelectProject}
-          onOpenCreateProjectWizard={onOpenCreateProjectWizard}
-        />
+
+        {hasHuggingFacePermission ? (
+          <HuggingFaceSyncView
+            onSelectProject={onSelectProject}
+            onOpenCreateProjectWizard={onOpenCreateProjectWizard}
+          />
+        ) : (
+          <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-8 border border-border dark:border-border-dark text-center">
+            <HuggingFaceIcon className="w-16 h-16 mx-auto mb-4 text-text-secondary dark:text-dark-text-secondary" />
+            <h2 className="text-xl font-bold text-text-primary dark:text-dark-text-primary mb-2">
+              Connect Your Hugging Face Account
+            </h2>
+            <p className="text-text-secondary dark:text-dark-text-secondary mb-6 max-w-md mx-auto">
+              Link your Hugging Face account to import your models, datasets,
+              and spaces directly into Cairn.
+            </p>
+            <button
+              onClick={() => setIsHFModalOpen(true)}
+              className="bg-primary text-primary-text font-semibold py-3 px-6 rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center space-x-2"
+            >
+              <HuggingFaceIcon className="w-5 h-5" />
+              <span>Connect Hugging Face</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   } else if (activePage === "funding") {
@@ -1161,12 +1181,27 @@ export function ResearcherDashboard({
     );
   }
 
-  return <div className="animate-fade-in">{content}</div>;
+  return (
+    <div className="animate-fade-in">
+      {content}
+
+      {/* Existing wizard modal */}
+      {isWizardOpen && (
+        <CreateProjectWizardModal
+          initialOutputs={wizardOutputs}
+          onClose={() => setIsWizardOpen(false)}
+        />
+      )}
+
+      {/* HuggingFace connection modal */}
+      {isHFModalOpen && (
+        <ConnectHuggingFaceModal onClose={() => setIsHFModalOpen(false)} />
+      )}
+    </div>
+  );
 }
-import { StatusBadge } from "../ui/status-badge";
+
 import { GenerativePlaceholder } from "../ui/generative-placeholder";
-import { useAppContext } from "../../context/app-provider";
-import { Tooltip } from "../ui/tooltip";
 import { ImpactLevelBadge } from "../ui/impact-level-badge";
 
 const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {
@@ -1199,479 +1234,479 @@ const StatCard = ({
   </div>
 );
 
-const DiscoverProjectCard = ({
-  project,
-  onSelectProject,
-}: {
-  project: Project;
-  onSelectProject: (p: Project) => void;
-}) => (
-  <div
-    onClick={() => onSelectProject(project)}
-    className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-border dark:border-border-dark hover:border-primary/30 dark:hover:border-primary/70 overflow-hidden flex flex-col justify-between group"
-  >
-    {project.image_url ? (
-      <img
-        src={project.image_url}
-        alt={project.title}
-        className="w-full h-40 object-cover rounded-md"
-      />
-    ) : (
-      <GenerativePlaceholder projectId={project.id} className="w-full h-40" />
-    )}
-    <div className="p-5 flex-grow">
-      <h3 className="text-lg font-semibold text-text dark:text-text-dark group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
-        {project.title}
-      </h3>
-      <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
-        {project.domain}
-      </p>
-      <p
-        className="text-xs text-text-secondary dark:text-text-dark-secondary mt-2 font-mono truncate"
-        title={project.ownerId}
-      >
-        by: {project.ownerId}
-      </p>
-    </div>
-    <div className="px-5 py-3 bg-cairn-gray-50 dark:bg-cairn-gray-800/50 border-t border-border dark:border-border-dark flex justify-between items-center text-sm">
-      <div className="flex items-center space-x-2 text-status-success font-medium">
-        <CheckCircleIcon className="w-5 h-5" />
-        <span>
-          {project.reproducibilities.filter((r) => r.valid == true).length}{" "}
-          Verified PoRs
-        </span>
-      </div>
-      <span className="font-semibold text-primary dark:text-primary-light flex items-center">
-        Review{" "}
-        <ArrowRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-      </span>
-    </div>
-  </div>
-);
+// const DiscoverProjectCard = ({
+//   project,
+//   onSelectProject,
+// }: {
+//   project: Project;
+//   onSelectProject: (p: Project) => void;
+// }) => (
+//   <div
+//     onClick={() => onSelectProject(project)}
+//     className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-border dark:border-border-dark hover:border-primary/30 dark:hover:border-primary/70 overflow-hidden flex flex-col justify-between group"
+//   >
+//     {project.image_url ? (
+//       <img
+//         src={project.image_url}
+//         alt={project.title}
+//         className="w-full h-40 object-cover rounded-md"
+//       />
+//     ) : (
+//       <GenerativePlaceholder projectId={project.id} className="w-full h-40" />
+//     )}
+//     <div className="p-5 flex-grow">
+//       <h3 className="text-lg font-semibold text-text dark:text-text-dark group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
+//         {project.title}
+//       </h3>
+//       <p className="text-sm text-text-secondary dark:text-text-dark-secondary mt-1">
+//         {project.domain}
+//       </p>
+//       <p
+//         className="text-xs text-text-secondary dark:text-text-dark-secondary mt-2 font-mono truncate"
+//         title={project.ownerId}
+//       >
+//         by: {project.ownerId}
+//       </p>
+//     </div>
+//     <div className="px-5 py-3 bg-cairn-gray-50 dark:bg-cairn-gray-800/50 border-t border-border dark:border-border-dark flex justify-between items-center text-sm">
+//       <div className="flex items-center space-x-2 text-status-success font-medium">
+//         <CheckCircleIcon className="w-5 h-5" />
+//         <span>
+//           {project.reproducibilities.filter((r) => r.valid == true).length}{" "}
+//           Verified PoRs
+//         </span>
+//       </div>
+//       <span className="font-semibold text-primary dark:text-primary-light flex items-center">
+//         Review{" "}
+//         <ArrowRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+//       </span>
+//     </div>
+//   </div>
+// );
 
-const MyProjectCard = ({
-  project,
-  onSelectProject,
-}: {
-  project: Project;
-  onSelectProject: (p: Project) => void;
-}) => (
-  <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md border border-border dark:border-border-dark overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 dark:hover:border-primary/70">
-    <div className="p-5 flex-grow">
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-semibold text-text dark:text-text-dark pr-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
-          {project.title}
-        </h3>
-        {/* <StatusBadge status={project.status} /> */}
-      </div>
-      <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-        {project.domain}
-      </p>
+// const MyProjectCard = ({
+//   project,
+//   onSelectProject,
+// }: {
+//   project: Project;
+//   onSelectProject: (p: Project) => void;
+// }) => (
+//   <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-md border border-border dark:border-border-dark overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 dark:hover:border-primary/70">
+//     <div className="p-5 flex-grow">
+//       <div className="flex justify-between items-start mb-2">
+//         <h3 className="text-lg font-semibold text-text dark:text-text-dark pr-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
+//           {project.title}
+//         </h3>
+//         {/* <StatusBadge status={project.status} /> */}
+//       </div>
+//       <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+//         {project.domain}
+//       </p>
 
-      <div className="mt-4 flex items-center space-x-8 text-sm">
-        <div className="flex items-center space-x-2">
-          <UploadCloudIcon className="w-5 h-5 text-text-secondary dark:text-text-dark-secondary" />
-          <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            Output
-          </span>
-          {project.output[0] ? (
-            <CheckCircleIcon className="w-4 h-4 text-green-500" />
-          ) : (
-            <span title="No output uploaded">
-              <svg
-                className="w-4 h-4 text-red-500"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </span>
-          )}
-        </div>
-        <div className="flex items-center space-x-2">
-          <CheckIcon className="w-5 h-5 text-status-success" />
-          <span className="font-semibold text-text dark:text-text-dark">
-            {project.reproducibilities.length}
-          </span>
-          <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            {" "}
-            PoR Submissions
-          </span>
-        </div>
-      </div>
-    </div>
-    <div className="border-t border-border dark:border-border-dark mt-auto p-4">
-      <button
-        onClick={() => onSelectProject(project)}
-        className="w-full bg-primary text-primary-text font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all duration-300 text-sm shadow-md hover:shadow-lg"
-      >
-        {project.status === ProjectStatus.Draft ? "Manage" : "View Project"}
-      </button>
-    </div>
-  </div>
-);
+//       <div className="mt-4 flex items-center space-x-8 text-sm">
+//         <div className="flex items-center space-x-2">
+//           <UploadCloudIcon className="w-5 h-5 text-text-secondary dark:text-text-dark-secondary" />
+//           <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
+//             Output
+//           </span>
+//           {project.output[0] ? (
+//             <CheckCircleIcon className="w-4 h-4 text-green-500" />
+//           ) : (
+//             <span title="No output uploaded">
+//               <svg
+//                 className="w-4 h-4 text-red-500"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 strokeWidth={2}
+//                 viewBox="0 0 24 24"
+//               >
+//                 <path
+//                   strokeLinecap="round"
+//                   strokeLinejoin="round"
+//                   d="M6 18L18 6M6 6l12 12"
+//                 />
+//               </svg>
+//             </span>
+//           )}
+//         </div>
+//         <div className="flex items-center space-x-2">
+//           <CheckIcon className="w-5 h-5 text-status-success" />
+//           <span className="font-semibold text-text dark:text-text-dark">
+//             {project.reproducibilities.length}
+//           </span>
+//           <span className="text-sm text-text-secondary dark:text-text-dark-secondary">
+//             {" "}
+//             PoR Submissions
+//           </span>
+//         </div>
+//       </div>
+//     </div>
+//     <div className="border-t border-border dark:border-border-dark mt-auto p-4">
+//       <button
+//         onClick={() => onSelectProject(project)}
+//         className="w-full bg-primary text-primary-text font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all duration-300 text-sm shadow-md hover:shadow-lg"
+//       >
+//         {project.status === ProjectStatus.Draft ? "Manage" : "View Project"}
+//       </button>
+//     </div>
+//   </div>
+// );
 
-const NewProjectCard = ({
-  onNewProject,
-  isEligible,
-  porRequirement,
-  porContributedCount,
-}: {
-  onNewProject: () => void;
-  isEligible: boolean;
-  porRequirement: number;
-  porContributedCount: number;
-}) => (
-  <div className="relative group h-full">
-    <button
-      onClick={onNewProject}
-      disabled={!isEligible}
-      className="w-full h-full bg-background-light dark:bg-background-dark-light rounded-xl border-2 border-dashed border-border dark:border-border-dark flex flex-col items-center justify-center p-5 text-text-secondary hover:border-primary hover:text-primary dark:hover:border-primary dark:hover:text-primary-light transition-all duration-300 disabled:cursor-not-allowed disabled:hover:border-border dark:disabled:hover:border-border-dark disabled:hover:text-text-secondary min-h-[220px]"
-    >
-      <PlusIcon className="w-10 h-10 mb-3" />
-      <span className="font-semibold text-lg">New Project</span>
-    </button>
-    {!isEligible && (
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs text-center px-3 py-1.5 bg-text text-background-light dark:bg-text-dark dark:text-background-dark text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-        {`Need ${
-          porRequirement - porContributedCount
-        } more PoRs to create a project (${porRequirement} total).`}
-        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-text dark:border-t-text-dark"></div>
-      </div>
-    )}
-  </div>
-);
+// const NewProjectCard = ({
+//   onNewProject,
+//   isEligible,
+//   porRequirement,
+//   porContributedCount,
+// }: {
+//   onNewProject: () => void;
+//   isEligible: boolean;
+//   porRequirement: number;
+//   porContributedCount: number;
+// }) => (
+//   <div className="relative group h-full">
+//     <button
+//       onClick={onNewProject}
+//       disabled={!isEligible}
+//       className="w-full h-full bg-background-light dark:bg-background-dark-light rounded-xl border-2 border-dashed border-border dark:border-border-dark flex flex-col items-center justify-center p-5 text-text-secondary hover:border-primary hover:text-primary dark:hover:border-primary dark:hover:text-primary-light transition-all duration-300 disabled:cursor-not-allowed disabled:hover:border-border dark:disabled:hover:border-border-dark disabled:hover:text-text-secondary min-h-[220px]"
+//     >
+//       <PlusIcon className="w-10 h-10 mb-3" />
+//       <span className="font-semibold text-lg">New Project</span>
+//     </button>
+//     {!isEligible && (
+//       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs text-center px-3 py-1.5 bg-text text-background-light dark:bg-text-dark dark:text-background-dark text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+//         {`Need ${
+//           porRequirement - porContributedCount
+//         } more PoRs to create a project (${porRequirement} total).`}
+//         <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-text dark:border-t-text-dark"></div>
+//       </div>
+//     )}
+//   </div>
+// );
 
-const ActionRequiredWidget = ({
-  projects,
-  onSelectProject,
-}: {
-  projects: Project[];
-  onSelectProject: (p: Project) => void;
-}) => {
-  const projectsNeedingOutputs = useMemo(
-    () => projects.filter((p) => p.output.length === 0),
-    [projects]
-  );
+// const ActionRequiredWidget = ({
+//   projects,
+//   onSelectProject,
+// }: {
+//   projects: Project[];
+//   onSelectProject: (p: Project) => void;
+// }) => {
+//   const projectsNeedingOutputs = useMemo(
+//     () => projects.filter((p) => p.output.length === 0),
+//     [projects]
+//   );
 
-  const actionItems = useMemo(() => {
-    return projectsNeedingOutputs.sort((a, b) =>
-      a.title.localeCompare(b.title)
-    );
-  }, [projectsNeedingOutputs]);
+//   const actionItems = useMemo(() => {
+//     return projectsNeedingOutputs.sort((a, b) =>
+//       a.title.localeCompare(b.title)
+//     );
+//   }, [projectsNeedingOutputs]);
 
-  const ActionStatCard = ({
-    icon: Icon,
-    iconClass,
-    count,
-    label,
-    tooltipText,
-  }: {
-    icon: React.FC<any>;
-    iconClass: string;
-    count: number;
-    label: string;
-    tooltipText: string;
-  }) => (
-    <div className="bg-cairn-gray-100 dark:bg-cairn-gray-900 p-4 rounded-xl flex items-center space-x-4 transition-colors hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800">
-      <Icon className={`w-8 h-8 flex-shrink-0 ${iconClass}`} />
-      <div>
-        <div className="flex items-baseline space-x-2">
-          <p className="text-2xl font-bold text-text dark:text-text-dark">
-            {count}
-          </p>
-          <span className="text-base font-medium text-text-secondary dark:text-text-dark-secondary">
-            {count === 1 ? "Project" : "Projects"}
-          </span>
-        </div>
-        <div className="flex items-center space-x-1.5 mt-0.5">
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            {label}
-          </p>
-          <Tooltip text={tooltipText}>
-            <InfoIcon className="w-4 h-4 text-text-secondary/70 dark:text-text-dark-secondary/70 cursor-help" />
-          </Tooltip>
-        </div>
-      </div>
-    </div>
-  );
+//   const ActionStatCard = ({
+//     icon: Icon,
+//     iconClass,
+//     count,
+//     label,
+//     tooltipText,
+//   }: {
+//     icon: React.FC<any>;
+//     iconClass: string;
+//     count: number;
+//     label: string;
+//     tooltipText: string;
+//   }) => (
+//     <div className="bg-cairn-gray-100 dark:bg-cairn-gray-900 p-4 rounded-xl flex items-center space-x-4 transition-colors hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800">
+//       <Icon className={`w-8 h-8 flex-shrink-0 ${iconClass}`} />
+//       <div>
+//         <div className="flex items-baseline space-x-2">
+//           <p className="text-2xl font-bold text-text dark:text-text-dark">
+//             {count}
+//           </p>
+//           <span className="text-base font-medium text-text-secondary dark:text-text-dark-secondary">
+//             {count === 1 ? "Project" : "Projects"}
+//           </span>
+//         </div>
+//         <div className="flex items-center space-x-1.5 mt-0.5">
+//           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+//             {label}
+//           </p>
+//           <Tooltip text={tooltipText}>
+//             <InfoIcon className="w-4 h-4 text-text-secondary/70 dark:text-text-dark-secondary/70 cursor-help" />
+//           </Tooltip>
+//         </div>
+//       </div>
+//     </div>
+//   );
 
-  return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-5 border border-border dark:border-border-dark shadow-sm flex flex-col h-80">
-      <h4 className="font-semibold mb-4 text-text dark:text-text-dark shrink-0">
-        Action Required
-      </h4>
+//   return (
+//     <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-5 border border-border dark:border-border-dark shadow-sm flex flex-col h-80">
+//       <h4 className="font-semibold mb-4 text-text dark:text-text-dark shrink-0">
+//         Action Required
+//       </h4>
 
-      <div className="grid grid-cols-1 gap-4 shrink-0">
-        <ActionStatCard
-          icon={UploadCloudIcon}
-          iconClass="text-primary"
-          count={projectsNeedingOutputs.length}
-          label="Need Outputs"
-          tooltipText="Research outputs are the core assets of your project. Upload anything that others can build on or verify—like code, datasets, simulations, or experimental results."
-        />
-      </div>
+//       <div className="grid grid-cols-1 gap-4 shrink-0">
+//         <ActionStatCard
+//           icon={UploadCloudIcon}
+//           iconClass="text-primary"
+//           count={projectsNeedingOutputs.length}
+//           label="Need Outputs"
+//           tooltipText="Research outputs are the core assets of your project. Upload anything that others can build on or verify—like code, datasets, simulations, or experimental results."
+//         />
+//       </div>
 
-      {actionItems.length > 0 ? (
-        <>
-          <div className="my-4 border-t border-border dark:border-border-dark -mx-5 px-5 shrink-0"></div>
-          <div className="flex-grow min-h-0 overflow-y-auto -mr-2 pr-2">
-            <ul className="space-y-2">
-              {actionItems.map((p) => {
-                const reason = "Add research outputs to activate";
+//       {actionItems.length > 0 ? (
+//         <>
+//           <div className="my-4 border-t border-border dark:border-border-dark -mx-5 px-5 shrink-0"></div>
+//           <div className="flex-grow min-h-0 overflow-y-auto -mr-2 pr-2">
+//             <ul className="space-y-2">
+//               {actionItems.map((p) => {
+//                 const reason = "Add research outputs to activate";
 
-                return (
-                  <li
-                    key={p.id}
-                    className="flex justify-between items-center p-3 rounded-lg transition-colors bg-primary-light/70 dark:bg-primary/10"
-                  >
-                    <div>
-                      <p className="font-semibold text-sm text-text dark:text-text-dark">
-                        {p.title}
-                      </p>
-                      <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
-                        {reason}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => onSelectProject(p)}
-                      className="text-xs font-semibold py-1 px-3 rounded-full transition-colors hover:opacity-80 bg-primary-light text-primary"
-                    >
-                      Manage
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
-          <CheckCircleIcon className="mx-auto h-10 w-10 text-status-success" />
-          <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
-            No immediate actions required.
-          </p>
-          <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
-            All your active projects are up-to-date.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
+//                 return (
+//                   <li
+//                     key={p.id}
+//                     className="flex justify-between items-center p-3 rounded-lg transition-colors bg-primary-light/70 dark:bg-primary/10"
+//                   >
+//                     <div>
+//                       <p className="font-semibold text-sm text-text dark:text-text-dark">
+//                         {p.title}
+//                       </p>
+//                       <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
+//                         {reason}
+//                       </p>
+//                     </div>
+//                     <button
+//                       onClick={() => onSelectProject(p)}
+//                       className="text-xs font-semibold py-1 px-3 rounded-full transition-colors hover:opacity-80 bg-primary-light text-primary"
+//                     >
+//                       Manage
+//                     </button>
+//                   </li>
+//                 );
+//               })}
+//             </ul>
+//           </div>
+//         </>
+//       ) : (
+//         <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
+//           <CheckCircleIcon className="mx-auto h-10 w-10 text-status-success" />
+//           <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
+//             No immediate actions required.
+//           </p>
+//           <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
+//             All your active projects are up-to-date.
+//           </p>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
-const DisputesWidget = ({
-  projects,
-  currentUser,
-  onViewContributionDetails,
-}: {
-  projects: Project[];
-  currentUser: UserProfile;
-  onViewContributionDetails: (
-    reproducibility: Reproducibility,
-    projectId: string
-  ) => void;
-}) => {
-  const myDisputedPors = useMemo(() => {
-    return projects.flatMap((p) =>
-      p.reproducibilities
-        .filter(
-          (r) =>
-            r.verifier === currentUser.walletAddress &&
-            r.status === PoRStatus.Disputed
-        )
-        .map((r) => ({ ...r, projectTitle: p.title, projectId: p.id }))
-    );
-  }, [projects, currentUser.walletAddress]);
+// const DisputesWidget = ({
+//   projects,
+//   currentUser,
+//   onViewContributionDetails,
+// }: {
+//   projects: Project[];
+//   currentUser: UserProfile;
+//   onViewContributionDetails: (
+//     reproducibility: Reproducibility,
+//     projectId: string
+//   ) => void;
+// }) => {
+//   const myDisputedPors = useMemo(() => {
+//     return projects.flatMap((p) =>
+//       p.reproducibilities
+//         .filter(
+//           (r) =>
+//             r.verifier === currentUser.walletAddress &&
+//             r.status === PoRStatus.Disputed
+//         )
+//         .map((r) => ({ ...r, projectTitle: p.title, projectId: p.id }))
+//     );
+//   }, [projects, currentUser.walletAddress]);
 
-  const ActionStatCard = ({
-    icon: Icon,
-    iconClass,
-    count,
-    label,
-    tooltipText,
-  }: {
-    icon: React.FC<any>;
-    iconClass: string;
-    count: number;
-    label: string;
-    tooltipText: string;
-  }) => (
-    <div className="bg-cairn-gray-100 dark:bg-cairn-gray-900 p-4 rounded-xl flex items-center space-x-4 transition-colors hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800">
-      <Icon className={`w-8 h-8 flex-shrink-0 ${iconClass}`} />
-      <div>
-        <div className="flex items-baseline space-x-2">
-          <p className="text-2xl font-bold text-text dark:text-text-dark">
-            {count}
-          </p>
-          <span className="text-base font-medium text-text-secondary dark:text-text-dark-secondary">
-            {count === 1 ? "Dispute" : "Disputes"}
-          </span>
-        </div>
-        <div className="flex items-center space-x-1.5 mt-0.5">
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            {label}
-          </p>
-          <Tooltip text={tooltipText}>
-            <InfoIcon className="w-4 h-4 text-text-secondary/70 dark:text-text-dark-secondary/70 cursor-help" />
-          </Tooltip>
-        </div>
-      </div>
-    </div>
-  );
+//   const ActionStatCard = ({
+//     icon: Icon,
+//     iconClass,
+//     count,
+//     label,
+//     tooltipText,
+//   }: {
+//     icon: React.FC<any>;
+//     iconClass: string;
+//     count: number;
+//     label: string;
+//     tooltipText: string;
+//   }) => (
+//     <div className="bg-cairn-gray-100 dark:bg-cairn-gray-900 p-4 rounded-xl flex items-center space-x-4 transition-colors hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-800">
+//       <Icon className={`w-8 h-8 flex-shrink-0 ${iconClass}`} />
+//       <div>
+//         <div className="flex items-baseline space-x-2">
+//           <p className="text-2xl font-bold text-text dark:text-text-dark">
+//             {count}
+//           </p>
+//           <span className="text-base font-medium text-text-secondary dark:text-text-dark-secondary">
+//             {count === 1 ? "Dispute" : "Disputes"}
+//           </span>
+//         </div>
+//         <div className="flex items-center space-x-1.5 mt-0.5">
+//           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+//             {label}
+//           </p>
+//           <Tooltip text={tooltipText}>
+//             <InfoIcon className="w-4 h-4 text-text-secondary/70 dark:text-text-dark-secondary/70 cursor-help" />
+//           </Tooltip>
+//         </div>
+//       </div>
+//     </div>
+//   );
 
-  return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-5 border border-border dark:border-border-dark shadow-sm h-full flex flex-col">
-      <h4 className="font-semibold mb-4 text-text dark:text-text-dark flex-shrink-0">
-        My Proof Disputes
-      </h4>
+//   return (
+//     <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-5 border border-border dark:border-border-dark shadow-sm h-full flex flex-col">
+//       <h4 className="font-semibold mb-4 text-text dark:text-text-dark flex-shrink-0">
+//         My Proof Disputes
+//       </h4>
 
-      <div className="grid grid-cols-1 gap-4 flex-shrink-0">
-        <ActionStatCard
-          icon={FlagIcon}
-          iconClass="text-status-danger"
-          count={myDisputedPors.length}
-          label="On my PoRs"
-          tooltipText="These are Proof of Reproducibility submissions you made that have been disputed by the community. Review the project and dispute details."
-        />
-      </div>
+//       <div className="grid grid-cols-1 gap-4 flex-shrink-0">
+//         <ActionStatCard
+//           icon={FlagIcon}
+//           iconClass="text-status-danger"
+//           count={myDisputedPors.length}
+//           label="On my PoRs"
+//           tooltipText="These are Proof of Reproducibility submissions you made that have been disputed by the community. Review the project and dispute details."
+//         />
+//       </div>
 
-      {myDisputedPors.length > 0 ? (
-        <>
-          <div className="my-4 border-t border-border dark:border-border-dark -mx-5 px-5"></div>
-          <div className="flex-grow overflow-y-auto -mr-2 pr-2">
-            <ul className="space-y-2">
-              {myDisputedPors.map((r) => {
-                return (
-                  <li
-                    key={r.id}
-                    className="flex justify-between items-center p-3 rounded-lg transition-colors bg-status-danger-bg dark:bg-status-danger-bg-dark/50"
-                  >
-                    <div>
-                      <p className="font-semibold text-sm text-text dark:text-text-dark">
-                        PoR on: {r.projectTitle}
-                      </p>
-                      <p className="text-xs font-semibold text-status-danger">
-                        Your submission was disputed
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => onViewContributionDetails(r, r.projectId)}
-                      className="text-xs font-semibold py-1 px-3 rounded-full transition-colors hover:opacity-80 bg-status-danger-bg text-status-danger dark:bg-status-danger-bg-dark dark:text-red-300"
-                    >
-                      View
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
-          <CheckCircleIcon className="mx-auto h-10 w-10 text-status-success" />
-          <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
-            No disputes on your submissions.
-          </p>
-          <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
-            All your contributions are in good standing.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
+//       {myDisputedPors.length > 0 ? (
+//         <>
+//           <div className="my-4 border-t border-border dark:border-border-dark -mx-5 px-5"></div>
+//           <div className="flex-grow overflow-y-auto -mr-2 pr-2">
+//             <ul className="space-y-2">
+//               {myDisputedPors.map((r) => {
+//                 return (
+//                   <li
+//                     key={r.id}
+//                     className="flex justify-between items-center p-3 rounded-lg transition-colors bg-status-danger-bg dark:bg-status-danger-bg-dark/50"
+//                   >
+//                     <div>
+//                       <p className="font-semibold text-sm text-text dark:text-text-dark">
+//                         PoR on: {r.projectTitle}
+//                       </p>
+//                       <p className="text-xs font-semibold text-status-danger">
+//                         Your submission was disputed
+//                       </p>
+//                     </div>
+//                     <button
+//                       onClick={() => onViewContributionDetails(r, r.projectId)}
+//                       className="text-xs font-semibold py-1 px-3 rounded-full transition-colors hover:opacity-80 bg-status-danger-bg text-status-danger dark:bg-status-danger-bg-dark dark:text-red-300"
+//                     >
+//                       View
+//                     </button>
+//                   </li>
+//                 );
+//               })}
+//             </ul>
+//           </div>
+//         </>
+//       ) : (
+//         <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
+//           <CheckCircleIcon className="mx-auto h-10 w-10 text-status-success" />
+//           <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
+//             No disputes on your submissions.
+//           </p>
+//           <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
+//             All your contributions are in good standing.
+//           </p>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
-const ActivityFeedWidget = ({
-  projects,
-  onViewReview,
-}: {
-  projects: Project[];
-  onViewReview: (reproducibility: Reproducibility, projectId: string) => void;
-}) => {
-  const recentSubmissions = useMemo(() => {
-    return projects
-      .flatMap((p) =>
-        p.reproducibilities.map((r) => ({
-          ...r,
-          projectTitle: p.title,
-          projectId: p.id,
-        }))
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
-      .slice(0, 10);
-  }, [projects]);
+// const ActivityFeedWidget = ({
+//   projects,
+//   onViewReview,
+// }: {
+//   projects: Project[];
+//   onViewReview: (reproducibility: Reproducibility, projectId: string) => void;
+// }) => {
+//   const recentSubmissions = useMemo(() => {
+//     return projects
+//       .flatMap((p) =>
+//         p.reproducibilities.map((r) => ({
+//           ...r,
+//           projectTitle: p.title,
+//           projectId: p.id,
+//         }))
+//       )
+//       .sort(
+//         (a, b) =>
+//           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+//       )
+//       .slice(0, 10);
+//   }, [projects]);
 
-  const formatDate = (timestamp: string) => {
-    const d = new Date(timestamp);
-    return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
-  };
+//   const formatDate = (timestamp: string) => {
+//     const d = new Date(timestamp);
+//     return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+//   };
 
-  return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-6 border border-border dark:border-border-dark shadow-sm flex flex-col h-80">
-      <h4 className="font-semibold mb-6 text-text dark:text-text-dark text-lg shrink-0">
-        Activity Feed
-      </h4>
-      {recentSubmissions.length > 0 ? (
-        <div className="flex-grow min-h-0 overflow-y-auto -mr-3 pr-3">
-          <ul className="relative border-l border-border dark:border-border-dark ml-3">
-            {recentSubmissions.map((r) => {
-              return (
-                <li key={r.proof_id} className="relative pl-8 pb-6 last:pb-0">
-                  <div className="absolute left-0 top-1 h-3 w-3 rounded-full bg-primary transform -translate-x-1/2 ring-4 ring-background-light dark:ring-background-dark-light"></div>
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="text-sm flex-grow">
-                      <p className="text-text dark:text-text-dark leading-relaxed">
-                        <span
-                          className="font-semibold text-primary font-mono"
-                          title={r.recorder}
-                        >
-                          {r.recorder.substring(0, 8)}...
-                        </span>
-                        {" submitted a PoR for "}
-                        <span className="font-semibold">{r.projectTitle}</span>.
-                      </p>
-                      <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
-                        {new Date(
-                          Number(r.timestamp) * 1000
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => onViewReview(r, r.projectId)}
-                      className="text-xs bg-primary-light text-primary font-semibold py-1 px-3 rounded-full hover:bg-blue-200/50 transition-colors flex-shrink-0"
-                    >
-                      View
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
-          <SearchIcon className="mx-auto h-8 w-8 text-text-secondary" />
-          <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
-            No recent activity.
-          </p>
-          <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
-            Reproducibility submissions will appear here.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
+//   return (
+//     <div className="bg-background-light dark:bg-background-dark-light rounded-xl p-6 border border-border dark:border-border-dark shadow-sm flex flex-col h-80">
+//       <h4 className="font-semibold mb-6 text-text dark:text-text-dark text-lg shrink-0">
+//         Activity Feed
+//       </h4>
+//       {recentSubmissions.length > 0 ? (
+//         <div className="flex-grow min-h-0 overflow-y-auto -mr-3 pr-3">
+//           <ul className="relative border-l border-border dark:border-border-dark ml-3">
+//             {recentSubmissions.map((r) => {
+//               return (
+//                 <li key={r.proof_id} className="relative pl-8 pb-6 last:pb-0">
+//                   <div className="absolute left-0 top-1 h-3 w-3 rounded-full bg-primary transform -translate-x-1/2 ring-4 ring-background-light dark:ring-background-dark-light"></div>
+//                   <div className="flex justify-between items-start gap-4">
+//                     <div className="text-sm flex-grow">
+//                       <p className="text-text dark:text-text-dark leading-relaxed">
+//                         <span
+//                           className="font-semibold text-primary font-mono"
+//                           title={r.recorder}
+//                         >
+//                           {r.recorder.substring(0, 8)}...
+//                         </span>
+//                         {" submitted a PoR for "}
+//                         <span className="font-semibold">{r.projectTitle}</span>.
+//                       </p>
+//                       <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
+//                         {new Date(
+//                           Number(r.timestamp) * 1000
+//                         ).toLocaleDateString()}
+//                       </p>
+//                     </div>
+//                     <button
+//                       onClick={() => onViewReview(r, r.projectId)}
+//                       className="text-xs bg-primary-light text-primary font-semibold py-1 px-3 rounded-full hover:bg-blue-200/50 transition-colors flex-shrink-0"
+//                     >
+//                       View
+//                     </button>
+//                   </div>
+//                 </li>
+//               );
+//             })}
+//           </ul>
+//         </div>
+//       ) : (
+//         <div className="flex flex-col items-center justify-center flex-grow text-center py-4">
+//           <SearchIcon className="mx-auto h-8 w-8 text-text-secondary" />
+//           <p className="mt-3 text-sm font-medium text-text dark:text-text-dark">
+//             No recent activity.
+//           </p>
+//           <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
+//             Reproducibility submissions will appear here.
+//           </p>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 const PoRStatusBadge = ({ rep }: { rep: Reproducibility }) => {
   let status: PoRStatus;

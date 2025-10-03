@@ -17,12 +17,12 @@ console.log("Using API URL:", apiUrl);
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AppProvider>
-      <ApiProvider apiUrl={apiUrl}>
+    <ApiProvider apiUrl={apiUrl}>
+      <AppProvider>
         <ContractProvider>
           <App />
         </ContractProvider>
-      </ApiProvider>
-    </AppProvider>
+      </AppProvider>
+    </ApiProvider>
   </React.StrictMode>
 );
