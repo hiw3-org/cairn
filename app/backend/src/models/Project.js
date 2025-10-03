@@ -77,12 +77,12 @@ const projectSchema = new mongoose.Schema(
     },
 
     huggingface: {
-      repo_url: {
+      repository_url: {
         type: String,
         trim: true,
         validate: {
           validator: function (v) {
-            if (!v) return true; // Optional field
+            if (!v) return true;
             return /^https:\/\/huggingface\.co\/[\w\-\.\/]+$/.test(v);
           },
           message: "Invalid HuggingFace repository URL",

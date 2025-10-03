@@ -88,14 +88,15 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
         {/* Researcher Section */}
         <div>
           <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
-            Researcher
+            Researcher Info
           </h3>
           <div className="py-2">
             <p className="font-semibold text-text dark:text-text-dark text-sm">
-              {project.researcher?.username || "Unknown Researcher"}
+              {project.researcher_id?.profile.firstName || "Unknown Researcher"}{" "}
+              {project.researcher_id?.profile.lastName || "Unknown Last Name"}
             </p>
             <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-              {project.researcher?.email || "No email provided"}
+              {project.researcher_id?.email || "No email provided"}
             </p>
           </div>
         </div>
@@ -148,17 +149,32 @@ const ProjectResourceCard = ({
       setIsDownloading(true);
       setDownloadError(null);
 
-      // Check if output has a CID for Filecoin download
-      if (output.data && output.data.cid && output.data.cid.trim()) {
-        // Use the new utility function for FileCoin download with output-specific CID
+      // Check if we should download from Filecoin
+      const hasCid =
+        (type === "HuggingFace" && project.huggingface?.contents_cid) ||
+        project.por?.por_cid;
+
+      if (hasCid) {
         const walletAddress = import.meta.env.VITE_FILECOIN_WALLET_ADDRESS;
-        if (!walletAddress || typeof walletAddress !== "string" || walletAddress.trim() === "") {
-          throw new Error("Missing required environment variable: VITE_FILECOIN_WALLET_ADDRESS");
+        if (
+          !walletAddress ||
+          typeof walletAddress !== "string" ||
+          walletAddress.trim() === ""
+        ) {
+          throw new Error(
+            "Missing required environment variable: VITE_FILECOIN_WALLET_ADDRESS"
+          );
         }
+
+        const cidToUse =
+          type === "HuggingFace"
+            ? project.huggingface?.contents_cid
+            : project.por?.por_cid;
+
         const result = await downloadFromFileCoin({
           walletAddress,
-          pieceCID: output.data.cid, // Use the output-specific CID
-          filename: `${project.title}_${output.description}.zip`,
+          pieceCID: cidToUse!,
+          filename: `${project.title}_${type}.zip`,
         });
 
         if (!result.success) {
@@ -167,8 +183,8 @@ const ProjectResourceCard = ({
 
         console.log(`Successfully downloaded: ${result.filename}`);
       } else if (url) {
-        // Open URL in new tab
-        window.open(url, "_blank");
+        // Open URL in new tab for direct links
+        window.open(url, "_blank", "noopener,noreferrer");
       } else {
         throw new Error("No CID or URL found for this resource");
       }
@@ -191,7 +207,7 @@ const ProjectResourceCard = ({
     if (hasCid) {
       return "Download from Filecoin";
     } else if (url) {
-      return type === "HuggingFace" ? "View on HuggingFace" : "View Paper";
+      return type === "HuggingFace" ? "View on HuggingFace" : "View on ArXiv";
     }
     return "No Download Available";
   };
@@ -289,26 +305,22 @@ export const ProjectDetailView = ({
     const resources = [];
 
     // Add HuggingFace resource if available
-    if (project.huggingface?.repo_url) {
+    if (project.huggingface?.repository_url) {
       resources.push({
         title: `${project.title} - HuggingFace Repository`,
-        url: project.huggingface.repo_url,
+        url: project.huggingface.repository_url,
         type: "HuggingFace",
       });
     }
 
     // Add paper resource if available
-    if (project.paper?.doi || project.paper?.arxiv_id) {
-      const paperUrl = project.paper.doi
-        ? `https://doi.org/${project.paper.doi}`
-        : project.paper.arxiv_id
-        ? `https://arxiv.org/abs/${project.paper.arxiv_id}`
-        : undefined;
+    if (project?.publication_url) {
+      const paperUrl = project.publication_url;
 
       resources.push({
-        title: project.paper.title || `${project.title} - Research Paper`,
+        title: project.description || `${project.title} - Research Paper`,
         url: paperUrl,
-        type: project.paper.doi ? "DOI Paper" : "ArXiv Paper",
+        type: "ArXiv Paper",
       });
     }
 

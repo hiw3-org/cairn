@@ -63,7 +63,8 @@ const Sidebar = ({
       id: "funding",
       label: "Funding",
       icon: ChartBarIcon,
-      notificationCount: newOpportunitiesCount, // Shows count of new funding opportunities
+      notificationCount: newOpportunitiesCount,
+      disabled: true, // Shows count of new funding opportunities
     },
     { id: "dao", label: "DAO", icon: GavelIcon, disabled: true }, // Coming soon feature
   ];
