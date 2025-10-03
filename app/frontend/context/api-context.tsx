@@ -62,6 +62,8 @@ interface ApiContextType {
   getHFRepos: (limit?: number) => Promise<HFModel[]>;
   getHFDatasets: (limit?: number) => Promise<HFDataset[]>;
   refreshHFConnection: () => Promise<any>;
+  searchArxivByTitle: (query: string, limit?: number) => Promise<any>;
+  searchArxivByAuthor: (author: string, limit?: number) => Promise<any>;
 
   // Loading states
   isLoading: boolean;
@@ -433,7 +435,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
-  const getHFRepos = async (limit: number = 20): Promise<HFRepo[]> => {
+  const getHFRepos = async (limit: number = 20): Promise<HFModel[]> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -445,7 +447,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
         }
       );
 
-      const data: ApiResponse<HFRepo[]> = await response.json();
+      const data: ApiResponse<HFModel[]> = await response.json();
 
       if (data.status === "success" && data.data) {
         return data.data;
@@ -519,6 +521,78 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
+  const searchArxivByTitle = async (
+    query: string,
+    limit: number = 20
+  ): Promise<any> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/arxiv/search-title?q=${encodeURIComponent(
+          query
+        )}&limit=${limit}`,
+        {
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to search arXiv");
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        return data.data.papers;
+      } else {
+        throw new Error(data.message || "Failed to search arXiv");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to search arXiv");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const searchArxivByAuthor = async (
+    author: string,
+    limit: number = 50
+  ): Promise<any> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/arxiv/search-author?author=${encodeURIComponent(
+          author
+        )}&limit=${limit}`,
+        {
+          credentials: "include",
+          headers: getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to search arXiv by author");
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        return data.data.papers;
+      } else {
+        throw new Error(data.message || "Failed to search arXiv by author");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Failed to search arXiv by author");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Admin functions
   const fetchAllUsers = async (params?: { page?: number; limit?: number }) => {
     setIsLoading(true);
@@ -570,6 +644,8 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     refreshHFConnection,
     isLoading,
     error,
+    searchArxivByTitle,
+    searchArxivByAuthor,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

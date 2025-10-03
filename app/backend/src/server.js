@@ -2,10 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
-const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const logger = require("./utils/logger");
@@ -21,6 +21,7 @@ const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const filecoinRoutes = require("./routes/filecoinRoutes");
 const huggingfaceRoutes = require("./routes/huggingfaceRoutes");
+const arxivRoutes = require("./routes/arxivRoutes");
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use(`/api/${apiVersion}/users`, userRoutes);
 app.use(`/api/${apiVersion}/projects`, projectRoutes);
 app.use(`/api/${apiVersion}/filecoin`, filecoinRoutes);
 app.use(`/api/${apiVersion}/integrations/huggingface`, huggingfaceRoutes);
+app.use(`/api/${apiVersion}/arxiv`, arxivRoutes);
 
 // Catch-all route for undefined endpoints
 app.all("*", (req, res) => {
