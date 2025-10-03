@@ -249,7 +249,15 @@ const createProject = async (req, res) => {
       data: { project },
     });
   } catch (error) {
-    // ... error handling
+    console.error("Create project error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to create project",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
+    });
   }
 };
 
