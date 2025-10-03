@@ -25,8 +25,6 @@ import {
   SearchIcon,
   EyeIcon,
 } from "../ui/icons";
-import { log } from "util";
-
 const WIZARD_STEPS = [
   { id: 1, name: "Selected Outputs", icon: HuggingFaceIcon },
   { id: 2, name: "Project Basics", icon: EyeIcon },
