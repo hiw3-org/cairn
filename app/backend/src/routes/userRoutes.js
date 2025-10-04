@@ -17,12 +17,16 @@ const User = require("../models/User");
 const router = express.Router();
 
 // Cookie configuration
-const getCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // HTTPS only in production
-  sameSite: "strict",
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  const isSameDomain = process.env.SAME_DOMAIN === "true";
+  return {
+    httpOnly: true,
+    secure: isProduction, // HTTPS only in production
+    sameSite: isProduction && !isSameDomain ? "none" : "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+};
 
 // @desc    User signup (public registration)
 // @route   POST /api/v1/users/signup
