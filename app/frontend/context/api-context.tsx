@@ -171,8 +171,6 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
       const data: ApiResponse<{ user: UserProfile }> = await response.json();
 
-      console.log("Current user data:", data);
-
       if (data.status === "success" && data.data) {
         return data.data.user;
       } else {
