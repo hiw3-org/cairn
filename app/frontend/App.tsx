@@ -356,11 +356,11 @@ export function App() {
    * Loads HuggingFace repos and datasets if user has connected their account
    * This enriches the UI with real data from their HF profile
    */
-  // Load HuggingFace data when user connects their account
   React.useEffect(() => {
     const fetchHFData = async () => {
-      // Only fetch once per session
+      // Don't fetch if already loaded or if user/auth not ready
       if (hasLoadedHFData.current) return;
+      if (!isAuthenticated || !currentUser) return;
       if (!currentUser?.integrations?.huggingface?.connected) return;
 
       hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
@@ -377,19 +377,32 @@ export function App() {
         setHfLastSync(new Date());
 
         console.log("Loaded HuggingFace data:", { repos, datasets });
-        // Store in context - make sure setHfRepos and setHfDatasets exist in your context
-        // For now, just log it
         addToast("HuggingFace data synced successfully", "success");
       } catch (error) {
         console.error("Failed to load HuggingFace data:", error);
         hasLoadedHFData.current = false; // Reset on error so they can retry
+        addToast("Failed to sync HuggingFace data", "error");
       }
     };
 
+    // Trigger fetch when BOTH auth and currentUser are ready AND HF is connected
     if (isAuthenticated && currentUser?.integrations?.huggingface?.connected) {
       fetchHFData();
     }
-  }, [isAuthenticated, currentUser?.integrations?.huggingface?.connected]);
+
+    // Reset the flag when user logs out
+    if (!isAuthenticated) {
+      hasLoadedHFData.current = false;
+    }
+  }, [
+    isAuthenticated,
+    currentUser, // Changed from just checking the nested property
+    api,
+    setHfModels,
+    setHfDatasets,
+    setHfLastSync,
+    addToast,
+  ]);
   // Count draft projects for the current researcher
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;
@@ -499,6 +512,20 @@ export function App() {
     setSelectedProjectForProof(project);
     setIsProofOfReproModalOpen(true);
   };
+
+  const handleProjectCreated = React.useCallback(
+    (createdProject: Project) => {
+      console.log("=== handleProjectCreated wrapper called ===");
+      console.log("Created project:", createdProject);
+      console.log("Current projects before add:", projects);
+
+      // Call the context handler
+      handleAddProject(createdProject);
+
+      console.log("handleAddProject from context was called");
+    },
+    [handleAddProject, projects]
+  );
 
   // Set default dashboard page based on user role
   React.useEffect(() => {
@@ -610,18 +637,8 @@ export function App() {
 
           {/* Main content routing */}
           {(() => {
-            console.log("Dashboard render check:", {
-              selectedProject,
-              userRole,
-              activeDashboardPage,
-            });
-
             // Show project detail view if a project is selected
             if (selectedProject) {
-              console.log(
-                "About to render ProjectDetailView for:",
-                selectedProject.title
-              );
               return (
                 <ProjectDetailView
                   project={selectedProject}
@@ -647,6 +664,7 @@ export function App() {
                   onNewProject={handleOpenNewProjectModal}
                   onNavigate={handleDashboardNavigation}
                   onApplyToFunding={handleOpenApplyFundingModal}
+                  onProjectCreated={handleProjectCreated}
                 />
               );
             } else if (userRole === UserRole.ImpactOwner) {
@@ -686,6 +704,7 @@ export function App() {
         <CreateProjectWizardModal
           initialOutputs={newProjectOutputs}
           onClose={() => setIsNewProjectWizardOpen(false)}
+          onProjectCreated={handleProjectCreated}
         />
       )}
 
