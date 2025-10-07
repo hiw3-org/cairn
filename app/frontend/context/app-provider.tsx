@@ -326,11 +326,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleAddProject = (project: Project) => {
-    console.log("handleAddProject called with:", project);
     setProjects((prevProjects) => {
-      console.log("Previous projects:", prevProjects);
       const newProjects = [...prevProjects, project];
-      console.log("New projects array:", newProjects);
       return newProjects;
     });
   };
