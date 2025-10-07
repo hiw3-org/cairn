@@ -520,14 +520,8 @@ export function App() {
 
   const handleProjectCreated = React.useCallback(
     (createdProject: Project) => {
-      console.log("=== handleProjectCreated wrapper called ===");
-      console.log("Created project:", createdProject);
-      console.log("Current projects before add:", projects);
-
       // Call the context handler
       handleAddProject(createdProject);
-
-      console.log("handleAddProject from context was called");
     },
     [handleAddProject, projects]
   );
