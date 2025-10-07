@@ -538,7 +538,6 @@ export const CreateProjectWizardModal = ({
 
       // Update the context with the new project
       if (onProjectCreated) {
-        console.log("Calling onProjectCreated with:", createdProject);
         onProjectCreated(createdProject);
       }
 
