@@ -381,7 +381,6 @@ export function App() {
         setHfDatasets(datasets);
         setHfLastSync(new Date());
 
-        console.log("Loaded HuggingFace data:", { repos, datasets });
         addToast("HuggingFace data synced successfully", "success");
       } catch (error) {
         console.error("Failed to load HuggingFace data:", error);
