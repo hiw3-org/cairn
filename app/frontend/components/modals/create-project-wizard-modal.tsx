@@ -190,10 +190,15 @@ const Step2_ProjectBasics = ({
         <select
           value={data.domain}
           onChange={(e) => setData({ ...data, domain: e.target.value })}
-          className="w-full h-11 px-3 border rounded-lg bg-transparent"
+          className="w-full h-11 px-3 border rounded-lg bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary"
         >
           {RESEARCH_DOMAINS.map((d) => (
-            <option key={d}>{d}</option>
+            <option
+              key={d}
+              className="bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary"
+            >
+              {d}
+            </option>
           ))}
         </select>
       </div>
@@ -202,12 +207,20 @@ const Step2_ProjectBasics = ({
         <select
           value={data.license}
           onChange={(e) => setData({ ...data, license: e.target.value })}
-          className="w-full h-11 px-3 border rounded-lg bg-transparent"
+          className="w-full h-11 px-3 border rounded-lg bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary"
         >
-          <option>MIT</option>
-          <option>Apache 2.0</option>
-          <option>GPL</option>
-          <option>Other</option>
+          <option className="bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary">
+            MIT
+          </option>
+          <option className="bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary">
+            Apache 2.0
+          </option>
+          <option className="bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary">
+            GPL
+          </option>
+          <option className="bg-background-light dark:bg-background-dark-light text-text-primary dark:text-dark-text-primary">
+            Other
+          </option>
         </select>
       </div>
     </div>
@@ -474,9 +487,11 @@ const Step4_Review = ({ data }: { data: any }) => (
 export const CreateProjectWizardModal = ({
   initialOutputs,
   onClose,
+  onProjectCreated,
 }: {
   initialOutputs: any[];
   onClose: () => void;
+  onProjectCreated?: (project: any) => void;
 }) => {
   const { addToast } = useAppContext();
   const api = useApi();
@@ -491,7 +506,7 @@ export const CreateProjectWizardModal = ({
         .replace(/(^\w{1})|(\s+\w{1})/g, (letter) => letter.toUpperCase()) ||
       "",
     description: `An open-source project based on the ${initialOutputs[0]?.name} ${initialOutputs[0]?.type}.`,
-    domain: "robotics", // Changed from ResearchDomain.Robotics to string
+    domain: "robotics",
     license: "MIT",
     artifacts: [],
     reproducibilityChecks: [],
@@ -507,7 +522,6 @@ export const CreateProjectWizardModal = ({
         title: wizardData.title,
         description: wizardData.description,
         field: wizardData.domain,
-        // Just send the URL as publication_url
         publication_url:
           wizardData.artifacts.length > 0
             ? wizardData.artifacts[0].url
@@ -520,9 +534,12 @@ export const CreateProjectWizardModal = ({
           : undefined,
       };
 
-      console.log("Sending project data:", projectData);
-
       const createdProject = await api.createProject(projectData);
+
+      // Update the context with the new project
+      if (onProjectCreated) {
+        onProjectCreated(createdProject);
+      }
 
       addToast(`Project "${createdProject.title}" created successfully!`);
       onClose();

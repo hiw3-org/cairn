@@ -240,8 +240,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         "success"
       );
     }
-
-    console.log("Login success - Role set to:", frontendRole, "User:", user);
   };
 
   const connectWallet = async () => {
@@ -328,8 +326,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleAddProject = (project: Project) => {
-    setProjects((prev) => [project, ...prev]);
-    addToast(`Project draft "${project.title}" created!`, "success");
+    setProjects((prevProjects) => {
+      const newProjects = [...prevProjects, project];
+      return newProjects;
+    });
   };
 
   const handleCreateProjectFromHuggingFace = (

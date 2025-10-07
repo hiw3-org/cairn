@@ -1093,6 +1093,7 @@ export function ResearcherDashboard({
   activePage,
   onNavigate,
   onApplyToFunding,
+  onProjectCreated,
 }: {
   projects: Project[];
   onSelectProject: (p: Project) => void;
@@ -1101,6 +1102,7 @@ export function ResearcherDashboard({
   activePage: string;
   onNavigate: (page: string) => void;
   onApplyToFunding: (project: Project) => void;
+  onProjectCreated: (project: Project) => void;
 }) {
   const { handleSubmitForReproducibility, addToast } = useAppContext();
 
@@ -1116,12 +1118,23 @@ export function ResearcherDashboard({
   };
 
   const myProjects = useMemo(() => {
+    if (!currentUser) return [];
+
+    const userId = currentUser._id || currentUser.id; // Support both formats
+
     const filtered = projects.filter((p) => {
-      const matches = p.researcher_id?._id === currentUser.id;
-      return matches;
+      // Handle both populated and non-populated researcher_id
+      const researcherId =
+        typeof p.researcher_id === "object" && p.researcher_id !== null
+          ? p.researcher_id._id
+          : p.researcher_id;
+
+      return researcherId === userId;
     });
+
     return filtered;
-  }, [projects, currentUser._id]);
+  }, [projects, currentUser]);
+
   let content;
 
   if (activePage === "projects") {
@@ -1198,6 +1211,7 @@ export function ResearcherDashboard({
         <CreateProjectWizardModal
           initialOutputs={wizardOutputs}
           onClose={() => setIsWizardOpen(false)}
+          onProjectCreated={onProjectCreated}
         />
       )}
 

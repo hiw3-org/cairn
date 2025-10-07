@@ -68,11 +68,9 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
     await provider.send("eth_requestAccounts", []);
     const signer = await provider.getSigner(address);
     setSigner(signer);
-    console.log("Signer initialized:", signer);
 
     const cairn = new ethers.Contract(CONTRACT_ADDRESS, CairnAbi.abi, signer);
     setCairnContract(cairn);
-    console.log("Cairn contract initialized:", cairn);
 
     const hypercert = new ethers.Contract(
       HYPERCERT_ADDRESS,
@@ -80,7 +78,6 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
       signer
     );
     setHypercertContract(hypercert);
-    console.log("Hypercert contract initialized:", hypercert);
   };
 
   const parseProjectFromContract = (p: any) => ({
@@ -218,7 +215,6 @@ export const ContractProvider: React.FC<{ children: React.ReactNode }> = ({
       throw err;
     }
   };
-
 
   const contractDisputeProof = async (
     proofCID: string,
