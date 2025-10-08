@@ -11,6 +11,7 @@ import { ReproducibilityDetailModal } from "./components/modals/reproduction-det
 import { useAppContext } from "./context/app-provider";
 import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { useApi } from "./context/api-context";
+import { useWalletConnection, useWalletActions, usePrivyAuth } from "./context/wallet-context";
 import {
   UserRole,
   Project,
@@ -240,6 +241,10 @@ export function App() {
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
   const hasLoadedHFData = React.useRef(false);
+
+  // Wallet connection and authentication hooks
+  const walletConnection = useWalletConnection();
+  const privyAuth = usePrivyAuth();
 
   // Get app context and API functions
   const {
@@ -512,12 +517,137 @@ export function App() {
   }, [userRole]);
 
   // ===== RENDER LOGIC =====
+  
+  // Global Privy Test Display (shows auth + wallet status on all pages)
+  const WalletTestDisplay = () => {
+    const { connectExternal } = useWalletActions();
+    
+    return (
+      <div style={{ 
+        position: 'fixed', 
+        top: '10px', 
+        right: '10px', 
+        background: 'rgba(0,0,0,0.9)', 
+        color: 'white', 
+        padding: '12px', 
+        borderRadius: '8px', 
+        fontSize: '11px', 
+        zIndex: 9999,
+        fontFamily: 'monospace',
+        border: '1px solid #333',
+        minWidth: '220px'
+      }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>🔗 Privy Integration Test</div>
+        
+        {/* Privy Authentication Status */}
+        <div style={{ marginBottom: '4px' }}>
+          Privy Auth: {privyAuth.isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
+        </div>
+        
+        {/* Cairn Authentication Status */}
+        <div style={{ marginBottom: '4px' }}>
+          Cairn Auth: {isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
+        </div>
+        
+        {/* Wallet Status */}
+        <div style={{ marginBottom: '4px' }}>
+          Wallet: {walletConnection.isConnected ? '✅ Connected' : '❌ Not Connected'}
+        </div>
+        
+        {/* Privy User Info */}
+        {privyAuth.isAuthenticated && privyAuth.user && (
+          <div style={{ fontSize: '10px', color: '#90EE90', marginBottom: '4px' }}>
+            Privy User: {privyAuth.user.id?.slice(0, 8)}...
+          </div>
+        )}
+        
+        {/* Cairn User Info */}
+        {isAuthenticated && currentUser && (
+          <div style={{ fontSize: '10px', color: '#87CEEB', marginBottom: '4px' }}>
+            Cairn User: {currentUser.username}
+          </div>
+        )}
+        
+        {/* Wallet Details */}
+        {walletConnection.isConnected && (
+          <>
+            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
+              Address: {walletConnection.address?.slice(0,6)}...{walletConnection.address?.slice(-4)}
+            </div>
+            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
+              Network: {walletConnection.network || 'Unknown'}
+            </div>
+            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
+              Type: {walletConnection.isEmbedded ? 'Embedded' : 'External'}
+            </div>
+          </>
+        )}
+        
+        {/* Action Buttons */}
+        <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexDirection: 'column' }}>
+          {!privyAuth.isAuthenticated && (
+            <button
+              onClick={() => privyAuth.login()}
+              style={{
+                padding: '4px 8px',
+                background: '#22c55e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              Privy Social Login
+            </button>
+          )}
+          
+          {privyAuth.isAuthenticated && (
+            <button
+              onClick={() => privyAuth.logout()}
+              style={{
+                padding: '4px 8px',
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              Logout
+            </button>
+          )}
+          
+          {!walletConnection.isConnected && (
+            <button
+              onClick={() => connectExternal()}
+              style={{
+                padding: '4px 8px',
+                background: '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              Connect Wallet
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
     console.log("Rendering landing page");
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <WalletTestDisplay />
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
@@ -526,8 +656,10 @@ export function App() {
     // Guest browsing - can view projects but not interact
     if (isGuestBrowsing) {
       return (
-        <PublicLayout>
-          <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
+        <>
+          <WalletTestDisplay />
+          <PublicLayout>
+            <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
             {isLoadingProjects ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-text-primary dark:text-dark-text-primary">
@@ -564,19 +696,26 @@ export function App() {
             )}
           </div>
         </PublicLayout>
+        </>
       );
     }
 
     // Static public pages
     if (staticPage === "howitworks") {
       return (
-        <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        <>
+          <WalletTestDisplay />
+          <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        </>
       );
     }
 
     // Default landing page
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <WalletTestDisplay />
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
@@ -584,15 +723,20 @@ export function App() {
   if (!currentUser) {
     console.log("No current user, showing loading");
     return (
-      <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
-        Loading user profile...
-      </div>
+      <>
+        <WalletTestDisplay />
+        <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
+          Loading user profile...
+        </div>
+      </>
     );
   }
 
   // ===== AUTHENTICATED USER FLOW =====
   return (
     <>
+      <WalletTestDisplay />
+      
       {/* Main application layout */}
       <AppLayout
         activePage={activeDashboardPage}

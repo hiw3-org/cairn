@@ -4,6 +4,7 @@ import { App } from "./App";
 import { AppProvider } from "./context/app-provider";
 import { ContractProvider } from "./context/contract-context";
 import { ApiProvider } from "./context/api-context";
+import { WalletProvider } from "./context/wallet-context"; 
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -20,7 +21,9 @@ root.render(
     <ApiProvider apiUrl={apiUrl}>
       <AppProvider>
         <ContractProvider>
-          <App />
+          <WalletProvider>
+            <App />
+          </WalletProvider>
         </ContractProvider>
       </AppProvider>
     </ApiProvider>
