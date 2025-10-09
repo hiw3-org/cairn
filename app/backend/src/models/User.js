@@ -2,22 +2,15 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  // Basic user information
-  email: {
-    type: String,
-    unique: true,
-    sparse: true, // Allow null values to be non-unique
-    lowercase: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
-  },
-  username: {
+  // Privy authentication (primary identifier)
+  privyId: {
     type: String,
     unique: true,
     sparse: true,
-    minlength: [3, 'Username must be at least 3 characters long'],
-    maxlength: [30, 'Username cannot exceed 30 characters']
+    index: true
   },
 
+  // Wallet address (can be one of multiple linked to Privy account)
   address: {
     type: String,
     required: false,
@@ -25,6 +18,24 @@ const userSchema = new mongoose.Schema({
     sparse: true, // Allow null values to be non-unique
     lowercase: true,
     match: [/^0x[a-fA-F0-9]{40}$/, 'Please provide a valid Ethereum address']
+  },
+
+  // Optional profile identifiers (no longer required for auth)
+  email: {
+    type: String,
+    required: false,
+    unique: true,
+    sparse: true, // Allow null values to be non-unique
+    lowercase: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+  },
+  username: {
+    type: String,
+    required: false,
+    unique: true,
+    sparse: true,
+    minlength: [3, 'Username must be at least 3 characters long'],
+    maxlength: [30, 'Username cannot exceed 30 characters']
   },
   
   // Profile information
@@ -67,9 +78,10 @@ const userSchema = new mongoose.Schema({
   }],
 
 
-  // Authentication
+  // Authentication (optional, only for legacy email/password users)
   password: {
     type: String,
+    required: false,
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
   },

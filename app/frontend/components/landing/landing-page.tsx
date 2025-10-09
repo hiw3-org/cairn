@@ -8,500 +8,131 @@ import {
   UsersGroupIcon,
   XIcon,
   GitHubIcon,
-  WalletIcon,
-  ArrowRightIcon,
   ChevronDownIcon,
   MenuIcon,
   CloseIcon,
-  GvelIcon,
-  GoogleIcon,
-  SparklesIcon,
   MetaMaskIcon,
-  OpenIdIcon,
   SpinnerIcon,
   HuggingFaceIcon,
   CheckCircleIcon,
 } from "../ui/icons";
 import { LandingHeaderLogo, AppLogo } from "../ui/logo";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/app-provider";
 import { useApi } from "../../context/api-context";
 import { UserRole } from "../../lib/types";
 import { Modal } from "../ui/modal";
+import { usePrivyAuth, useWalletConnection } from "../../context/wallet-context";
+import { useWallets } from "@privy-io/react-auth";
 
 const AuthModal = ({
   onClose,
-  initialMode = "login",
 }: {
   onClose: () => void;
-  initialMode?: "login" | "signup";
 }) => {
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const { handleLoginSuccess } = useAppContext();
-  const { signupUser, loginUser, isLoading, error } = useApi(); // Use API context
+  const privyAuth = usePrivyAuth();
+  const { wallets } = useWallets();
 
-  // Signup state
-  const [signupStep, setSignupStep] = useState(1);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Step 1 state
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Step 2 state
-  const [username, setUsername] = useState("");
-  const [address, setAddress] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [department, setDepartment] = useState("");
-  const [researchInterests, setResearchInterests] = useState("");
-  const [bio, setBio] = useState("");
-  const [website, setWebsite] = useState("");
-  const [orcid, setOrcid] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [github, setGithub] = useState("");
-  const [signupSuccess, setSignupSuccess] = useState(false);
-
-  // Login state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const user = await loginUser(loginEmail, loginPassword);
-      handleLoginSuccess(user); 
-      console.log("Login successful:", user);
-      onClose();
-      // The API context handles token storage automatically
-    } catch (error) {
-      console.error("Login failed:", error);
-      // Error is handled by API context and available in the error state
+  // Trigger Privy login immediately when modal opens
+  useEffect(() => {
+    if (!privyAuth.isAuthenticated && privyAuth.isReady) {
+      privyAuth.login();
     }
-  };
+  }, [privyAuth.isReady]);
 
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // Prepare research interests as array
-      const interestsArray = researchInterests
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      // Use the API context signup method
-      const user = await signupUser({
-        email,
-        username,
-        password,
-        address,
-        profile: {
-          firstName,
-          lastName,
-          institution,
-          department,
-          researchInterests: interestsArray,
-          bio,
-          website,
-          orcid,
-          twitter,
-          github,
-        },
-      });
-
-      console.log("Signup successful:", user);
-      setSignupSuccess(true);
-      // The API context handles token storage automatically
-    } catch (error) {
-      console.error("Signup failed:", error);
-      // Error is handled by API context and available in the error state
-    }
-  };
-
-  const renderLoginForm = () => (
-    <form onSubmit={handleLoginSubmit} className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
-          Log in to your account
-        </h3>
-        <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-          Enter your credentials to continue.
-        </p>
-      </div>
-      
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Email</label>
-        <input
-          type="email"
-          value={loginEmail}
-          onChange={(e) => setLoginEmail(e.target.value)}
-          required
-          className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-        />
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">Password</label>
-        <input
-          type="password"
-          value={loginPassword}
-          onChange={(e) => setLoginPassword(e.target.value)}
-          required
-          className="w-full px-4 py-2 border rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
-      >
-        {isLoading ? (
-          <SpinnerIcon className="animate-spin w-5 h-5" />
-        ) : (
-          <span>Log In</span>
-        )}
-      </button>
-
-      <p className="text-center text-sm">
-        Don't have an account?{" "}
-        <button
-          type="button"
-          onClick={() => setMode("signup")}
-          className="font-semibold text-primary hover:underline"
-        >
-          Apply to join
-        </button>
-      </p>
-    </form>
-  );
-
-  const [signupRole, setSignupRole] = useState<UserRole>(UserRole.Researcher);
-
-  const renderSignupForm = () => (
-    <form
-      onSubmit={
-        signupStep === 2
-          ? handleSignupSubmit
-          : (e) => {
-              e.preventDefault();
-              setSignupStep(2);
-            }
+  // Handle Privy authentication flow
+  useEffect(() => {
+    const handlePrivyAuth = async () => {
+      // Only proceed if Privy authentication is complete and we have wallet
+      if (!privyAuth.isAuthenticated || !privyAuth.user || isAuthenticating) {
+        return;
       }
-      className="space-y-6"
-    >
-      <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-        Submit your application to join the CAIRN platform. Your application will be manually reviewed.
-      </p>
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
 
-      <div className="mx-auto w-full max-w-3xl">
-        {signupStep === 1 ? (
-          <div className="border border-cairn-gray-800 rounded-2xl bg-cairn-gray-900/80 p-10 space-y-6 shadow-lg">
-            <div>
-              <label className="block text-sm font-medium text-text-primary dark:text-text-dark-primary mb-1">Full Name</label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                placeholder="First Name"
-                className="w-full px-4 py-2 mb-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                placeholder="Last Name"
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">I am a...</label>
-              <div className="flex gap-4">
-                <label className={`flex-1 flex items-center p-3 border rounded-lg cursor-pointer transition-all
-                  ${signupRole === UserRole.Researcher ? "bg-blue-600/30 border-blue-400" : "border-cairn-gray-700"}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value={UserRole.Researcher}
-                    checked={signupRole === UserRole.Researcher}
-                    onChange={() => setSignupRole(UserRole.Researcher)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-cairn-gray-400"
-                  />
-                  <span className="ml-3 text-sm font-medium text-gray-100">Researcher</span>
-                </label>
-                <label className={`flex-1 flex items-center p-3 border rounded-lg cursor-pointer transition-all
-                  ${signupRole === UserRole.Funder ? "bg-blue-600/30 border-blue-400" : "border-cairn-gray-700"}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value={UserRole.Funder}
-                    checked={signupRole === UserRole.Funder}
-                    onChange={() => setSignupRole(UserRole.Funder)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-cairn-gray-400"
-                  />
-                  <span className="ml-3 text-sm font-medium text-gray-100">Funder</span>
-                </label>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setSignupStep(2)}
-              className="w-full bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
-            >
-              Continue
-            </button>
-            <p className="text-center text-sm text-cairn-gray-300">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="font-semibold text-blue-400 hover:underline"
-              >
-                Log In
-              </button>
-            </p>
-          </div>
-        ) : (
-          <div className="border border-cairn-gray-800 rounded-2xl bg-cairn-gray-900/80 p-10 space-y-6 shadow-lg">
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Wallet Address</label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Institution</label>
-              <input
-                type="text"
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Department</label>
-              <input
-                type="text"
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Research Interests (comma-separated)</label>
-              <input
-                type="text"
-                value={researchInterests}
-                onChange={(e) => setResearchInterests(e.target.value)}
-                required
-                placeholder="e.g., Machine Learning, NLP"
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">Bio</label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-cairn-gray-200 mb-1">References (Optional)</label>
-              <div className="space-y-2">
-                <input
-                  type="url"
-                  placeholder="Website"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-                />
-                <input
-                  type="text"
-                  placeholder="ORCID"
-                  value={orcid}
-                  onChange={(e) => setOrcid(e.target.value)}
-                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-                />
-                <input
-                  type="text"
-                  placeholder="Twitter"
-                  value={twitter}
-                  onChange={(e) => setTwitter(e.target.value)}
-                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-                />
-                <input
-                  type="text"
-                  placeholder="GitHub"
-                  value={github}
-                  onChange={(e) => setGithub(e.target.value)}
-                  className="w-full px-4 py-2 border border-cairn-gray-700 rounded-lg bg-cairn-gray-950 text-gray-800 focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
-            >
-              {isLoading ? (
-                <SpinnerIcon className="animate-spin w-5 h-5" />
-              ) : (
-                <span>Submit Application</span>
-              )}
-            </button>
-            <p className="text-center text-sm">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="font-semibold text-primary hover:underline"
-              >
-                Log In
-              </button>
-            </p>
-          </div>
-        )}
-      </div>
-    </form>
-  );
+      // Get wallet address from Privy wallets
+      const privyWallet = wallets?.[0];
+      if (!privyWallet?.address) {
+        return;
+      }
 
-  const renderLoginOptions = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
-          Log in to your account
-        </h3>
-        <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-          Authentication options coming soon.
-        </p>
-      </div>
-      <div className="space-y-4">
-        <button
-          disabled
-          className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl bg-gray-50 dark:bg-gray-900 cursor-not-allowed opacity-60"
-        >
-          <HuggingFaceIcon className="w-8 h-8 text-gray-400" />
-          <div className="text-left">
-            <p className="font-semibold text-gray-500 dark:text-gray-400">
-              Continue as Researcher
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Hugging Face login - Coming Soon
-            </p>
-          </div>
-        </button>
-        <button
-          disabled
-          className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl bg-gray-50 dark:bg-gray-900 cursor-not-allowed opacity-60"
-        >
-          <MetaMaskIcon className="w-8 h-8 text-gray-400" />
-          <div className="text-left">
-            <p className="font-semibold text-gray-500 dark:text-gray-400">
-              Continue as Funder
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              MetaMask login - Coming Soon
-            </p>
-          </div>
-        </button>
-      </div>
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        {/* Don't have an account?{" "} */}
-        <span className="font-semibold text-gray-400 cursor-not-allowed">
-          Registration coming soon
-        </span>
-      </p>
-    </div>
-  );
+      setIsAuthenticating(true);
+      setAuthError(null);
 
-  const renderSignupSuccess = () => (
-    <div className="text-center p-8">
-      <CheckCircleIcon className="w-16 h-16 text-status-success mx-auto" />
-      <h3 className="text-2xl font-bold mt-4 text-text dark:text-text-dark">
-        Application Submitted!
-      </h3>
-      <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
-        Thanks for applying. We'll review your application and get back to you
-        soon.
-      </p>
-      <button
-        onClick={onClose}
-        className="mt-6 w-full bg-primary text-white font-semibold py-3 px-5 rounded-xl hover:bg-primary-hover"
-      >
-        Close
-      </button>
-    </div>
-  );
+      try {
+        // Call backend Privy auth endpoint
+        const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
+        const response = await fetch(`${API_BASE}/api/v1/users/privy-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            privyId: privyAuth.user.id,
+            address: privyWallet.address,
+          }),
+        });
 
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Authentication failed');
+        }
+
+        const data = await response.json();
+
+        // Update app context with user data
+        handleLoginSuccess(data.data.user);
+        onClose();
+      } catch (error) {
+        console.error('❌ Cairn authentication failed:', error);
+        setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+        // Optionally logout from Privy if backend auth fails
+        await privyAuth.logout();
+      } finally {
+        setIsAuthenticating(false);
+      }
+    };
+
+    handlePrivyAuth();
+  }, [privyAuth.isAuthenticated, privyAuth.user, wallets, isAuthenticating]);
+
+  // Show loading/error state while authenticating
   return (
-    <Modal
-      onClose={onClose}
-      title={
-        mode === "login"
-          ? "Log In"
-          : signupSuccess
-          ? "Application Received"
-          : "Apply to CAIRN"
-      }
-    >
-      <div className="w-full max-w-md mx-auto">
-        {signupSuccess
-          ? renderSignupSuccess()
-          : mode === "login"
-          ? renderLoginForm()  // Use the new login form instead of renderLoginOptions
-          : renderSignupForm()}
+    <Modal onClose={onClose} title="Authenticating">
+      <div className="w-full max-w-md mx-auto p-8">
+        {authError ? (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+            </div>
+            <button
+              onClick={() => {
+                setAuthError(null);
+                privyAuth.login();
+              }}
+              className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
+            >
+              <span>Try Again</span>
+            </button>
+          </div>
+        ) : isAuthenticating ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <SpinnerIcon className="animate-spin w-8 h-8 text-blue-600" />
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+              Connecting to Cairn...
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <SpinnerIcon className="animate-spin w-8 h-8 text-blue-600" />
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+              Opening authentication...
+            </p>
+          </div>
+        )}
       </div>
     </Modal>
   );
@@ -517,7 +148,6 @@ const LandingHeader = ({
   onLoginClick: () => void;
   onSignupClick: () => void;
 }) => {
-  const { isAuthenticated, enterApp } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const scrollToSection = (sectionId: string) => {
@@ -530,84 +160,6 @@ const LandingHeader = ({
   const handleNavigate = (page: "howitworks") => {
     onNavigate(page);
     setIsMobileMenuOpen(false);
-  };
-
-  const handleConnectWallet = async () => {
-    if (typeof window.ethereum !== "undefined") {
-      try {
-        const TARGET_CHAIN_ID = "0x4cb2f"; // Filecoin Calibration = 0x13a (decimal 314159)
-
-        const currentChainId = await window.ethereum.request({
-          method: "eth_chainId",
-        });
-
-        console.log("Current chain ID:", currentChainId);
-
-        if (currentChainId !== TARGET_CHAIN_ID) {
-          try {
-            // Try to switch to Filecoin Calibration
-            await window.ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: TARGET_CHAIN_ID }],
-            });
-          } catch (switchError: any) {
-            // If the chain is not added to MetaMask, add it
-            if (switchError.code === 4902) {
-              try {
-                await window.ethereum.request({
-                  method: "wallet_addEthereumChain",
-                  params: [
-                    {
-                      chainId: TARGET_CHAIN_ID,
-                      chainName: "Filecoin Calibration",
-                      nativeCurrency: {
-                        name: "tFIL",
-                        symbol: "tFIL",
-                        decimals: 18,
-                      },
-                      rpcUrls: [
-                        "https://filecoin-calibration.chainup.net/rpc/v1",
-                      ],
-                      blockExplorerUrls: ["https://calibration.filfox.info/en"],
-                    },
-                  ],
-                });
-              } catch (addError) {
-                console.error("Failed to add chain:", addError);
-                return;
-              }
-            } else {
-              console.error("Failed to switch chain:", switchError);
-              return;
-            }
-          }
-        }
-
-        // ✅ Connect wallet
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        const address = accounts[0];
-
-        await initWithWallet(address);
-        const porCount = await getUserPoRCount(address);
-
-        setCurrentUser({
-          walletAddress: address,
-          porContributedCount: porCount,
-          role: UserRole.Scientist,
-        });
-
-        setUserRole(UserRole.Scientist);
-        setConnectedWallet(address);
-        console.log("User connected:", address, "Role:", UserRole.Scientist);
-        console.log("PoR Count:", porCount);
-      } catch (err) {
-        console.error("User rejected wallet connection or chain switch:", err);
-      }
-    } else {
-      alert("Please install MetaMask.");
-    }
   };
 
   return (
@@ -1000,12 +552,8 @@ export const LandingPage = ({
   onNavigate: (page: "howitworks") => void;
 }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
-  const [authModalMode, setAuthModalMode] = React.useState<"login" | "signup">(
-    "login"
-  );
 
-  const openAuthModal = (mode: "login" | "signup") => {
-    setAuthModalMode(mode);
+  const openAuthModal = () => {
     setIsAuthModalOpen(true);
   };
 
@@ -1013,22 +561,19 @@ export const LandingPage = ({
     <div className="bg-cairn-gray-950 font-sans">
       <LandingHeader
         onNavigate={onNavigate}
-        onLoginClick={() => openAuthModal("login")}
-        onSignupClick={() => openAuthModal("signup")}
+        onLoginClick={openAuthModal}
+        onSignupClick={openAuthModal}
       />
       <main>
         <HeroSection
-          onLoginClick={() => openAuthModal("login")}
-          onSignupClick={() => openAuthModal("signup")}
+          onLoginClick={openAuthModal}
+          onSignupClick={openAuthModal}
         />
         <FeaturesSection />
       </main>
       <AppFooter />
       {isAuthModalOpen && (
-        <AuthModal
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-        />
+        <AuthModal onClose={() => setIsAuthModalOpen(false)} />
       )}
     </div>
   );

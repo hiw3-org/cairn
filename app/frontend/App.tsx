@@ -189,15 +189,9 @@ const AppLayout = ({
  * Simpler layout without sidebar, used for guest browsing and landing pages
  */
 const PublicLayout = ({
-  children,
-  selectedProject,
-  onSelectProject,
-  onBackToLibrary,
+  children
 }: {
   children: React.ReactNode;
-  selectedProject?: Project | null;
-  onSelectProject?: (project: Project) => void;
-  onBackToLibrary?: () => void;
 }) => {
   const { goToLandingPage } = useAppContext();
 
@@ -332,7 +326,6 @@ export function App() {
     setIsLoadingProjects(true);
     try {
       const result = await api.fetchProjects({ limit: 50 });
-      console.log("Fetched projects from API:", result);
 
       if (!result || !result.projects) {
         throw new Error("Invalid response from server");
@@ -340,7 +333,6 @@ export function App() {
 
       // Projects from API already match our unified Project interface
       setProjects(result.projects);
-      console.log("Set projects:", result.projects);
     } catch (error) {
       console.error("Failed to load projects:", error);
       addToast("Failed to load projects from server", "error");
@@ -371,7 +363,6 @@ export function App() {
       hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
 
       try {
-        console.log("Fetching HuggingFace data...");
         const [repos, datasets] = await Promise.all([
           api.getHFRepos(50),
           api.getHFDatasets(50),
@@ -431,7 +422,6 @@ export function App() {
   };
 
   const handleSelectProject = (project: Project) => {
-    console.log("handleSelectProject called with:", project.title, project._id);
     setSelectedProject(project);
   };
 
@@ -541,34 +531,55 @@ export function App() {
   // Global Privy Test Display (shows auth + wallet status on all pages)
   const WalletTestDisplay = () => {
     const { connectExternal } = useWalletActions();
-    
+
+    // Don't show status until Privy SDK is ready
+    if (!privyAuth.isReady) {
+      return (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          background: 'rgba(0,0,0,0.9)',
+          color: 'white',
+          padding: '12px',
+          borderRadius: '8px',
+          fontSize: '11px',
+          zIndex: 9999,
+          fontFamily: 'monospace',
+          border: '1px solid #333'
+        }}>
+          <div>⏳ Privy initializing...</div>
+        </div>
+      );
+    }
+
     return (
-      <div style={{ 
-        position: 'fixed', 
-        top: '10px', 
-        right: '10px', 
-        background: 'rgba(0,0,0,0.9)', 
-        color: 'white', 
-        padding: '12px', 
-        borderRadius: '8px', 
-        fontSize: '11px', 
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        right: '10px',
+        background: 'rgba(0,0,0,0.9)',
+        color: 'white',
+        padding: '12px',
+        borderRadius: '8px',
+        fontSize: '11px',
         zIndex: 9999,
         fontFamily: 'monospace',
         border: '1px solid #333',
         minWidth: '220px'
       }}>
         <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>🔗 Privy Integration Test</div>
-        
+
         {/* Privy Authentication Status */}
         <div style={{ marginBottom: '4px' }}>
           Privy Auth: {privyAuth.isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
         </div>
-        
+
         {/* Cairn Authentication Status */}
         <div style={{ marginBottom: '4px' }}>
           Cairn Auth: {isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
         </div>
-        
+
         {/* Wallet Status */}
         <div style={{ marginBottom: '4px' }}>
           Wallet: {walletConnection.isConnected ? '✅ Connected' : '❌ Not Connected'}
@@ -662,7 +673,6 @@ export function App() {
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
-    console.log("Rendering landing page");
     return (
       <>
         <WalletTestDisplay />
@@ -741,7 +751,6 @@ export function App() {
 
   // Loading state while user data is being fetched
   if (!currentUser) {
-    console.log("No current user, showing loading");
     return (
       <>
         <WalletTestDisplay />

@@ -3,7 +3,7 @@
  * Preserves existing authentication while adding wallet capabilities
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { usePrivyWallet } from '../hooks/use-privy-wallet';
 import { 
@@ -15,7 +15,6 @@ import {
 
 // Get Privy App ID from environment (defined in vite.config.ts)
 const privyAppId = process.env.REACT_APP_PRIVY_APP_ID;
-console.log('Privy App ID loaded:', privyAppId ? 'Found' : 'Missing', privyAppId?.slice(0, 8) + '...');
 
 // Privy configuration for social login + wallet
 const PRIVY_CONFIG = {
@@ -94,47 +93,24 @@ const WalletProviderInner: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (ready && privyWallet.isReady && !isInitialized) {
       setIsInitialized(true);
-      console.log('🔗 Privy context initialized', { authenticated, hasUser: !!user });
     }
-  }, [ready, privyWallet.isReady, isInitialized, authenticated, user]);
+  }, [ready, privyWallet.isReady, isInitialized]);
 
-  // Log authentication changes
-  useEffect(() => {
-    if (authenticated && user) {
-      console.log('🔐 User authenticated:', {
-        id: user.id,
-        wallets: user.linkedAccounts?.filter((acc: any) => acc.type === 'wallet')?.length || 0,
-        socialAccounts: user.linkedAccounts?.filter((acc: any) => acc.type !== 'wallet')?.length || 0,
-      });
-    }
-  }, [authenticated, user]);
-
-  // Log wallet state changes
-  useEffect(() => {
-    if (privyWallet.walletState.isConnected) {
-      console.log('🔗 Wallet connected:', {
-        address: privyWallet.walletState.address,
-        network: privyWallet.walletState.network,
-        isEmbedded: privyWallet.walletState.isEmbedded,
-      });
-    }
-  }, [privyWallet.walletState]);
-
-  const contextValue: WalletContextType = {
+  const contextValue: WalletContextType = useMemo(() => ({
     // Authentication state
     isAuthenticated: authenticated,
     user,
     isPrivyReady: ready,
-    
+
     // Wallet state
     walletState: privyWallet.walletState,
     isWalletReady: privyWallet.isReady && isInitialized,
     isNetworkSupported: privyWallet.isNetworkSupported,
-    
+
     // Authentication actions
     login,
     logout,
-    
+
     // Wallet actions
     connectExternalWallet: privyWallet.connectExternalWallet,
     createEmbeddedWallet: privyWallet.createEmbeddedWallet,
@@ -142,10 +118,27 @@ const WalletProviderInner: React.FC<{ children: React.ReactNode }> = ({ children
     signMessage: privyWallet.signMessage,
     getWalletInfo: privyWallet.getWalletInfo,
     disconnectWallet: privyWallet.disconnectWallet,
-    
+
     // Helper data
     supportedNetworks: privyWallet.supportedNetworks,
-  };
+  }), [
+    authenticated,
+    user,
+    ready,
+    privyWallet.walletState,
+    privyWallet.isReady,
+    isInitialized,
+    privyWallet.isNetworkSupported,
+    login,
+    logout,
+    privyWallet.connectExternalWallet,
+    privyWallet.createEmbeddedWallet,
+    privyWallet.switchNetwork,
+    privyWallet.signMessage,
+    privyWallet.getWalletInfo,
+    privyWallet.disconnectWallet,
+    privyWallet.supportedNetworks,
+  ]);
 
   return (
     <WalletContext.Provider value={contextValue}>

@@ -132,8 +132,24 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
+// Validation rules for Privy authentication
+const validatePrivyAuth = [
+  body("privyId")
+    .notEmpty()
+    .withMessage("Privy ID is required")
+    .matches(/^did:privy:[a-z0-9]+$/)
+    .withMessage("Invalid Privy ID format"),
+
+  body("address")
+    .notEmpty()
+    .withMessage("Wallet address is required")
+    .matches(/^0x[a-fA-F0-9]{40}$/)
+    .withMessage("Please provide a valid Ethereum address"),
+];
+
 module.exports = {
   validateUserCreation,
   validateSignup,
+  validatePrivyAuth,
   handleValidationErrors,
 };

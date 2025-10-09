@@ -3,6 +3,7 @@ const { asyncHandler } = require("../middleware/errorHandler");
 const {
   validateUserCreation,
   validateSignup,
+  validatePrivyAuth,
   handleValidationErrors,
 } = require("../middleware/userValidation");
 const {
@@ -179,6 +180,68 @@ router.get(
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
+        },
+      },
+    });
+  })
+);
+
+// @desc    Privy authentication (create or login)
+// @route   POST /api/v1/users/privy-auth
+// @access  Public
+router.post(
+  "/privy-auth",
+  validatePrivyAuth,
+  handleValidationErrors,
+  asyncHandler(async (req, res) => {
+    const { privyId, address } = req.body;
+
+    // Find existing user by privyId or address
+    let user = await User.findOne({
+      $or: [
+        { privyId },
+        { address: address.toLowerCase() }
+      ]
+    });
+
+    if (user) {
+      // Update existing user with Privy ID if not set
+      if (!user.privyId) {
+        user.privyId = privyId;
+      }
+      // Update address if not set
+      if (!user.address) {
+        user.address = address.toLowerCase();
+      }
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        privyId,
+        address: address.toLowerCase(),
+        role: "researcher", // Default role
+      });
+    }
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    // Set cookie
+    res.cookie("auth_token", token, getCookieOptions());
+
+    res.status(200).json({
+      status: "success",
+      message: user.isNew ? "Account created successfully" : "Login successful",
+      data: {
+        user: {
+          _id: user._id,
+          privyId: user.privyId,
+          address: user.address,
+          role: user.role,
+          profile: user.profile,
+          lastLogin: user.lastLogin,
         },
       },
     });
