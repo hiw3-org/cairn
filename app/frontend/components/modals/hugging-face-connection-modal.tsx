@@ -238,27 +238,134 @@ export const ConnectHuggingFaceModal = ({
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
-      // Poll for connection status (since callback happens on backend)
-      const pollInterval = setInterval(async () => {
-        try {
-          const status = await api.getHFStatus();
+      // Declare interval and timeout refs first
+      let pollInterval: NodeJS.Timeout | null = null;
+      let timeoutId: NodeJS.Timeout | null = null;
 
-          if (status.connected) {
-            clearInterval(pollInterval);
-            authWindow?.close();
-            setIsAuthorizing(false);
+      // Listen for messages from the OAuth callback page
+      const handleMessage = async (event: MessageEvent) => {
+        console.log("📨 Message received from:", event.origin, "data:", event.data);
 
-            // Update user permissions
-            setCurrentUser((prev) => {
-              if (!prev) return prev;
-              const currentPermissions = prev.permissions || [];
-              if (!currentPermissions.includes("huggingface")) {
+        // Accept messages from localhost or your backend domain
+        // For development, we'll accept from localhost
+        if (!event.origin.includes('localhost') && !event.origin.includes(window.location.hostname)) {
+          console.log("⚠️ Message origin rejected:", event.origin);
+          return;
+        }
+
+        // Verify the message type
+        if (event.data?.type === "hf_oauth_success") {
+          console.log("✅ HF OAuth success message received!");
+
+          if (pollInterval) clearInterval(pollInterval);
+          if (timeoutId) clearTimeout(timeoutId);
+          window.removeEventListener("message", handleMessage);
+
+          // Close the popup window
+          if (authWindow && !authWindow.closed) {
+            authWindow.close();
+            console.log("🔒 Popup window closed");
+          }
+          setIsAuthorizing(false);
+
+          // Fetch the updated connection status
+          try {
+            const status = await api.getHFStatus();
+            console.log("📊 HF Status:", status);
+
+            if (status.connected) {
+              // Update user with HF integration info
+              setCurrentUser((prev) => {
+                if (!prev) return prev;
                 return {
                   ...prev,
-                  permissions: [...currentPermissions, "huggingface"],
+                  integrations: {
+                    ...prev.integrations,
+                    huggingface: {
+                      connected: true,
+                      username: status.username,
+                      userId: status.userId,
+                      connectedAt: status.connectedAt,
+                      lastSync: status.lastSync,
+                      scopes: status.scopes || [],
+                    },
+                  },
                 };
+              });
+
+              // Get repo count
+              try {
+                const repos = await api.getHFRepos();
+                setHfData({
+                  username: status.username,
+                  repoCount: repos.length,
+                });
+              } catch (error) {
+                setHfData({ username: status.username });
               }
-              return prev;
+
+              setCurrentStep(3);
+              addToast("Successfully connected to Hugging Face!", "success");
+            }
+          } catch (error) {
+            console.error("Error fetching HF status:", error);
+          }
+        }
+      };
+
+      window.addEventListener("message", handleMessage);
+      console.log("👂 Message listener attached, expecting messages from:", window.location.origin);
+
+      // Poll for connection status as fallback (check more frequently)
+      pollInterval = setInterval(async () => {
+        // Debug: Log window state
+        console.log("🪟 Window state:", {
+          exists: !!authWindow,
+          closed: authWindow?.closed,
+          type: typeof authWindow
+        });
+
+        try {
+          const status = await api.getHFStatus();
+          console.log("🔄 Polling status:", status.connected ? "Connected" : "Not connected");
+
+          if (status.connected) {
+            console.log("✅ Polling detected HF connection!");
+            if (pollInterval) clearInterval(pollInterval);
+            if (timeoutId) clearTimeout(timeoutId);
+            window.removeEventListener("message", handleMessage);
+
+            // Try to close the window
+            try {
+              if (authWindow && !authWindow.closed) {
+                authWindow.close();
+                console.log("🔒 Popup window closed by polling");
+              } else {
+                console.log("⚠️ Window already closed or invalid");
+              }
+            } catch (e) {
+              console.log("❌ Error closing window:", e);
+            }
+
+            setIsAuthorizing(false);
+
+            // Update user with HF integration info
+            setCurrentUser((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                integrations: {
+                  ...prev.integrations,
+                  huggingface: {
+                    connected: true,
+                    username: status.username,
+                    userId: status.userId,
+                    connectedAt: status.connectedAt,
+                    lastSync: status.lastSync,
+                    scopes: status.scopes || [],
+                  },
+                },
+              };
             });
 
             // Get repo count
@@ -276,13 +383,17 @@ export const ConnectHuggingFaceModal = ({
             addToast("Successfully connected to Hugging Face!", "success");
           }
         } catch (error) {
-          // Still authorizing, continue polling
+          console.log("⚠️ Polling error:", error);
         }
-      }, 2000); // Poll every 2 seconds
+
+        // Only stop polling if window is actually closed AND we haven't detected connection
+        // Don't rely solely on authWindow.closed as it can be unreliable
+      }, 1000); // Poll every 1 second (faster polling)
 
       // Stop polling after 5 minutes (timeout)
-      setTimeout(() => {
-        clearInterval(pollInterval);
+      timeoutId = setTimeout(() => {
+        if (pollInterval) clearInterval(pollInterval);
+        window.removeEventListener("message", handleMessage);
         if (currentStep !== 3) {
           setIsAuthorizing(false);
           authWindow?.close();
