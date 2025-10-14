@@ -24,6 +24,7 @@ import { UserRole } from "../../lib/types";
 import { Modal } from "../ui/modal";
 import { usePrivyAuth, useWalletConnection } from "../../context/wallet-context";
 import { useWallets } from "@privy-io/react-auth";
+import { SignupModal } from "./signup-modal";
 
 const AuthModal = ({
   onClose,
@@ -497,7 +498,7 @@ const FeaturesSection = () => {
 };
 
 export const AppFooter = () => (
-  <footer className="bg-background-light dark:bg-cairn-gray-950 text-text-secondary dark:text-cairn-gray-400 border-t border-border dark:border-cairn-gray-800">
+  <footer className="bg-cairn-gray-950 text-cairn-gray-400 border-t border-cairn-gray-800">
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* Left Side: Logo and Copyright */}
@@ -514,28 +515,28 @@ export const AppFooter = () => (
           className="flex items-center gap-x-6"
           aria-label="Footer navigation"
         >
-          <a
+          {/* <a
             href="#"
-            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+            className="text-sm font-medium hover:text-white transition-colors"
           >
             Docs
           </a>
           <a
             href="#"
-            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+            className="text-sm font-medium hover:text-white transition-colors"
           >
             FAQ
-          </a>
+          </a> */}
           <a
             href="https://x.com/cairn_platform"
-            className="hover:text-text dark:hover:text-white transition-colors"
+            className="hover:text-white transition-colors"
             aria-label="Twitter"
           >
             <XIcon className="h-5 w-5" />
           </a>
           <a
-            href="#"
-            className="hover:text-text dark:hover:text-white transition-colors"
+            href="https://github.com/hiw3-org/cairn"
+            className="hover:text-white transition-colors"
             aria-label="GitHub"
           >
             <GitHubIcon className="h-5 w-5" />
@@ -551,29 +552,37 @@ export const LandingPage = ({
 }: {
   onNavigate: (page: "howitworks") => void;
 }) => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = React.useState(false);
 
-  const openAuthModal = () => {
-    setIsAuthModalOpen(true);
+  const openLoginModal = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const openSignupModal = () => {
+    setIsSignupModalOpen(true);
   };
 
   return (
     <div className="bg-cairn-gray-950 font-sans">
       <LandingHeader
         onNavigate={onNavigate}
-        onLoginClick={openAuthModal}
-        onSignupClick={openAuthModal}
+        onLoginClick={openLoginModal}
+        onSignupClick={openSignupModal}
       />
       <main>
         <HeroSection
-          onLoginClick={openAuthModal}
-          onSignupClick={openAuthModal}
+          onLoginClick={openLoginModal}
+          onSignupClick={openSignupModal}
         />
         <FeaturesSection />
       </main>
       <AppFooter />
-      {isAuthModalOpen && (
-        <AuthModal onClose={() => setIsAuthModalOpen(false)} />
+      {isLoginModalOpen && (
+        <AuthModal onClose={() => setIsLoginModalOpen(false)} />
+      )}
+      {isSignupModalOpen && (
+        <SignupModal onClose={() => setIsSignupModalOpen(false)} />
       )}
     </div>
   );

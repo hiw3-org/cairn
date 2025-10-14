@@ -355,10 +355,19 @@ export function App() {
    */
   React.useEffect(() => {
     const fetchHFData = async () => {
-      // Don't fetch if already loaded or if user/auth not ready
-      if (hasLoadedHFData.current) return;
+      // Don't fetch if user/auth not ready
       if (!isAuthenticated || !currentUser) return;
-      if (!currentUser?.integrations?.huggingface?.connected) return;
+
+      const isHFConnected = currentUser?.integrations?.huggingface?.connected;
+
+      // If HF is not connected, reset the flag and return
+      if (!isHFConnected) {
+        hasLoadedHFData.current = false;
+        return;
+      }
+
+      // Don't fetch if already loaded
+      if (hasLoadedHFData.current) return;
 
       hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
 
@@ -380,10 +389,7 @@ export function App() {
       }
     };
 
-    // Trigger fetch when BOTH auth and currentUser are ready AND HF is connected
-    if (isAuthenticated && currentUser?.integrations?.huggingface?.connected) {
-      fetchHFData();
-    }
+    fetchHFData();
 
     // Reset the flag when user logs out
     if (!isAuthenticated) {
@@ -391,7 +397,7 @@ export function App() {
     }
   }, [
     isAuthenticated,
-    currentUser, // Changed from just checking the nested property
+    currentUser?.integrations?.huggingface?.connected, // Watch HF connection status specifically
     api,
     setHfModels,
     setHfDatasets,
@@ -527,155 +533,11 @@ export function App() {
   }, [userRole]);
 
   // ===== RENDER LOGIC =====
-  
-  // Global Privy Test Display (shows auth + wallet status on all pages)
-  const WalletTestDisplay = () => {
-    const { connectExternal } = useWalletActions();
-
-    // Don't show status until Privy SDK is ready
-    if (!privyAuth.isReady) {
-      return (
-        <div style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          background: 'rgba(0,0,0,0.9)',
-          color: 'white',
-          padding: '12px',
-          borderRadius: '8px',
-          fontSize: '11px',
-          zIndex: 9999,
-          fontFamily: 'monospace',
-          border: '1px solid #333'
-        }}>
-          <div>⏳ Privy initializing...</div>
-        </div>
-      );
-    }
-
-    return (
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        right: '10px',
-        background: 'rgba(0,0,0,0.9)',
-        color: 'white',
-        padding: '12px',
-        borderRadius: '8px',
-        fontSize: '11px',
-        zIndex: 9999,
-        fontFamily: 'monospace',
-        border: '1px solid #333',
-        minWidth: '220px'
-      }}>
-        <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>🔗 Privy Integration Test</div>
-
-        {/* Privy Authentication Status */}
-        <div style={{ marginBottom: '4px' }}>
-          Privy Auth: {privyAuth.isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
-        </div>
-
-        {/* Cairn Authentication Status */}
-        <div style={{ marginBottom: '4px' }}>
-          Cairn Auth: {isAuthenticated ? '✅ Logged in' : '❌ Not logged in'}
-        </div>
-
-        {/* Wallet Status */}
-        <div style={{ marginBottom: '4px' }}>
-          Wallet: {walletConnection.isConnected ? '✅ Connected' : '❌ Not Connected'}
-        </div>
-        
-        {/* Privy User Info */}
-        {privyAuth.isAuthenticated && privyAuth.user && (
-          <div style={{ fontSize: '10px', color: '#90EE90', marginBottom: '4px' }}>
-            Privy User: {privyAuth.user.id?.slice(0, 8)}...
-          </div>
-        )}
-        
-        {/* Cairn User Info */}
-        {isAuthenticated && currentUser && (
-          <div style={{ fontSize: '10px', color: '#87CEEB', marginBottom: '4px' }}>
-            Cairn User: {currentUser.username}
-          </div>
-        )}
-        
-        {/* Wallet Details */}
-        {walletConnection.isConnected && (
-          <>
-            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
-              Address: {walletConnection.address?.slice(0,6)}...{walletConnection.address?.slice(-4)}
-            </div>
-            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
-              Network: {walletConnection.network || 'Unknown'}
-            </div>
-            <div style={{ fontSize: '10px', color: '#87CEEB' }}>
-              Type: {walletConnection.isEmbedded ? 'Embedded' : 'External'}
-            </div>
-          </>
-        )}
-        
-        {/* Action Buttons */}
-        <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexDirection: 'column' }}>
-          {!privyAuth.isAuthenticated && (
-            <button
-              onClick={() => privyAuth.login()}
-              style={{
-                padding: '4px 8px',
-                background: '#22c55e',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '10px',
-                cursor: 'pointer'
-              }}
-            >
-              Privy Social Login
-            </button>
-          )}
-          
-          {privyAuth.isAuthenticated && (
-            <button
-              onClick={() => privyAuth.logout()}
-              style={{
-                padding: '4px 8px',
-                background: '#dc2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '10px',
-                cursor: 'pointer'
-              }}
-            >
-              Logout
-            </button>
-          )}
-          
-          {!walletConnection.isConnected && (
-            <button
-              onClick={() => connectExternal()}
-              style={{
-                padding: '4px 8px',
-                background: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '10px',
-                cursor: 'pointer'
-              }}
-            >
-              Connect Wallet
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
     return (
       <>
-        <WalletTestDisplay />
         <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
       </>
     );
@@ -687,7 +549,6 @@ export function App() {
     if (isGuestBrowsing) {
       return (
         <>
-          <WalletTestDisplay />
           <PublicLayout>
             <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
             {isLoadingProjects ? (
@@ -734,7 +595,6 @@ export function App() {
     if (staticPage === "howitworks") {
       return (
         <>
-          <WalletTestDisplay />
           <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
         </>
       );
@@ -743,7 +603,6 @@ export function App() {
     // Default landing page
     return (
       <>
-        <WalletTestDisplay />
         <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
       </>
     );
@@ -753,7 +612,6 @@ export function App() {
   if (!currentUser) {
     return (
       <>
-        <WalletTestDisplay />
         <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
           Loading user profile...
         </div>
@@ -763,9 +621,7 @@ export function App() {
 
   // ===== AUTHENTICATED USER FLOW =====
   return (
-    <>
-      <WalletTestDisplay />
-      
+    <>      
       {/* Main application layout */}
       <AppLayout
         activePage={activeDashboardPage}
