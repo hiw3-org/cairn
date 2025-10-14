@@ -153,8 +153,8 @@ export const FundingRoundDetailView = ({ round, onBack, onSelectProject }: { rou
                         <h2>Overview</h2>
                         <p className="text-text-secondary dark:text-dark-text-secondary">{round.description}</p>
                     </section>
-                    
-                    {round.eligibilityCriteria && <section>
+
+                    {/* {round.eligibilityCriteria && <section>
                         <h2>Eligibility Criteria</h2>
                         <div className="text-text-secondary dark:text-dark-text-secondary" dangerouslySetInnerHTML={{ __html: round.eligibilityCriteria }} />
                     </section>}
@@ -162,7 +162,8 @@ export const FundingRoundDetailView = ({ round, onBack, onSelectProject }: { rou
                      {round.evaluationCriteria && <section>
                         <h2>Evaluation Criteria</h2>
                         <div className="text-text-secondary dark:text-dark-text-secondary" dangerouslySetInnerHTML={{ __html: round.evaluationCriteria }} />
-                    </section>}
+                    </section>} */}
+                    
                 </div>
                 
                 {/* Applicants Section */}
