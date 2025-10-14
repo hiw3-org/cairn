@@ -66,44 +66,7 @@ const AddressWithCopy = ({ address }: { address: string }) => {
   );
 };
 
-const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
-  return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark">
-      <div className="space-y-6">
-        {/* Funding Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-3">
-            Funding
-          </h3>
-          <div className="p-4 rounded-lg bg-cairn-gray-50 dark:bg-cairn-gray-900/50">
-            <p className="text-sm font-semibold text-text-secondary dark:text-text-dark-secondary">
-              Total Raised
-            </p>
-            <p className="text-3xl font-bold text-status-success mt-1">
-              ${(project.funded_amount || 0).toLocaleString()}
-            </p>
-          </div>
-        </div>
 
-        {/* Researcher Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
-            Researcher Info
-          </h3>
-          <div className="py-2">
-            <p className="font-semibold text-text dark:text-text-dark text-sm">
-              {project.researcher_id?.profile.firstName || "Unknown Researcher"}{" "}
-              {project.researcher_id?.profile.lastName || "Unknown Last Name"}
-            </p>
-            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-              {project.researcher_id?.email || "No email provided"}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const ImpactMetric = ({
   icon: Icon,
@@ -435,19 +398,7 @@ export const ProjectDetailView = ({
               )}
             </div>
           </div>
-        </div>
-
-        {/* Sidebar Column */}
-        <div className="lg:col-span-1 space-y-8 lg:sticky lg:top-28">
-          <FundingAndOwnershipWidget project={project} />
-          <PoRModule
-            project={project}
-            isOwner={isOwner}
-            onPorSubmitClick={onPorSubmitClick}
-            onViewReproducibility={onViewReproducibility}
-            onGetProofClick={() => onGetProofClick(project)}
-          />
-        </div>
+        </div> 
       </div>
     </div>
   );
