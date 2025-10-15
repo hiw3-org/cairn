@@ -1,4 +1,5 @@
 const huggingfaceService = require("../services/huggingfaceService");
+const huggingfacePollingService = require("../services/huggingfacePollingService");
 const User = require("../models/User");
 
 /**
@@ -327,6 +328,50 @@ const refreshHFConnection = async (req, res) => {
   }
 };
 
+/**
+ * Manually trigger HuggingFace metrics polling for all projects
+ * This will update likes and downloads for all projects with HF repositories
+ */
+const pollMetrics = async (req, res) => {
+  try {
+    const result = await huggingfacePollingService.pollAllProjects();
+
+    res.json({
+      status: "success",
+      message: "HuggingFace metrics polling completed",
+      data: result,
+    });
+  } catch (error) {
+    console.error("HF Metrics polling error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to poll HuggingFace metrics",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get HuggingFace polling service status
+ */
+const getPollingStatus = async (req, res) => {
+  try {
+    const status = huggingfacePollingService.getStatus();
+
+    res.json({
+      status: "success",
+      data: status,
+    });
+  } catch (error) {
+    console.error("HF Polling status error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to get polling status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   initiateHFAuth,
   handleHFCallback,
@@ -335,4 +380,6 @@ module.exports = {
   getHFRepos,
   getHFDatasets,
   refreshHFConnection,
+  pollMetrics,
+  getPollingStatus,
 };

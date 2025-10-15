@@ -36,7 +36,7 @@ export async function downloadFromFileCoin({
     const downloadUrl =
       (baseUrl
         ? `${baseUrl}/${pieceCID}`
-        : `https://${walletAddress}.${filecoinChain}.filcdn.io/${pieceCID}`);
+        : `https://${walletAddress}.${filecoinChain}.filbeam.io/${pieceCID}`);
     const finalFilename = filename || `cairn_${pieceCID.slice(0, 8)}.zip`;
 
     console.log(`Downloading from FileCoin URL: ${downloadUrl}`);

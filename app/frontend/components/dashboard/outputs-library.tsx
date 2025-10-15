@@ -6,8 +6,6 @@ import {
   LibraryOutput,
   LibraryOutputType,
   ReproducibilityStatus,
-  ProjectStatus,
-  UserProfile,
 } from "../../lib/types";
 import { downloadFromFileCoin } from "../../utils/filecoin";
 import {
@@ -67,8 +65,8 @@ const createOutputsFromProject = (project: Project): LibraryOutput[] => {
       ipfsCid: project.huggingface?.contents_cid || project.por?.por_cid,
     },
     metrics: {
-      downloads: Math.floor(Math.random() * 1000),
-      stars: Math.floor(Math.random() * 200),
+      downloads: project.huggingface?.metrics.downloads,
+      stars: project.huggingface?.metrics.likes,
       citations: Math.floor(Math.random() * 100),
     },
     projectName: project.title,
@@ -433,17 +431,24 @@ export const OutputsLibrary = ({
           <StarIcon className="w-4 h-4" />{" "}
           <span>{numberFormatter.format(output.metrics.stars)}</span>
         </span>
-        <span className="flex items-center space-x-1" title="Citations">
+        {/* <span className="flex items-center space-x-1" title="Citations">
           <BookOpenIcon className="w-4 h-4" />{" "}
           <span>{numberFormatter.format(output.metrics.citations)}</span>
-        </span>
+        </span> */}
       </div>
       <div className="col-span-12 md:col-span-4 flex md:justify-between items-center gap-4">
         <ReproducibilityBadge status={output.reproducibility} />
         <button
           onClick={() => handleFilecoinDownload(output)}
-          disabled={downloadingOutputs.has(output.id)}
-          className="group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg transition-all duration-300 ease-in-out hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          disabled={
+            downloadingOutputs.has(output.id) ||
+            getDownloadButtonText(output) === "No Download Available"
+          }
+          className={`group inline-flex items-center justify-center space-x-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ease-in-out shadow-md disabled:cursor-not-allowed disabled:transform-none ${
+            getDownloadButtonText(output) === "No Download Available"
+              ? "text-text-secondary dark:text-dark-text-secondary bg-hf-gray-300 dark:bg-hf-gray-700 cursor-not-allowed opacity-75"
+              : "text-white bg-primary hover:bg-primary-hover hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50"
+          }`}
         >
           <StorageIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
           <span>
