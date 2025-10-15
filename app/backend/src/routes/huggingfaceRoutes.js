@@ -7,7 +7,9 @@ const {
   disconnectHF,
   getHFRepos,
   getHFDatasets,
-  refreshHFConnection
+  refreshHFConnection,
+  pollMetrics,
+  getPollingStatus
 } = require('../controllers/huggingfaceController');
 const { authenticate } = require('../middleware/auth');
 
@@ -45,5 +47,15 @@ router.get('/datasets', authenticate, getHFDatasets);
 // @route   POST /api/v1/integrations/huggingface/refresh
 // @access  Private
 router.post('/refresh', authenticate, refreshHFConnection);
+
+// @desc    Manually trigger metrics polling for all projects
+// @route   POST /api/v1/integrations/huggingface/poll-metrics
+// @access  Private (Admin only recommended in production)
+router.post('/poll-metrics', authenticate, pollMetrics);
+
+// @desc    Get polling service status
+// @route   GET /api/v1/integrations/huggingface/polling-status
+// @access  Private
+router.get('/polling-status', authenticate, getPollingStatus);
 
 module.exports = router;

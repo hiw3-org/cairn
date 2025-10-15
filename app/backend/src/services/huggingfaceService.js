@@ -326,6 +326,52 @@ class HuggingFaceService {
       throw new Error(`Failed to get HF datasets: ${error.message}`);
     }
   }
+
+  /**
+   * Get metrics for a public HuggingFace repository
+   * Works for both models and datasets without authentication
+   */
+  async getPublicRepoMetrics(repoUrl) {
+    try {
+      // Parse HuggingFace URL: https://huggingface.co/username/repo-name
+      const match = repoUrl.match(/huggingface\.co\/([\w\-\.]+)\/([\w\-\.]+)/);
+      if (!match) {
+        throw new Error("Invalid HuggingFace repository URL");
+      }
+
+      const [, author, repoName] = match;
+
+      // Try models endpoint first
+      let response = await fetch(`${this.apiUrl}/models/${author}/${repoName}`, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      // If not a model, try datasets endpoint
+      if (!response.ok) {
+        response = await fetch(`${this.apiUrl}/datasets/${author}/${repoName}`, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Repository not found: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        likes: data.likes || 0,
+        downloads: data.downloads || 0,
+        lastModified: data.lastModified ? new Date(data.lastModified) : null,
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch repo metrics: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new HuggingFaceService();

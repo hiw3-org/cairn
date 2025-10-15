@@ -11,6 +11,7 @@ require("dotenv").config();
 const logger = require("./utils/logger");
 const { errorHandler } = require("./middleware/errorHandler");
 const { connectDB, disconnectDB } = require("./config/database");
+const huggingfacePollingService = require("./services/huggingfacePollingService");
 
 // Import Passport configuration
 require("./config/passport");
@@ -94,10 +95,22 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   logger.info(
     `🚀 Cairn Backend server running on port ${PORT} in ${process.env.NODE_ENV} mode`
   );
+
+  // Start HuggingFace metrics polling cron job
+  huggingfacePollingService.startCronJob();
+  logger.info("📊 HuggingFace metrics polling service started");
+
+  // Run initial poll on server startup
+  try {
+    logger.info("🔄 Running initial HuggingFace metrics poll...");
+    await huggingfacePollingService.pollAllProjects();
+  } catch (error) {
+    logger.error(`Initial HuggingFace poll failed: ${error.message}`);
+  }
 });
 
 // Handle unhandled promise rejections
@@ -119,6 +132,8 @@ process.on("uncaughtException", (err) => {
 process.on("SIGTERM", () => {
   logger.info("👋 SIGTERM RECEIVED. Shutting down gracefully");
   server.close(async () => {
+    // Stop polling service
+    huggingfacePollingService.stopCronJob();
     await disconnectDB();
     logger.info("💥 Process terminated!");
   });

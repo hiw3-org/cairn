@@ -117,6 +117,22 @@ const projectSchema = new mongoose.Schema(
         trim: true,
         default: "MIT",
       },
+      metrics: {
+        likes: {
+          type: Number,
+          default: 0,
+        },
+        downloads: {
+          type: Number,
+          default: 0,
+        },
+        lastModified: {
+          type: Date,
+        },
+        lastUpdated: {
+          type: Date,
+        },
+      },
     },
 
     por: {
