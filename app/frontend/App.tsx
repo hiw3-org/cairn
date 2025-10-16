@@ -11,6 +11,7 @@ import { ReproducibilityDetailModal } from "./components/modals/reproduction-det
 import { useAppContext } from "./context/app-provider";
 import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { useApi } from "./context/api-context";
+import { useWalletConnection, useWalletActions, usePrivyAuth } from "./context/wallet-context";
 import {
   UserRole,
   Project,
@@ -188,15 +189,9 @@ const AppLayout = ({
  * Simpler layout without sidebar, used for guest browsing and landing pages
  */
 const PublicLayout = ({
-  children,
-  selectedProject,
-  onSelectProject,
-  onBackToLibrary,
+  children
 }: {
   children: React.ReactNode;
-  selectedProject?: Project | null;
-  onSelectProject?: (project: Project) => void;
-  onBackToLibrary?: () => void;
 }) => {
   const { goToLandingPage } = useAppContext();
 
@@ -240,6 +235,10 @@ export function App() {
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
   const hasLoadedHFData = React.useRef(false);
+
+  // Wallet connection and authentication hooks
+  const walletConnection = useWalletConnection();
+  const privyAuth = usePrivyAuth();
 
   // Get app context and API functions
   const {
@@ -327,7 +326,6 @@ export function App() {
     setIsLoadingProjects(true);
     try {
       const result = await api.fetchProjects({ limit: 50 });
-      console.log("Fetched projects from API:", result);
 
       if (!result || !result.projects) {
         throw new Error("Invalid response from server");
@@ -335,7 +333,6 @@ export function App() {
 
       // Projects from API already match our unified Project interface
       setProjects(result.projects);
-      console.log("Set projects:", result.projects);
     } catch (error) {
       console.error("Failed to load projects:", error);
       addToast("Failed to load projects from server", "error");
@@ -358,15 +355,23 @@ export function App() {
    */
   React.useEffect(() => {
     const fetchHFData = async () => {
-      // Don't fetch if already loaded or if user/auth not ready
-      if (hasLoadedHFData.current) return;
+      // Don't fetch if user/auth not ready
       if (!isAuthenticated || !currentUser) return;
-      if (!currentUser?.integrations?.huggingface?.connected) return;
+
+      const isHFConnected = currentUser?.integrations?.huggingface?.connected;
+
+      // If HF is not connected, reset the flag and return
+      if (!isHFConnected) {
+        hasLoadedHFData.current = false;
+        return;
+      }
+
+      // Don't fetch if already loaded
+      if (hasLoadedHFData.current) return;
 
       hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
 
       try {
-        console.log("Fetching HuggingFace data...");
         const [repos, datasets] = await Promise.all([
           api.getHFRepos(50),
           api.getHFDatasets(50),
@@ -384,10 +389,7 @@ export function App() {
       }
     };
 
-    // Trigger fetch when BOTH auth and currentUser are ready AND HF is connected
-    if (isAuthenticated && currentUser?.integrations?.huggingface?.connected) {
-      fetchHFData();
-    }
+    fetchHFData();
 
     // Reset the flag when user logs out
     if (!isAuthenticated) {
@@ -395,7 +397,7 @@ export function App() {
     }
   }, [
     isAuthenticated,
-    currentUser, // Changed from just checking the nested property
+    currentUser?.integrations?.huggingface?.connected, // Watch HF connection status specifically
     api,
     setHfModels,
     setHfDatasets,
@@ -426,7 +428,6 @@ export function App() {
   };
 
   const handleSelectProject = (project: Project) => {
-    console.log("handleSelectProject called with:", project.title, project._id);
     setSelectedProject(project);
   };
 
@@ -535,9 +536,10 @@ export function App() {
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
-    console.log("Rendering landing page");
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
@@ -546,8 +548,9 @@ export function App() {
     // Guest browsing - can view projects but not interact
     if (isGuestBrowsing) {
       return (
-        <PublicLayout>
-          <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
+        <>
+          <PublicLayout>
+            <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
             {isLoadingProjects ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-text-primary dark:text-dark-text-primary">
@@ -584,35 +587,41 @@ export function App() {
             )}
           </div>
         </PublicLayout>
+        </>
       );
     }
 
     // Static public pages
     if (staticPage === "howitworks") {
       return (
-        <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        <>
+          <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        </>
       );
     }
 
     // Default landing page
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
   // Loading state while user data is being fetched
   if (!currentUser) {
-    console.log("No current user, showing loading");
     return (
-      <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
-        Loading user profile...
-      </div>
+      <>
+        <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
+          Loading user profile...
+        </div>
+      </>
     );
   }
 
   // ===== AUTHENTICATED USER FLOW =====
   return (
-    <>
+    <>      
       {/* Main application layout */}
       <AppLayout
         activePage={activeDashboardPage}
