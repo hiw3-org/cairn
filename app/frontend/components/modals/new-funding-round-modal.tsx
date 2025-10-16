@@ -83,7 +83,8 @@ const PreviewRoundModal = ({ roundData, onClose, onConfirm, onEdit }: { roundDat
 // --- Main Component ---
 
 export const NewFundingRoundModal = ({ onClose }: { onClose: () => void }) => {
-    const { handleCreateFundingRound, addToast, usdcBalance } = useAppContext();
+    const { handleCreateFundingRound, addToast } = useAppContext();
+    const usdcBalance = 0; // TODO: Fetch actual USDC balance from wallet/contract
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     // Form state using individual states to prevent input issues.
@@ -150,18 +151,18 @@ export const NewFundingRoundModal = ({ onClose }: { onClose: () => void }) => {
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                             <FormField label="Funding Pool (USDFC)">
                                 <div className="relative">
-                                    <input type="number" placeholder="e.g., 100000" value={poolSize === undefined ? '' : poolSize} onChange={e => setPoolSize(e.target.value ? parseInt(e.target.value, 10) : undefined)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
+                                    <input type="number" placeholder="e.g., 100000" value={poolSize === undefined ? '' : poolSize} onChange={e => setPoolSize(e.target.value ? parseInt(e.target.value, 10) : undefined)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-text-secondary">USDFC</div>
                                 </div>
                                 <div className="flex justify-between items-center mt-1">
                                     <p className="text-xs text-text-secondary dark:text-text-dark-secondary">Available: ${usdcBalance.toLocaleString()} USDFC</p>
-                                    {poolSize !== undefined && poolSize > usdcBalance && (
+                                    {/* {poolSize !== undefined && poolSize > usdcBalance && (
                                         <p className="text-xs font-semibold text-status-danger">Insufficient funds</p>
-                                    )}
+                                    )} */}
                                 </div>
                             </FormField>
                             <FormField label="Pool Allocation" tooltip="The estimated number of projects that will receive funding from this pool.">
-                                <input type="number" placeholder="# of projects" value={maxProjects === undefined ? '' : maxProjects} onChange={e => setMaxProjects(e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
+                                <input type="number" placeholder="# of projects" value={maxProjects === undefined ? '' : maxProjects} onChange={e => setMaxProjects(e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                             </FormField>
                          </div>
                          <FormField label="Distribution Method" tooltip="Determines how the funding pool is split among selected projects.">

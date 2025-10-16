@@ -29,7 +29,7 @@ import {
 } from "./components/ui/icons";
 import { AppFooter } from "./components/landing/landing-page";
 import { BottomNavBar } from "./components/layout/bottom-nav-bar";
-import { FundingRoundDetailModal } from "./components/modals/funding-round-detail-modal";
+import { FundingRoundDetailView } from "./components/modals/funding-round-detail-modal";
 import { OutputsLibrary } from "./components/dashboard/outputs-library";
 import { ApplyToFundingModal } from "./components/modals/apply-to-funding-modal";
 import { ProofOfReproducibilityModal } from "./components/modals/proof-of-reproducibility-modal";
@@ -705,14 +705,14 @@ export function App() {
       {isNewProjectWizardOpen && (
         <CreateProjectWizardModal
           initialOutputs={newProjectOutputs}
-          onClose={() => setIsNewProjectWizardOpen(false)}
+          onClose={() => setIsNewProjectWizardOpen(false)}  
           onProjectCreated={handleProjectCreated}
         />
       )}
 
       {/* Funding round detail modal */}
       {isFundingRoundDetailModalOpen && selectedFundingRound && (
-        <FundingRoundDetailModal
+        <FundingRoundDetailView
           round={selectedFundingRound}
           onClose={handleCloseFundingRoundDetail}
           onSelectProject={handleSelectProjectFromRoundModal}
