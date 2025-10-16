@@ -626,8 +626,11 @@ export const CreateProjectWizardModal = ({
           ) : (
             <button
               onClick={handleNext}
-              disabled={!wizardData.title}
-              className="flex items-center space-x-2 font-semibold py-2 px-4 rounded-lg bg-primary text-white disabled:bg-hf-gray-400"
+              disabled={
+                !wizardData.title ||
+                (currentStep === 3 && wizardData.artifacts.length === 0)
+              }
+              className="flex items-center space-x-2 font-semibold py-2 px-4 rounded-lg bg-primary text-white disabled:bg-hf-gray-400 disabled:cursor-not-allowed"
             >
               <span>Next</span>
               <ChevronRightIcon className="w-4 h-4" />

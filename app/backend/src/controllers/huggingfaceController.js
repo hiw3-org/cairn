@@ -1,4 +1,5 @@
 const huggingfaceService = require("../services/huggingfaceService");
+const huggingfacePollingService = require("../services/huggingfacePollingService");
 const User = require("../models/User");
 
 /**
@@ -42,18 +43,53 @@ const handleHFCallback = async (req, res) => {
 
     // Check for OAuth errors
     if (error) {
-      return res.status(400).json({
-        success: false,
-        message: "OAuth authorization failed",
-        error: error,
-      });
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Authorization Failed</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              .error { color: #dc2626; }
+            </style>
+          </head>
+          <body>
+            <h1 class="error">Authorization Failed</h1>
+            <p>There was an error connecting your HuggingFace account.</p>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'hf_oauth_error', error: '${error}' }, '*');
+              }
+              setTimeout(() => window.close(), 2000);
+            </script>
+          </body>
+        </html>
+      `);
     }
 
     if (!code || !state) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing authorization code or state parameter",
-      });
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Invalid Request</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              .error { color: #dc2626; }
+            </style>
+          </head>
+          <body>
+            <h1 class="error">Invalid Request</h1>
+            <p>Missing required parameters.</p>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'hf_oauth_error', error: 'Missing parameters' }, '*');
+              }
+              setTimeout(() => window.close(), 2000);
+            </script>
+          </body>
+        </html>
+      `);
     }
 
     // Exchange code for token
@@ -65,21 +101,82 @@ const handleHFCallback = async (req, res) => {
     // Connect account
     const result = await huggingfaceService.connectAccount(userId, tokenData);
 
-    res.json({
-      success: true,
-      message: "HuggingFace account connected successfully",
-      data: {
-        user: result.user,
-        profile: result.profile,
-      },
-    });
+    // Send success HTML page that notifies parent and closes
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Connection Successful</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 50px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+            }
+            .success { color: #10b981; }
+            .checkmark {
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              display: block;
+              stroke-width: 3;
+              stroke: #10b981;
+              stroke-miterlimit: 10;
+              margin: 20px auto;
+              animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
+            }
+            @keyframes scale {
+              0%, 100% { transform: none; }
+              50% { transform: scale3d(1.1, 1.1, 1); }
+            }
+          </style>
+        </head>
+        <body>
+          <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+          </svg>
+          <h1>Successfully Connected!</h1>
+          <p>Your HuggingFace account has been linked.</p>
+          <p>You can close this pop-up and refresh the Cairn app to get your project imported in to the app.</p>
+          <script>
+            // Notify parent window of success
+            if (window.opener) {
+              window.opener.postMessage({ type: 'hf_oauth_success', username: '${result.profile?.name || ""}' }, '*');
+            }
+            // Close window after 1.5 seconds
+            setTimeout(() => window.close(), 1500);
+          </script>
+        </body>
+      </html>
+    `);
   } catch (error) {
     console.error("HF Callback error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to complete HuggingFace authentication",
-      error: error.message,
-    });
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Connection Failed</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .error { color: #dc2626; }
+          </style>
+        </head>
+        <body>
+          <h1 class="error">Connection Failed</h1>
+          <p>There was an error connecting your HuggingFace account.</p>
+          <p class="error">${error.message}</p>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'hf_oauth_error', error: '${error.message}' }, '*');
+            }
+            setTimeout(() => window.close(), 3000);
+          </script>
+        </body>
+      </html>
+    `);
   }
 };
 
@@ -231,6 +328,50 @@ const refreshHFConnection = async (req, res) => {
   }
 };
 
+/**
+ * Manually trigger HuggingFace metrics polling for all projects
+ * This will update likes and downloads for all projects with HF repositories
+ */
+const pollMetrics = async (req, res) => {
+  try {
+    const result = await huggingfacePollingService.pollAllProjects();
+
+    res.json({
+      status: "success",
+      message: "HuggingFace metrics polling completed",
+      data: result,
+    });
+  } catch (error) {
+    console.error("HF Metrics polling error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to poll HuggingFace metrics",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get HuggingFace polling service status
+ */
+const getPollingStatus = async (req, res) => {
+  try {
+    const status = huggingfacePollingService.getStatus();
+
+    res.json({
+      status: "success",
+      data: status,
+    });
+  } catch (error) {
+    console.error("HF Polling status error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to get polling status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   initiateHFAuth,
   handleHFCallback,
@@ -239,4 +380,6 @@ module.exports = {
   getHFRepos,
   getHFDatasets,
   refreshHFConnection,
+  pollMetrics,
+  getPollingStatus,
 };
