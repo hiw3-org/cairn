@@ -277,7 +277,7 @@ export interface Notification {
 }
 
 // --- Outputs Library Types ---
-export type ReproducibilityStatus = "Verified" | "Pending" | "Failed";
+export type ReproducibilityStatus = "InReview" | "Disputed" | "Phase1" | "Phase2";
 export type LibraryOutputType = "Model" | "Dataset" | "Paper" | "Space";
 
 export interface LibraryOutput extends Output {

@@ -713,22 +713,47 @@ const FundingOpportunitiesDashboard = ({
   projects: Project[];
   currentUser: UserProfile;
 }) => {
-  //     title: o.title,
-  //     issuer: o.issuer,
-  //     amount: `${o.amount} ${o.currency}`,
-  //     poolSize: parseAmount(o.amount),
-  //     deadline: o.deadline,
-  //     tags: [],
-  //     isNew: o.isNew,
-  //     url: o.url,
-  //     creationDate: o.creationDate,
-  //   }));
+  const { fundingRounds } = useAppContext();
 
-  //   const combined = [...rounds, ...opportunities];
-  //   const topics = new Set(rounds.flatMap((r) => r.tags));
+  // Transform funding rounds into opportunities format
+  const allOpportunities = useMemo(() => {
+    return fundingRounds.map((round) => ({
+      id: round.id,
+      type: "Round" as const,
+      title: round.title,
+      issuer: "Cairn DAO", // Default issuer for funding rounds
+      amount: `$${numberFormatter.format(round.poolSize)}`,
+      poolSize: round.poolSize,
+      deadline: new Date(round.applicationDeadline).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      tags: round.topics,
+      isNew: false, // Could be calculated based on creation date
+      url: `#/funding/${round.id}`, // Link to funding round details
+      creationDate: new Date().toISOString(), // Would come from backend
+    }));
+  }, [fundingRounds]);
 
-  //   return { allOpportunities: combined, allTopics: Array.from(topics).sort() };
-  // }, []);
+  // Extract all unique topics from funding rounds
+  const allTopics = useMemo(() => {
+    const topics = new Set(fundingRounds.flatMap((r) => r.topics));
+    return Array.from(topics).sort();
+  }, [fundingRounds]);
+
+  // Applications data - would come from user's actual applications
+  // TODO: Implement actual applications tracking when funding_round_id is added to Project schema
+  const myApplications = useMemo(() => {
+    // For now, return empty array until backend supports funding round applications
+    // In the future, this would filter projects that have been applied to funding rounds
+    const applications: {
+      roundTitle: string;
+      projectTitle: string;
+      status: "Open" | "Voting" | "Closed";
+      roundId: string;
+    }[] = [];
+    return applications;
+  }, [projects, fundingRounds]);
 
   const [filterType, setFilterType] = useState("All");
   const [sortKey, setSortKey] = useState("deadline");
@@ -779,8 +804,8 @@ const FundingOpportunitiesDashboard = ({
   }, [allOpportunities, filterType, sortKey, activeTopics]);
 
   const kpis = {
-    openRounds: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").length,
-    totalFunding: MOCK_FUNDING_ROUNDS.filter((r) => r.status === "Open").reduce(
+    openRounds: fundingRounds.filter((r) => r.status === "Open").length,
+    totalFunding: fundingRounds.filter((r) => r.status === "Open").reduce(
       (sum, r) => sum + r.poolSize,
       0
     ),
