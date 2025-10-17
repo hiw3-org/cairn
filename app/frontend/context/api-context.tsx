@@ -65,6 +65,9 @@ interface ApiContextType {
   searchArxivByTitle: (query: string, limit?: number) => Promise<any>;
   searchArxivByAuthor: (author: string, limit?: number) => Promise<any>;
 
+  // Generic API method
+  post: <T = any>(endpoint: string, body: any) => Promise<T>;
+
   // Loading states
   isLoading: boolean;
   error: string | null;
@@ -96,6 +99,36 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     const errorMessage = error?.message || defaultMessage;
     setError(errorMessage);
     throw new Error(errorMessage);
+  };
+
+  // Generic POST method helper
+  const post = async <T = any>(
+    endpoint: string,
+    body: any
+  ): Promise<T> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        credentials: "include",
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const data: ApiResponse<T> = await response.json();
+
+      if (data.status === "success" && data.data) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Request failed");
+      }
+    } catch (error: any) {
+      handleApiError(error, "Request failed");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Check authentication status on mount
@@ -640,6 +673,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     getHFRepos,
     getHFDatasets,
     refreshHFConnection,
+    post,
     isLoading,
     error,
     searchArxivByTitle,

@@ -8,9 +8,21 @@ const IconButton = ({ onClick, children, className = '' }: { onClick: () => void
     </button>
 );
 
-export const Modal = ({ children, onClose, title, footer }: { children: React.ReactNode, onClose: () => void, title: string, footer?: React.ReactNode }) => (
+export const Modal = ({
+    children,
+    onClose,
+    title,
+    footer,
+    maxWidth = 'max-w-4xl'
+}: {
+    children: React.ReactNode,
+    onClose: () => void,
+    title: string,
+    footer?: React.ReactNode,
+    maxWidth?: string
+}) => (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-8 pt-20 animate-fade-in" onClick={onClose}>
-        <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col animate-modal-scale-in border border-gray-700" onClick={(e) => e.stopPropagation()}>
+        <div className={`bg-gray-900 rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[85vh] flex flex-col animate-modal-scale-in border border-gray-700`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-white">{title}</h2>
                 <IconButton onClick={onClose}><CloseIcon className="w-6 h-6 text-gray-400 hover:text-white" /></IconButton>

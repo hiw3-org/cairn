@@ -12,10 +12,12 @@ import {
   UserCircleIcon,
   CheckIcon,
   HomeIcon,
+  CurrencyDollarIcon,
 } from "../ui/icons";
 import { useAppContext } from "../../context/app-provider";
 import { AppLogo } from "../ui/logo";
 import { Tooltip } from "../ui/tooltip";
+import { FiatOnrampModal } from "../modals/fiat-onramp-modal";
 
 const IconButton = ({
   onClick,
@@ -115,6 +117,7 @@ export default function Header({
 }) {
   const { isDarkMode, setIsDarkMode, goToLandingPage } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isOnrampOpen, setIsOnrampOpen] = useState(false);
   return (
     <header className="relative z-30 h-20 flex-shrink-0 bg-background-light/80 dark:bg-background-dark-light/80 backdrop-blur-lg border-b border-border dark:border-border-dark flex items-center justify-between px-6 lg:px-8">
       {/* On mobile, show AppLogo. On larger screens, show search bar */}
@@ -140,6 +143,25 @@ export default function Header({
             <HomeIcon className="w-5 h-5" />
           </IconButton>
         </Tooltip>
+
+        {/* Buy FIL Button */}
+        <Tooltip text="Buy FIL tokens">
+          <button
+            onClick={() => setIsOnrampOpen(true)}
+            className="hidden sm:flex items-center space-x-2 bg-primary text-primary-text px-3 py-2 rounded-lg hover:bg-primary-hover transition-colors font-semibold text-sm"
+          >
+            <CurrencyDollarIcon className="w-5 h-5" />
+            <span>Buy FIL</span>
+          </button>
+        </Tooltip>
+
+        {/* Mobile: Icon only */}
+        <Tooltip text="Buy FIL tokens">
+          <IconButton onClick={() => setIsOnrampOpen(true)} className="sm:hidden">
+            <CurrencyDollarIcon className="w-5 h-5" />
+          </IconButton>
+        </Tooltip>
+
         <IconButton onClick={() => setIsDarkMode(!isDarkMode)}>
           {isDarkMode ? (
             <SunIcon className="w-5 h-5" />
@@ -156,6 +178,11 @@ export default function Header({
         <div className="h-8 w-px bg-border dark:border-border-dark"></div>
         <UserMenu />
       </div>
+
+      {/* Fiat Onramp Modal */}
+      {isOnrampOpen && (
+        <FiatOnrampModal onClose={() => setIsOnrampOpen(false)} />
+      )}
     </header>
   );
 }

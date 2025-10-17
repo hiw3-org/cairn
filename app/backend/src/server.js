@@ -23,6 +23,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const filecoinRoutes = require("./routes/filecoinRoutes");
 const huggingfaceRoutes = require("./routes/huggingfaceRoutes");
 const arxivRoutes = require("./routes/arxivRoutes");
+const onrampRoutes = require("./routes/onrampRoutes");
 
 const app = express();
 
@@ -81,6 +82,7 @@ app.use(`/api/${apiVersion}/projects`, projectRoutes);
 app.use(`/api/${apiVersion}/filecoin`, filecoinRoutes);
 app.use(`/api/${apiVersion}/integrations/huggingface`, huggingfaceRoutes);
 app.use(`/api/${apiVersion}/arxiv`, arxivRoutes);
+app.use(`/api/${apiVersion}/onramp`, onrampRoutes);
 
 // Catch-all route for undefined endpoints
 app.all("*", (req, res) => {
