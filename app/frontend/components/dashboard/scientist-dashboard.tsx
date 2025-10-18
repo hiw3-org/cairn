@@ -59,17 +59,14 @@ const HuggingFaceSyncView = ({
       downloads: model.downloads,
       likes: model.likes,
       lastModified: new Date(model.createdAt).toLocaleDateString(),
-      // FIX: Check both repo_url and repository_url fields
       status: projects.some(
         (p) =>
-          p.huggingface?.repo_url === `https://huggingface.co/${model.id}` ||
           p.huggingface?.repository_url === `https://huggingface.co/${model.id}`
       )
         ? "Imported"
         : "Not Imported",
       cairnProjectId: projects.find(
         (p) =>
-          p.huggingface?.repo_url === `https://huggingface.co/${model.id}` ||
           p.huggingface?.repository_url === `https://huggingface.co/${model.id}`
       )?._id,
       huggingfaceUrl: `https://huggingface.co/${model.id}`,
@@ -86,8 +83,6 @@ const HuggingFaceSyncView = ({
       lastModified: new Date(dataset.lastModified).toLocaleDateString(),
       status: projects.some(
         (p) =>
-          p.huggingface?.repo_url ===
-            `https://huggingface.co/datasets/${dataset.id}` ||
           p.huggingface?.repository_url ===
             `https://huggingface.co/datasets/${dataset.id}`
       )
@@ -95,8 +90,6 @@ const HuggingFaceSyncView = ({
         : "Not Imported",
       cairnProjectId: projects.find(
         (p) =>
-          p.huggingface?.repo_url ===
-            `https://huggingface.co/datasets/${dataset.id}` ||
           p.huggingface?.repository_url ===
             `https://huggingface.co/datasets/${dataset.id}`
       )?._id,

@@ -67,6 +67,7 @@ export interface Project {
   project_status: ProjectStatus;
   por_status: PoRStatus;
   funded_amount: number;
+  publication_url?: string;
   paper?: {
     doi?: string;
     arxiv_id?: string;
@@ -74,11 +75,18 @@ export interface Project {
     abstract?: string;
   };
   huggingface?: {
-    repo_url?: string;
+    repository_url?: string;
     commit_hash?: string;
     files?: string;
     licence?: string;
     contents_cid?: string;
+    storage_expires_at?: string;
+    metrics?: {
+      likes?: number;
+      downloads?: number;
+      lastModified?: string;
+      lastUpdated?: string;
+    };
   };
   por?: {
     por_cid?: string;
@@ -325,10 +333,12 @@ export interface CreateProjectData {
     abstract?: string;
   };
   huggingface?: {
-    repo_url?: string;
+    repository_url?: string;
     commit_hash?: string;
     files?: string;
     licence?: string;
+    contents_cid?: string;
+    storage_expires_at?: string;
   };
   por?: {
     por_cid?: string;
