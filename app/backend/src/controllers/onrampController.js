@@ -1,192 +1,241 @@
-const crypto = require("crypto");
 const logger = require("../utils/logger");
+const { sign } = require("jsonwebtoken");
+const crypto = require("crypto");
 
 /**
  * Onramp Controller
- * Handles fiat onramp integrations (MoonPay, etc.)
+ * Handles fiat onramp integrations (Coinbase OnRamp with secure session tokens)
  */
 
 /**
- * Generate HMAC SHA256 signature for MoonPay URL
- * @param {string} originalUrl - The URL to sign
- * @returns {string} The signature
+ * Generate JWT for Coinbase CDP API authentication
+ * @param {string} requestMethod - HTTP method (GET, POST, etc.)
+ * @param {string} requestPath - API endpoint path
+ * @returns {string} JWT token
  */
-const generateMoonPaySignature = (originalUrl) => {
-  const secretKey = process.env.MOONPAY_SECRET_KEY;
+const generateCoinbaseJWT = (requestMethod, requestPath) => {
+  const keyName = process.env.COINBASE_API_KEY_NAME; // e.g., "organizations/{org_id}/apiKeys/{key_id}"
+  let keySecret = process.env.COINBASE_API_KEY_SECRET; // Private key in PEM format
 
-  if (!secretKey) {
-    throw new Error("MoonPay secret key not configured");
+  if (!keyName || !keySecret) {
+    throw new Error("Coinbase API credentials not configured");
   }
 
-  const signature = crypto
-    .createHmac("sha256", secretKey)
-    .update(new URL(originalUrl).search)
-    .digest("base64");
+  // Replace literal \n with actual newlines (in case .env has escaped newlines)
+  keySecret = keySecret.replace(/\\n/g, '\n');
 
-  return signature;
+  const url = "api.developer.coinbase.com";
+  const uri = `${requestMethod} ${url}${requestPath}`;
+
+  logger.info(`JWT URI being signed: ${uri}`);
+
+  const token = sign(
+    {
+      iss: "cdp", // Coinbase Developer Platform
+      nbf: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 120, // 2 minutes
+      sub: keyName,
+      uri,
+    },
+    keySecret,
+    {
+      algorithm: "ES256",
+      header: {
+        kid: keyName,
+        nonce: crypto.randomBytes(16).toString("hex"),
+      },
+    }
+  );
+
+  return token;
 };
 
 /**
- * Verify MoonPay webhook signature
- * @param {string} signature - The signature from webhook headers
- * @param {object} payload - The webhook payload
- * @returns {boolean} Whether the signature is valid
+ * Generate Coinbase OnRamp session token via API
+ * This is required for secure initialization
  */
-const verifyMoonPayWebhookSignature = (signature, payload) => {
-  const secretKey = process.env.MOONPAY_WEBHOOK_SECRET;
-
-  if (!secretKey) {
-    logger.error("MoonPay webhook secret not configured");
-    return false;
-  }
-
-  const expectedSignature = crypto
-    .createHmac("sha256", secretKey)
-    .update(JSON.stringify(payload))
-    .digest("hex");
-
-  return signature === expectedSignature;
-};
-
-/**
- * Generate signed MoonPay onramp URL
- */
-exports.generateMoonPayUrl = async (req, res) => {
+exports.getCoinbaseConfig = async (req, res) => {
   try {
-    const {
-      walletAddress,
-      email,
-      currencyCode,
-      baseCurrencyCode,
-      baseCurrencyAmount,
-    } = req.body;
+    const { walletAddress, currencyCode, baseCurrencyCode, baseCurrencyAmount } = req.body;
 
     // Validate environment variables
-    const moonpayApiKey = process.env.MOONPAY_PUBLISHABLE_KEY;
-    if (!moonpayApiKey) {
-      logger.error("MoonPay publishable key not configured");
+    const coinbaseAppId = process.env.COINBASE_APP_ID;
+    if (!coinbaseAppId) {
+      logger.error("Coinbase App ID not configured");
       return res.status(500).json({
         status: "error",
         message: "Onramp service not configured. Please contact support.",
       });
     }
 
-    // Build MoonPay URL parameters
-    const params = new URLSearchParams({
-      apiKey: moonpayApiKey,
-      currencyCode: currencyCode.toLowerCase(), // e.g., "fil"
-      walletAddress: walletAddress,
-      baseCurrencyCode: baseCurrencyCode.toLowerCase(), // e.g., "usd"
-      colorCode: "#6366f1", // Cairn brand color
-      redirectURL: `${process.env.FRONTEND_URL}/dashboard?onramp=success`,
-    });
-
-    // Add optional parameters
-    if (email) {
-      params.append("email", email);
-    }
-    if (baseCurrencyAmount) {
-      params.append("baseCurrencyAmount", baseCurrencyAmount.toString());
+    // Validate wallet address format (basic validation)
+    if (!walletAddress || (!walletAddress.startsWith('0x') && !walletAddress.startsWith('f'))) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid wallet address format",
+      });
     }
 
-    // MoonPay base URL (use sandbox for testing)
-    const moonpayBaseUrl = process.env.MOONPAY_SANDBOX === "true"
-      ? "https://buy-sandbox.moonpay.com"
-      : "https://buy.moonpay.com";
+    logger.info(`Coinbase OnRamp config requested for user ${req.user.id}, wallet: ${walletAddress}`);
 
-    // Construct full URL
-    const originalUrl = `${moonpayBaseUrl}?${params.toString()}`;
+    // Check if API credentials are configured for secure session token generation
+    const hasApiCredentials = process.env.COINBASE_API_KEY_NAME && process.env.COINBASE_API_KEY_SECRET;
 
-    // Generate signature
-    let signedUrl = originalUrl;
+    if (!hasApiCredentials) {
+      // Fallback to basic configuration (may not work if project requires secure initialization)
+      logger.warn("Coinbase API credentials not configured. Using basic initialization (may fail if project requires session token).");
+
+      return res.status(200).json({
+        status: "success",
+        data: {
+          appId: coinbaseAppId,
+          provider: "coinbase",
+          destinationWallets: [
+            {
+              address: walletAddress,
+              blockchains: ["filecoin"],
+              assets: [currencyCode?.toUpperCase() || "FIL"]
+            }
+          ],
+          ...(baseCurrencyCode && { defaultFiatCurrency: baseCurrencyCode.toUpperCase() }),
+          ...(baseCurrencyAmount && { defaultAmount: baseCurrencyAmount.toString() }),
+        },
+      });
+    }
+
+    // Generate session token via Coinbase API (secure method)
     try {
-      const signature = generateMoonPaySignature(originalUrl);
-      signedUrl = `${originalUrl}&signature=${encodeURIComponent(signature)}`;
-    } catch (signError) {
-      logger.error(`Failed to sign MoonPay URL: ${signError.message}`);
-      // Continue without signature (MoonPay will still work in some cases)
+      const requestPath = "/onramp/v1/token";
+      const jwt = generateCoinbaseJWT("POST", requestPath);
+
+      logger.info(`Generated JWT for Coinbase API (first 50 chars): ${jwt.substring(0, 50)}...`);
+
+      // Extract client IP from request
+      // Note: In production, extract from TCP layer, not X-Forwarded-For (can be spoofed)
+      // For development behind proxies, we use X-Forwarded-For as fallback
+      const clientIp = req.ip ||
+                       req.connection.remoteAddress ||
+                       req.socket.remoteAddress ||
+                       (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                       '127.0.0.1';
+
+      // Clean up IPv6 localhost to IPv4
+      const cleanIp = clientIp.replace('::ffff:', '').replace('::1', '127.0.0.1');
+
+      logger.info(`Generating session token for IP: ${cleanIp}`);
+
+      // Prepare request body for session token generation
+      // Format according to Coinbase API documentation
+      const tokenRequestBody = {
+        addresses: [
+          {
+            address: walletAddress,
+            blockchains: ["filecoin"], // Supported blockchains for this address
+          }
+        ],
+        assets: [currencyCode?.toUpperCase() || "FIL"], // Assets to enable
+        clientIp: cleanIp, // Required: true client IP
+      };
+
+      logger.info(`Calling Coinbase API: POST https://api.developer.coinbase.com${requestPath}`);
+      logger.info(`Request body: ${JSON.stringify(tokenRequestBody)}`);
+
+      // Call Coinbase API to generate session token
+      const response = await fetch(`https://api.developer.coinbase.com${requestPath}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tokenRequestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error(`Coinbase API error: ${response.status} - ${errorText}`);
+        logger.error(`Request details - Method: POST, Path: ${requestPath}, KeyName: ${process.env.COINBASE_API_KEY_NAME}`);
+        throw new Error(`Coinbase API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.token) {
+        throw new Error("No session token returned from Coinbase API");
+      }
+
+      logger.info(`Generated Coinbase session token for user ${req.user.id}`);
+
+      // Return session token for secure initialization
+      return res.status(200).json({
+        status: "success",
+        data: {
+          appId: coinbaseAppId,
+          sessionToken: data.token,
+          provider: "coinbase",
+        },
+      });
+
+    } catch (apiError) {
+      logger.error(`Error generating Coinbase session token: ${apiError.message}`);
+
+      // Return error with helpful message
+      return res.status(500).json({
+        status: "error",
+        message: "Failed to generate secure session token. Please check API credentials.",
+        details: apiError.message,
+      });
     }
 
-    logger.info(`Generated MoonPay URL for user ${req.user.id}, wallet: ${walletAddress}`);
-
-    res.status(200).json({
-      status: "success",
-      data: {
-        url: signedUrl,
-        provider: "moonpay",
-      },
-    });
   } catch (error) {
-    logger.error(`Error generating MoonPay URL: ${error.message}`);
+    logger.error(`Error in getCoinbaseConfig: ${error.message}`);
     res.status(500).json({
       status: "error",
-      message: "Failed to generate onramp URL",
+      message: "Failed to generate onramp configuration",
     });
   }
 };
 
 /**
- * Handle MoonPay webhook for transaction updates
+ * Handle Coinbase OnRamp events/webhooks
+ * Note: Coinbase OnRamp uses event callbacks in the SDK rather than server webhooks
+ * This endpoint is reserved for future webhook integration if Coinbase adds it
  */
-exports.handleMoonPayWebhook = async (req, res) => {
+exports.handleCoinbaseEvent = async (req, res) => {
   try {
-    const signature = req.headers["moonpay-signature"];
-    const payload = req.body;
+    const event = req.body;
 
-    // Verify webhook signature
-    if (!verifyMoonPayWebhookSignature(signature, payload)) {
-      logger.warn("Invalid MoonPay webhook signature");
-      return res.status(401).json({
-        status: "error",
-        message: "Invalid signature",
-      });
-    }
-
-    // Handle different event types
-    const { type, data } = payload;
-
-    logger.info(`Received MoonPay webhook: ${type}`, {
-      transactionId: data?.id,
-      status: data?.status,
+    logger.info(`Received Coinbase OnRamp event: ${event.type || 'unknown'}`, {
+      eventData: event,
     });
 
-    switch (type) {
-      case "transaction_created":
-        // Transaction initiated
-        logger.info(`MoonPay transaction created: ${data.id}`);
+    // Event handling logic can be added here
+    // Currently Coinbase OnRamp uses frontend callbacks (onSuccess, onExit, onEvent)
+    // This endpoint is a placeholder for future server-side event handling
+
+    switch (event.type) {
+      case "buy_succeeded":
+        logger.info(`Coinbase buy succeeded: ${event.id}`);
+        // TODO: Update user balance or trigger any post-purchase logic
         break;
 
-      case "transaction_updated":
-        // Transaction status updated
-        logger.info(`MoonPay transaction updated: ${data.id}, status: ${data.status}`);
-
-        // Handle specific statuses
-        if (data.status === "completed") {
-          // Transaction completed successfully
-          logger.info(`MoonPay transaction completed: ${data.id}`);
-          // TODO: Update user balance or trigger any post-purchase logic
-        } else if (data.status === "failed") {
-          // Transaction failed
-          logger.warn(`MoonPay transaction failed: ${data.id}`);
-        }
+      case "buy_failed":
+        logger.warn(`Coinbase buy failed: ${event.id}`);
         break;
 
       default:
-        logger.info(`Unhandled MoonPay webhook type: ${type}`);
+        logger.info(`Unhandled Coinbase event type: ${event.type}`);
     }
 
-    // Always return 200 to acknowledge receipt
     res.status(200).json({
       status: "success",
-      message: "Webhook received",
+      message: "Event received",
     });
   } catch (error) {
-    logger.error(`Error handling MoonPay webhook: ${error.message}`);
+    logger.error(`Error handling Coinbase event: ${error.message}`);
 
-    // Return 200 even on error to prevent MoonPay from retrying
     res.status(200).json({
       status: "error",
-      message: "Webhook processing failed",
+      message: "Event processing failed",
     });
   }
 };
@@ -197,31 +246,38 @@ exports.handleMoonPayWebhook = async (req, res) => {
 exports.getSupportedCurrencies = async (req, res) => {
   try {
     // Return list of supported cryptocurrencies and fiat currencies
+    // Coinbase OnRamp supports many more currencies than listed here
     const supportedCurrencies = {
       crypto: [
         {
-          code: "fil",
+          code: "FIL",
           name: "Filecoin",
           network: "filecoin",
           recommended: true,
         },
         {
-          code: "eth",
+          code: "ETH",
           name: "Ethereum",
           network: "ethereum",
           recommended: false,
         },
         {
-          code: "usdc",
+          code: "USDC",
           name: "USD Coin",
           network: "ethereum",
           recommended: false,
         },
+        {
+          code: "BTC",
+          name: "Bitcoin",
+          network: "bitcoin",
+          recommended: false,
+        },
       ],
       fiat: [
-        { code: "usd", name: "US Dollar", symbol: "$" },
-        { code: "eur", name: "Euro", symbol: "€" },
-        { code: "gbp", name: "British Pound", symbol: "£" },
+        { code: "USD", name: "US Dollar", symbol: "$" },
+        { code: "EUR", name: "Euro", symbol: "€" },
+        { code: "GBP", name: "British Pound", symbol: "£" },
       ],
     };
 

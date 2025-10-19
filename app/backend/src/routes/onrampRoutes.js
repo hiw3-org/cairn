@@ -7,9 +7,9 @@ const onrampController = require("../controllers/onrampController");
 const router = express.Router();
 
 /**
- * Validation middleware for MoonPay URL generation
+ * Validation middleware for Coinbase OnRamp configuration request
  */
-const validateMoonPayRequest = [
+const validateOnrampRequest = [
   body("walletAddress")
     .notEmpty()
     .withMessage("Wallet address is required")
@@ -22,19 +22,17 @@ const validateMoonPayRequest = [
     .isEmail()
     .withMessage("Invalid email format"),
   body("currencyCode")
-    .notEmpty()
-    .withMessage("Currency code is required")
+    .optional()
     .isString()
     .withMessage("Currency code must be a string")
-    .isIn(["fil", "FIL", "eth", "ETH", "usdc", "USDC"])
-    .withMessage("Unsupported currency code (supported: fil, eth, usdc)"),
+    .isIn(["fil", "FIL", "eth", "ETH", "usdc", "USDC", "btc", "BTC"])
+    .withMessage("Unsupported currency code (supported: FIL, ETH, USDC, BTC)"),
   body("baseCurrencyCode")
-    .notEmpty()
-    .withMessage("Base currency code is required")
+    .optional()
     .isString()
     .withMessage("Base currency code must be a string")
-    .isIn(["usd", "eur", "gbp"])
-    .withMessage("Unsupported base currency (supported: usd, eur, gbp)"),
+    .isIn(["usd", "USD", "eur", "EUR", "gbp", "GBP"])
+    .withMessage("Unsupported base currency (supported: USD, EUR, GBP)"),
   body("baseCurrencyAmount")
     .optional()
     .isFloat({ min: 10, max: 10000 })
@@ -57,27 +55,27 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 /**
- * @desc    Generate signed MoonPay onramp URL
- * @route   POST /api/v1/onramp/moonpay-url
+ * @desc    Get Coinbase OnRamp configuration
+ * @route   POST /api/v1/onramp/coinbase-config
  * @access  Private (requires authentication)
  */
 router.post(
-  "/moonpay-url",
+  "/coinbase-config",
   authenticate,
-  validateMoonPayRequest,
+  validateOnrampRequest,
   handleValidationErrors,
-  asyncHandler(onrampController.generateMoonPayUrl)
+  asyncHandler(onrampController.getCoinbaseConfig)
 );
 
 /**
- * @desc    MoonPay webhook for transaction status updates
- * @route   POST /api/v1/onramp/moonpay-webhook
- * @access  Public (webhook signature verified)
- * @note    This endpoint is called by MoonPay to notify of transaction status changes
+ * @desc    Coinbase OnRamp event handler (webhook/callback)
+ * @route   POST /api/v1/onramp/coinbase-event
+ * @access  Public
+ * @note    This endpoint can receive events from Coinbase if configured
  */
 router.post(
-  "/moonpay-webhook",
-  asyncHandler(onrampController.handleMoonPayWebhook)
+  "/coinbase-event",
+  asyncHandler(onrampController.handleCoinbaseEvent)
 );
 
 /**

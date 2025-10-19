@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@coinbase/cbpay-js": "^2.4.0",
     "@filoz/synapse-sdk": "^0.28.0",
     "@privy-io/react-auth": "^3.1.0",
     "@privy-io/wagmi": "^2.0.0",
