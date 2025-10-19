@@ -133,6 +133,21 @@ const projectSchema = new mongoose.Schema(
           type: Date,
         },
       },
+      contents_cid: {
+        type: String,
+        trim: true,
+        validate: {
+          validator: function (v) {
+            if (!v) return true; // Optional field
+            // Basic CID validation (Filecoin/IPFS CID formats)
+            return /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{50,})$/.test(v);
+          },
+          message: "Invalid Filecoin/IPFS CID format",
+        },
+      },
+      storage_expires_at: {
+        type: Date,
+      },
     },
 
     por: {

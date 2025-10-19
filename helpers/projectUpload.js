@@ -210,8 +210,6 @@ export class ProjectUploader {
     const files = fs.readdirSync(repoPath);
     const zipPath = path.join(__dirname, `${repoName}_${timestamp}.zip`);
 
-    console.log("📦 Creating ZIP bundle...");
-
     return new Promise((resolve, reject) => {
       const output = fs.createWriteStream(zipPath);
       const archive = archiver("zip", { zlib: { level: 9 } });
@@ -230,10 +228,8 @@ export class ProjectUploader {
 
         if (stat.isFile()) {
           archive.file(filePath, { name: file });
-          console.log(`  📄 Added: ${file}`);
         } else if (stat.isDirectory()) {
           archive.directory(filePath, file);
-          console.log(`  📁 Added directory: ${file}`);
         }
       });
 

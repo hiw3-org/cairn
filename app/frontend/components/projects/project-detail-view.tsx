@@ -27,6 +27,8 @@ import { useAppContext } from "../../context/app-provider";
 import React from "react";
 import { useClipboard } from "../../hooks/use-clipboard";
 import { ReproducibilityBadge } from "../ui/reproducibility-badge";
+import { StoragePaymentModal } from "../modals/storage-payment-modal";
+import { DatabaseIcon } from "../ui/icons";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -132,17 +134,26 @@ const ProjectResourceCard = ({
   url,
   type,
   project,
+  onStoreClick,
 }: {
   title: string;
   url?: string;
   type: string;
   project: Project;
+  onStoreClick?: () => void;
 }) => {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
+  const { currentUser } = useAppContext();
 
   const reproducibilityStatus: ReproducibilityStatus =
     project.por_status === "Phase2" ? "Verified" : "Pending";
+
+  // Check if user is the project owner
+  const isOwner = currentUser ? project.researcher_id?._id === (currentUser.id || currentUser._id) : false;
+
+  // Check if this resource is already stored on Filecoin
+  const isStoredOnFilecoin = type === "HuggingFace" && project.huggingface?.contents_cid;
 
   const handleDownload = async () => {
     try {
@@ -249,8 +260,9 @@ const ProjectResourceCard = ({
         </span>
       </div>
 
-      {/* Download button */}
-      <div className="flex items-center space-x-2">
+      {/* Action buttons */}
+      <div className="flex items-center space-x-2 flex-wrap gap-2">
+        {/* Download/View button */}
         <button
           onClick={handleDownload}
           disabled={!isDownloadAvailable() || isDownloading}
@@ -261,6 +273,25 @@ const ProjectResourceCard = ({
             {isDownloading ? "Downloading..." : getDownloadButtonText()}
           </span>
         </button>
+
+        {/* Store on Filecoin button - only show for HuggingFace repos and project owners */}
+        {type === "HuggingFace" && isOwner && !isStoredOnFilecoin && onStoreClick && (
+          <button
+            onClick={onStoreClick}
+            className="flex items-center space-x-2 bg-hf-gray-100 dark:bg-hf-gray-800 text-text dark:text-text-dark text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-hf-gray-200 dark:hover:bg-hf-gray-700 transition-colors border border-border dark:border-border-dark"
+          >
+            <DatabaseIcon className="w-4 h-4" />
+            <span>Store on Filecoin</span>
+          </button>
+        )}
+
+        {/* Stored indicator */}
+        {type === "HuggingFace" && isStoredOnFilecoin && (
+          <div className="flex items-center space-x-2 bg-status-success-bg text-status-success text-sm font-semibold py-1.5 px-3 rounded-md border border-status-success/20">
+            <CheckIcon className="w-4 h-4" />
+            <span>Stored on Filecoin</span>
+          </div>
+        )}
       </div>
 
       {/* CID display if available */}
@@ -296,9 +327,11 @@ export const ProjectDetailView = ({
 }) => {
   const { currentUser } = useAppContext();
   const isOwner = currentUser
-    ? project.researcher_id === currentUser._id
+    ? project.researcher_id?._id === (currentUser.id || currentUser._id)
     : false;
+
   const [isStarred, setIsStarred] = React.useState(false);
+  const [isStorageModalOpen, setIsStorageModalOpen] = React.useState(false);
 
   // Create resource cards from project data
   const projectResources = React.useMemo(() => {
@@ -426,6 +459,7 @@ export const ProjectDetailView = ({
                     url={resource.url}
                     type={resource.type}
                     project={project}
+                    onStoreClick={() => setIsStorageModalOpen(true)}
                   />
                 ))
               ) : (
@@ -449,6 +483,18 @@ export const ProjectDetailView = ({
           />
         </div>
       </div>
+
+      {/* Storage Payment Modal */}
+      {isStorageModalOpen && (
+        <StoragePaymentModal
+          project={project}
+          onClose={() => setIsStorageModalOpen(false)}
+          onSuccess={() => {
+            setIsStorageModalOpen(false);
+            // Optionally refresh project data here
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -65,6 +65,12 @@ interface ApiContextType {
   searchArxivByTitle: (query: string, limit?: number) => Promise<any>;
   searchArxivByAuthor: (author: string, limit?: number) => Promise<any>;
 
+  // Generic HTTP methods
+  get: (endpoint: string) => Promise<any>;
+  post: (endpoint: string, body?: any) => Promise<any>;
+  put: (endpoint: string, body?: any) => Promise<any>;
+  delete: (endpoint: string) => Promise<any>;
+
   // Loading states
   isLoading: boolean;
   error: string | null;
@@ -623,6 +629,92 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     }
   };
 
+  // Generic HTTP methods
+  const get = async (endpoint: string): Promise<any> => {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        credentials: "include",
+        headers: getHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Request failed");
+      }
+
+      return data.data || data;
+    } catch (error: any) {
+      console.error("GET request failed:", error);
+      throw error;
+    }
+  };
+
+  const post = async (endpoint: string, body?: any): Promise<any> => {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        credentials: "include",
+        headers: getHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Request failed");
+      }
+
+      return data.data || data;
+    } catch (error: any) {
+      console.error("POST request failed:", error);
+      throw error;
+    }
+  };
+
+  const put = async (endpoint: string, body?: any): Promise<any> => {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: getHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Request failed");
+      }
+
+      return data.data || data;
+    } catch (error: any) {
+      console.error("PUT request failed:", error);
+      throw error;
+    }
+  };
+
+  const deleteMethod = async (endpoint: string): Promise<any> => {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: getHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Request failed");
+      }
+
+      return data.data || data;
+    } catch (error: any) {
+      console.error("DELETE request failed:", error);
+      throw error;
+    }
+  };
+
   const value: ApiContextType = {
     loginUser,
     signupUser,
@@ -640,10 +732,14 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     getHFRepos,
     getHFDatasets,
     refreshHFConnection,
-    isLoading,
-    error,
     searchArxivByTitle,
     searchArxivByAuthor,
+    get,
+    post,
+    put,
+    delete: deleteMethod,
+    isLoading,
+    error,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

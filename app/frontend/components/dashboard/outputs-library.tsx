@@ -34,8 +34,8 @@ const createOutputsFromProject = (project: Project): LibraryOutput[] => {
   let sourceType: "Hugging Face" | "ArXiv" | "Other" = "Other";
   let libraryType: LibraryOutputType = "Space";
 
-  if (project.huggingface?.repo_url) {
-    primaryUrl = project.huggingface.repo_url;
+  if (project.huggingface?.repository_url) {
+    primaryUrl = project.huggingface.repository_url;
     sourceType = "Hugging Face";
     libraryType = "Model";
   } else if (project.paper?.doi) {
@@ -347,7 +347,7 @@ export const OutputsLibrary = ({
     if (hasHuggingFaceCid || hasPorCid) {
       return "Download from Filecoin";
     } else if (output.data?.url) {
-      if (project.huggingface?.repo_url) {
+      if (project.huggingface?.repository_url) {
         return "View on HuggingFace";
       } else if (project.paper?.doi || project.paper?.arxiv_id) {
         return "View Paper";
