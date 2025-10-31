@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -53,19 +54,16 @@ const PreviewRoundModal = ({ roundData, onClose, onConfirm, onEdit }: { roundDat
                 </div>
                 <div className="py-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                        <DetailItem label="Funding Pool" value={`$${(roundData.poolSize || 0).toLocaleString()} USDC`} />
+                        <DetailItem label="Funding Pool" value={`$${(roundData.poolSize || 0).toLocaleString()} USDFC`} />
                         <DetailItem label="Distribution Method" value={roundData.distributionMethod} tooltip="The method for splitting funds."/>
                         <DetailItem label="Pool Allocation" value={`${roundData.maxProjects || 'N/A'} projects`} tooltip="The maximum number of projects that will receive funding."/>
                     </div>
-                     <div className="h-px bg-border dark:bg-border-dark"></div>
-                     <DetailItem label="Evaluation Method" value={roundData.evaluationMethod} tooltip="Determines how project impact will be verified." />
                     <div className="h-px bg-border dark:bg-border-dark"></div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                          <DetailItem label="Application Deadline" value={roundData.applicationDeadline ? new Date(roundData.applicationDeadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'}) : 'N/A'} />
-                         <DetailItem label="Evaluation Deadline" value={roundData.evaluationDeadline ? new Date(roundData.evaluationDeadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric'}) : 'N/A'} />
+                         <DetailItem label="Voting Deadline" value={roundData.evaluationDeadline ? new Date(roundData.evaluationDeadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric'}) : 'N/A'} />
                          <DetailItem label="Distribution Deadline" value={roundData.distributionDeadline ? new Date(roundData.distributionDeadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric'}) : 'N/A'} />
                     </div>
-                    {roundData.selectionCriteria && <DetailItem label="Selection Criteria" value={roundData.selectionCriteria} />}
                 </div>
             </div>
             
@@ -85,7 +83,8 @@ const PreviewRoundModal = ({ roundData, onClose, onConfirm, onEdit }: { roundDat
 // --- Main Component ---
 
 export const NewFundingRoundModal = ({ onClose }: { onClose: () => void }) => {
-    const { handleCreateFundingRound, addToast, usdcBalance } = useAppContext();
+    const { handleCreateFundingRound, addToast } = useAppContext();
+    const usdcBalance = 0; // TODO: Fetch actual USDC balance from wallet/contract
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     // Form state using individual states to prevent input issues.
@@ -93,17 +92,15 @@ export const NewFundingRoundModal = ({ onClose }: { onClose: () => void }) => {
     const [description, setDescription] = useState('');
     const [topics, setTopics] = useState<string[]>([]);
     const [poolSize, setPoolSize] = useState<number | undefined>(undefined);
-    const [evaluationMethod, setEvaluationMethod] = useState<FundingRound['evaluationMethod']>('Delegated Evaluators');
     const [distributionMethod, setDistributionMethod] = useState<FundingRound['distributionMethod']>('Even');
-    const [selectionCriteria, setSelectionCriteria] = useState('');
     const [applicationDeadline, setApplicationDeadline] = useState('');
     const [evaluationDeadline, setEvaluationDeadline] = useState('');
     const [distributionDeadline, setDistributionDeadline] = useState('');
     const [maxProjects, setMaxProjects] = useState<number | undefined>(undefined);
     
     const roundData: Partial<FundingRound> = {
-        title, description, topics, poolSize, evaluationMethod, distributionMethod,
-        selectionCriteria, applicationDeadline, evaluationDeadline, distributionDeadline, maxProjects
+        title, description, topics, poolSize, distributionMethod,
+        applicationDeadline, evaluationDeadline, distributionDeadline, maxProjects
     };
 
     const handleTopicToggle = (topic: string) => {
@@ -152,57 +149,51 @@ export const NewFundingRoundModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="space-y-4">
                          <h4 className="font-semibold text-text dark:text-text-dark">Funding</h4>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            <FormField label="Funding Pool (USDC)">
+                            <FormField label="Funding Pool (USDFC)">
                                 <div className="relative">
-                                    <input type="number" placeholder="e.g., 100000" value={poolSize === undefined ? '' : poolSize} onChange={e => setPoolSize(e.target.value ? parseInt(e.target.value, 10) : undefined)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-text-secondary">USDC</div>
+                                    <input type="number" placeholder="e.g., 100000" value={poolSize === undefined ? '' : poolSize} onChange={e => setPoolSize(e.target.value ? parseInt(e.target.value, 10) : undefined)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-text-secondary">USDFC</div>
                                 </div>
                                 <div className="flex justify-between items-center mt-1">
-                                    <p className="text-xs text-text-secondary dark:text-text-dark-secondary">Available: ${usdcBalance.toLocaleString()} USDC</p>
-                                    {poolSize !== undefined && poolSize > usdcBalance && (
+                                    <p className="text-xs text-text-secondary dark:text-text-dark-secondary">Available: ${usdcBalance.toLocaleString()} USDFC</p>
+                                    {/* {poolSize !== undefined && poolSize > usdcBalance && (
                                         <p className="text-xs font-semibold text-status-danger">Insufficient funds</p>
-                                    )}
+                                    )} */}
                                 </div>
                             </FormField>
                             <FormField label="Pool Allocation" tooltip="The estimated number of projects that will receive funding from this pool.">
-                                <input type="number" placeholder="# of projects" value={maxProjects === undefined ? '' : maxProjects} onChange={e => setMaxProjects(e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
+                                <input type="number" placeholder="# of projects" value={maxProjects === undefined ? '' : maxProjects} onChange={e => setMaxProjects(e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                             </FormField>
                          </div>
                          <FormField label="Distribution Method" tooltip="Determines how the funding pool is split among selected projects.">
                             <div className="flex items-center space-x-2 h-11">
-                                {(['Even', 'By Score', 'Manual'] as const).map(type => (
-                                    <label key={type} className="flex-1 flex items-center justify-center h-full px-3 border border-border dark:border-border-dark rounded-lg cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary transition-colors">
-                                        <input type="radio" name="distributionMethod" value={type} checked={distributionMethod === type} onChange={() => setDistributionMethod(type)} className="sr-only"/>
-                                        <span className="text-sm font-medium text-text dark:text-text-dark">{type}</span>
-                                    </label>
-                                ))}
+                                {(['Even', 'By Score', 'Manual'] as const).map(type => {
+                                    const isDisabled = type !== 'Even';
+                                    return (
+                                        <label key={type} className={`flex-1 flex items-center justify-center h-full px-3 border border-border dark:border-border-dark rounded-lg transition-colors ${isDisabled ? 'cursor-not-allowed bg-hf-gray-100 dark:bg-hf-gray-800 opacity-50' : 'cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary'}`}>
+                                            <input
+                                                type="radio"
+                                                name="distributionMethod"
+                                                value={type}
+                                                checked={distributionMethod === type}
+                                                onChange={() => !isDisabled && setDistributionMethod(type)}
+                                                className="sr-only"
+                                                disabled={isDisabled}
+                                            />
+                                            <span className={`text-sm font-medium ${isDisabled ? 'text-text-secondary' : 'text-text dark:text-text-dark'}`}>{type}</span>
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </FormField>
                     </div>
                      <div className="h-px bg-border dark:bg-border-dark"></div>
-                    {/* Section 3: Evaluation */}
-                    <div className="space-y-4">
-                        <h4 className="font-semibold text-text dark:text-text-dark">Evaluation</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            <FormField label="Evaluation Method" tooltip="Determines how project impact will be verified.">
-                                <select onChange={e => setEvaluationMethod(e.target.value as any)} value={evaluationMethod} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm">
-                                    <option>Delegated Evaluators</option>
-                                    <option>Cairn Core Team</option>
-                                    <option disabled>DAO Vote [coming soon]</option>
-                                </select>
-                            </FormField>
-                            <FormField label="Selection Criteria (Optional)" tooltip="Provide guidelines for evaluators or your own review process.">
-                                <input type="text" placeholder="e.g., Focus on novelty and open source..." value={selectionCriteria} onChange={e => setSelectionCriteria(e.target.value)} className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
-                            </FormField>
-                        </div>
-                    </div>
-                    <div className="h-px bg-border dark:bg-border-dark"></div>
                     {/* Section 4: Timeline */}
                      <div className="space-y-4">
                         <h4 className="font-semibold text-text dark:text-text-dark">Timeline</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                             <FormField label="Application Deadline"><input type="date" value={applicationDeadline} onChange={e => setApplicationDeadline(e.target.value)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" /></FormField>
-                            <FormField label="Evaluation Deadline"><input type="date" value={evaluationDeadline} onChange={e => setEvaluationDeadline(e.target.value)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm"/></FormField>
+                            <FormField label="Voting Deadline"><input type="date" value={evaluationDeadline} onChange={e => setEvaluationDeadline(e.target.value)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm" /></FormField>
                             <FormField label="Distribution Deadline"><input type="date" value={distributionDeadline} onChange={e => setDistributionDeadline(e.target.value)} required className="w-full h-11 px-3 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary text-sm"/></FormField>
                         </div>
                     </div>

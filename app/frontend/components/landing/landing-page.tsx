@@ -8,452 +8,137 @@ import {
   UsersGroupIcon,
   XIcon,
   GitHubIcon,
-  WalletIcon,
-  ArrowRightIcon,
   ChevronDownIcon,
   MenuIcon,
   CloseIcon,
-  GvelIcon,
-  GoogleIcon,
-  SparklesIcon,
   MetaMaskIcon,
-  OpenIdIcon,
   SpinnerIcon,
   HuggingFaceIcon,
   CheckCircleIcon,
 } from "../ui/icons";
 import { LandingHeaderLogo, AppLogo } from "../ui/logo";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/app-provider";
-import { useContract } from "../../context/contract-context";
+import { useApi } from "../../context/api-context";
 import { UserRole } from "../../lib/types";
 import { Modal } from "../ui/modal";
+import { usePrivyAuth, useWalletConnection } from "../../context/wallet-context";
+import { useWallets } from "@privy-io/react-auth";
+import { SignupModal } from "./signup-modal";
 
 const AuthModal = ({
   onClose,
-  initialMode = "login",
 }: {
   onClose: () => void;
-  initialMode?: "login" | "signup";
 }) => {
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
-  const { login, signUp } = useAppContext();
+  const { handleLoginSuccess } = useAppContext();
+  const privyAuth = usePrivyAuth();
+  const { wallets } = useWallets();
 
-  // Signup state
-  const [signupName, setSignupName] = useState("");
-  const [signupRole, setSignupRole] = useState<UserRole>(UserRole.Researcher);
-  const [signupAffiliation, setSignupAffiliation] = useState("");
-  const [signupGithub, setSignupGithub] = useState("");
-  const [signupScholar, setSignupScholar] = useState("");
-  const [signupLinkedin, setSignupLinkedin] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleHuggingFaceLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    login("huggingface");
-    onClose();
-  };
+  // Trigger Privy login immediately when modal opens
+  useEffect(() => {
+    if (!privyAuth.isAuthenticated && privyAuth.isReady) {
+      privyAuth.login();
+    }
+  }, [privyAuth.isReady]);
 
-  const handleMetaMaskLogin = () => {
-    login("metamask");
-    onClose();
-  };
-
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signupName || !signupRole || !signupAffiliation) return;
-    setIsSubmitting(true);
-    await signUp({
-      name: signupName,
-      role: signupRole,
-      affiliation: signupAffiliation,
-      github: signupGithub,
-      scholar: signupScholar,
-      linkedin: signupLinkedin,
-    });
-    setIsSubmitting(false);
-    setSignupSuccess(true);
-  };
-
-  const renderSignupForm = () => (
-    <div className="space-y-6">
-      <div className="text-center space-y-4">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold text-text dark:text-text-dark">
-            Join the CAIRN Platform
-          </h3>
-          <p className="text-text-secondary dark:text-text-dark-secondary mt-2">
-            We're preparing something special for researchers and funders.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/20">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>Coming Soon</span>
-          </div>
-          <h4 className="text-lg font-semibold text-text dark:text-text-dark">
-            Applications Opening Soon
-          </h4>
-          <p className="text-text-secondary dark:text-text-dark-secondary">
-            We're putting the finishing touches on our researcher and funder
-            onboarding experience. Get ready to contribute to reproducible
-            science on the blockchain.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 border border-border dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark-light">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-blue-600 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-            </div>
-            <h5 className="font-semibold text-text dark:text-text-dark">
-              For Researchers
-            </h5>
-          </div>
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            Submit your projects, get them reproduced, and earn funding through
-            verified results.
-          </p>
-        </div>
-
-        <div className="p-4 border border-border dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark-light">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                />
-              </svg>
-            </div>
-            <h5 className="font-semibold text-text dark:text-text-dark">
-              For Funders
-            </h5>
-          </div>
-          <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-            Invest in reproducible research and support the future of open
-            science.
-          </p>
-        </div>
-      </div>
-
-      <p className="text-center text-sm text-text-secondary dark:text-text-dark-secondary">
-        Already have an account?{" "}
-        <span className="font-semibold text-gray-400 cursor-not-allowed">
-          Login coming soon
-        </span>
-      </p>
-    </div>
-  );
-
-  // const renderSignupForm = () => (
-  // <form onSubmit={handleSignupSubmit} className="space-y-4">
-  //   <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-  //     Submit your application to join the CAIRN platform. Your application
-  //     will be manually reviewed.
-  //   </p>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       Full Name
-  //     </label>
-  //     <input
-  //       type="text"
-  //       value={signupName}
-  //       onChange={(e) => setSignupName(e.target.value)}
-  //       required
-  //       className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //     />
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       I am a...
-  //     </label>
-  //     <div className="flex gap-4">
-  //       <label className="flex-1 flex items-center p-3 border border-border dark:border-border-dark rounded-lg cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary">
-  //         <input
-  //           type="radio"
-  //           name="role"
-  //           value={UserRole.Researcher}
-  //           checked={signupRole === UserRole.Researcher}
-  //           onChange={() => setSignupRole(UserRole.Researcher)}
-  //           className="h-4 w-4 text-primary focus:ring-primary border-cairn-gray-400"
-  //         />
-  //         <span className="ml-3 text-sm font-medium text-text dark:text-text-dark">
-  //           Researcher
-  //         </span>
-  //       </label>
-  //       <label className="flex-1 flex items-center p-3 border border-border dark:border-border-dark rounded-lg cursor-pointer has-[:checked]:bg-primary-light has-[:checked]:border-primary dark:has-[:checked]:bg-primary/20 dark:has-[:checked]:border-primary">
-  //         <input
-  //           type="radio"
-  //           name="role"
-  //           value={UserRole.Funder}
-  //           checked={signupRole === UserRole.Funder}
-  //           onChange={() => setSignupRole(UserRole.Funder)}
-  //           className="h-4 w-4 text-primary focus:ring-primary border-cairn-gray-400"
-  //         />
-  //         <span className="ml-3 text-sm font-medium text-text dark:text-text-dark">
-  //           Funder
-  //         </span>
-  //       </label>
-  //     </div>
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       Affiliation
-  //     </label>
-  //     <input
-  //       type="text"
-  //       placeholder="e.g., University of Cambridge"
-  //       value={signupAffiliation}
-  //       onChange={(e) => setSignupAffiliation(e.target.value)}
-  //       required
-  //       className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //     />
-  //   </div>
-  //   <div>
-  //     <label className="block text-sm font-medium text-text-secondary dark:text-text-dark-secondary mb-1">
-  //       References (Optional)
-  //     </label>
-  //     <div className="space-y-2">
-  //       <input
-  //         type="text"
-  //         placeholder="GitHub Profile URL"
-  //         value={signupGithub}
-  //         onChange={(e) => setSignupGithub(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //       <input
-  //         type="text"
-  //         placeholder="Google Scholar Profile URL"
-  //         value={signupScholar}
-  //         onChange={(e) => setSignupScholar(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //       <input
-  //         type="text"
-  //         placeholder="LinkedIn Profile URL"
-  //         value={signupLinkedin}
-  //         onChange={(e) => setSignupLinkedin(e.target.value)}
-  //         className="w-full px-4 py-2 border border-border dark:border-border-dark rounded-lg bg-transparent focus:ring-1 focus:ring-primary focus:border-primary"
-  //       />
-  //     </div>
-  //   </div>
-  //   <button
-  //     type="submit"
-  //     disabled={isSubmitting}
-  //     className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300 disabled:bg-blue-400"
-  //   >
-  //     {isSubmitting ? (
-  //       <SpinnerIcon className="animate-spin w-5 h-5" />
-  //     ) : (
-  //       <span>Submit Application</span>
-  //     )}
-  //   </button>
-  //   <p className="text-center text-sm">
-  //     Already have an account?{" "}
-  //     <button
-  //       onClick={() => setMode("login")}
-  //       className="font-semibold text-primary hover:underline"
-  //     >
-  //       Log In
-  //     </button>
-  //   </p>
-  // </form>
-  // );
-
-  const renderLoginOptions = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
-          Log in to your account
-        </h3>
-        <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-          Authentication options coming soon.
-        </p>
-      </div>
-      <div className="space-y-4">
-        <button
-          disabled
-          className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl bg-gray-50 dark:bg-gray-900 cursor-not-allowed opacity-60"
-        >
-          <HuggingFaceIcon className="w-8 h-8 text-gray-400" />
-          <div className="text-left">
-            <p className="font-semibold text-gray-500 dark:text-gray-400">
-              Continue as Researcher
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Hugging Face login - Coming Soon
-            </p>
-          </div>
-        </button>
-        <button
-          disabled
-          className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl bg-gray-50 dark:bg-gray-900 cursor-not-allowed opacity-60"
-        >
-          <MetaMaskIcon className="w-8 h-8 text-gray-400" />
-          <div className="text-left">
-            <p className="font-semibold text-gray-500 dark:text-gray-400">
-              Continue as Funder
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              MetaMask login - Coming Soon
-            </p>
-          </div>
-        </button>
-      </div>
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        {/* Don't have an account?{" "} */}
-        <span className="font-semibold text-gray-400 cursor-not-allowed">
-          Registration coming soon
-        </span>
-      </p>
-    </div>
-  );
-
-  // const renderLoginOptions = () => (
-  //   <div className="space-y-6">
-  //     <div>
-  //       <h3 className="text-lg font-semibold text-center text-text dark:text-text-dark">
-  //         Log in to your account
-  //       </h3>
-  //       <p className="text-sm text-center text-text-secondary dark:text-text-dark-secondary">
-  //         Connect with your preferred account to continue.
-  //       </p>
-  //     </div>
-  //     <div className="space-y-4">
-  //       <button
-  //         onClick={handleHuggingFaceLogin}
-  //         className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 transition-colors"
-  //       >
-  //         <HuggingFaceIcon className="w-8 h-8 text-yellow-500" />
-  //         <div className="text-left">
-  //           <p className="font-semibold text-text dark:text-text-dark">
-  //             Continue as Researcher
-  //           </p>
-  //           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-  //             Login with Hugging Face
-  //           </p>
-  //         </div>
-  //       </button>
-  //       <button
-  //         onClick={handleMetaMaskLogin}
-  //         className="w-full flex items-center space-x-4 p-4 border border-border dark:border-border-dark rounded-xl hover:bg-hf-gray-100 dark:hover:bg-hf-gray-800 transition-colors"
-  //       >
-  //         <MetaMaskIcon className="w-8 h-8" />
-  //         <div className="text-left">
-  //           <p className="font-semibold text-text dark:text-text-dark">
-  //             Continue as Funder
-  //           </p>
-  //           <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-  //             Login with MetaMask
-  //           </p>
-  //         </div>
-  //       </button>
-  //     </div>
-  //     <p className="text-center text-sm">
-  //       Don't have an account?{" "}
-  //       <button
-  //         onClick={() => setMode("signup")}
-  //         className="font-semibold text-primary hover:underline"
-  //       >
-  //         Apply to join
-  //       </button>
-  //     </p>
-  //   </div>
-  // );
-
-  const renderSignupSuccess = () => (
-    <div className="text-center p-8">
-      <CheckCircleIcon className="w-16 h-16 text-status-success mx-auto" />
-      <h3 className="text-2xl font-bold mt-4 text-text dark:text-text-dark">
-        Application Submitted!
-      </h3>
-      <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
-        Thanks for applying. We'll review your application and get back to you
-        soon.
-      </p>
-      <button
-        onClick={onClose}
-        className="mt-6 w-full bg-primary text-white font-semibold py-3 px-5 rounded-xl hover:bg-primary-hover"
-      >
-        Close
-      </button>
-    </div>
-  );
-
-  return (
-    <Modal
-      onClose={onClose}
-      title={
-        mode === "login"
-          ? "Log In"
-          : signupSuccess
-          ? "Application Received"
-          : "Apply to CAIRN"
+  // Handle Privy authentication flow
+  useEffect(() => {
+    const handlePrivyAuth = async () => {
+      // Only proceed if Privy authentication is complete and we have wallet
+      if (!privyAuth.isAuthenticated || !privyAuth.user || isAuthenticating) {
+        return;
       }
-    >
-      <div className="w-full max-w-md mx-auto">
-        {signupSuccess
-          ? renderSignupSuccess()
-          : mode === "login"
-          ? renderLoginOptions()
-          : renderSignupForm()}
+
+      // Get wallet address from Privy wallets
+      const privyWallet = wallets?.[0];
+      if (!privyWallet?.address) {
+        return;
+      }
+
+      setIsAuthenticating(true);
+      setAuthError(null);
+
+      try {
+        // Call backend Privy auth endpoint
+        const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
+        const response = await fetch(`${API_BASE}/api/v1/users/privy-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            privyId: privyAuth.user.id,
+            address: privyWallet.address,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Authentication failed');
+        }
+
+        const data = await response.json();
+
+        // Update app context with user data
+        handleLoginSuccess(data.data.user);
+        onClose();
+      } catch (error) {
+        console.error('❌ Cairn authentication failed:', error);
+        setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+        // Optionally logout from Privy if backend auth fails
+        await privyAuth.logout();
+      } finally {
+        setIsAuthenticating(false);
+      }
+    };
+
+    handlePrivyAuth();
+  }, [privyAuth.isAuthenticated, privyAuth.user, wallets, isAuthenticating]);
+
+  // Show loading/error state while authenticating
+  return (
+    <Modal onClose={onClose} title="Authenticating">
+      <div className="w-full max-w-md mx-auto p-8">
+        {authError ? (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+            </div>
+            <button
+              onClick={() => {
+                setAuthError(null);
+                privyAuth.login();
+              }}
+              className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-5 rounded-xl hover:bg-blue-500 transition-all duration-300"
+            >
+              <span>Try Again</span>
+            </button>
+          </div>
+        ) : isAuthenticating ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <SpinnerIcon className="animate-spin w-8 h-8 text-blue-600" />
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+              Connecting to Cairn...
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <SpinnerIcon className="animate-spin w-8 h-8 text-blue-600" />
+            <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+              Opening authentication...
+            </p>
+          </div>
+        )}
       </div>
     </Modal>
   );
 };
+
 
 const LandingHeader = ({
   onNavigate,
@@ -464,7 +149,6 @@ const LandingHeader = ({
   onLoginClick: () => void;
   onSignupClick: () => void;
 }) => {
-  const { isAuthenticated, enterApp } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const scrollToSection = (sectionId: string) => {
@@ -477,84 +161,6 @@ const LandingHeader = ({
   const handleNavigate = (page: "howitworks") => {
     onNavigate(page);
     setIsMobileMenuOpen(false);
-  };
-
-  const handleConnectWallet = async () => {
-    if (typeof window.ethereum !== "undefined") {
-      try {
-        const TARGET_CHAIN_ID = "0x4cb2f"; // Filecoin Calibration = 0x13a (decimal 314159)
-
-        const currentChainId = await window.ethereum.request({
-          method: "eth_chainId",
-        });
-
-        console.log("Current chain ID:", currentChainId);
-
-        if (currentChainId !== TARGET_CHAIN_ID) {
-          try {
-            // Try to switch to Filecoin Calibration
-            await window.ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: TARGET_CHAIN_ID }],
-            });
-          } catch (switchError: any) {
-            // If the chain is not added to MetaMask, add it
-            if (switchError.code === 4902) {
-              try {
-                await window.ethereum.request({
-                  method: "wallet_addEthereumChain",
-                  params: [
-                    {
-                      chainId: TARGET_CHAIN_ID,
-                      chainName: "Filecoin Calibration",
-                      nativeCurrency: {
-                        name: "tFIL",
-                        symbol: "tFIL",
-                        decimals: 18,
-                      },
-                      rpcUrls: [
-                        "https://filecoin-calibration.chainup.net/rpc/v1",
-                      ],
-                      blockExplorerUrls: ["https://calibration.filfox.info/en"],
-                    },
-                  ],
-                });
-              } catch (addError) {
-                console.error("Failed to add chain:", addError);
-                return;
-              }
-            } else {
-              console.error("Failed to switch chain:", switchError);
-              return;
-            }
-          }
-        }
-
-        // ✅ Connect wallet
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        const address = accounts[0];
-
-        await initWithWallet(address);
-        const porCount = await getUserPoRCount(address);
-
-        setCurrentUser({
-          walletAddress: address,
-          porContributedCount: porCount,
-          role: UserRole.Scientist,
-        });
-
-        setUserRole(UserRole.Scientist);
-        setConnectedWallet(address);
-        console.log("User connected:", address, "Role:", UserRole.Scientist);
-        console.log("PoR Count:", porCount);
-      } catch (err) {
-        console.error("User rejected wallet connection or chain switch:", err);
-      }
-    } else {
-      alert("Please install MetaMask.");
-    }
   };
 
   return (
@@ -892,7 +498,7 @@ const FeaturesSection = () => {
 };
 
 export const AppFooter = () => (
-  <footer className="bg-background-light dark:bg-cairn-gray-950 text-text-secondary dark:text-cairn-gray-400 border-t border-border dark:border-cairn-gray-800">
+  <footer className="bg-cairn-gray-950 text-cairn-gray-400 border-t border-cairn-gray-800">
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* Left Side: Logo and Copyright */}
@@ -909,28 +515,28 @@ export const AppFooter = () => (
           className="flex items-center gap-x-6"
           aria-label="Footer navigation"
         >
-          <a
+          {/* <a
             href="#"
-            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+            className="text-sm font-medium hover:text-white transition-colors"
           >
             Docs
           </a>
           <a
             href="#"
-            className="text-sm font-medium hover:text-text dark:hover:text-white transition-colors"
+            className="text-sm font-medium hover:text-white transition-colors"
           >
             FAQ
-          </a>
+          </a> */}
           <a
             href="https://x.com/cairn_platform"
-            className="hover:text-text dark:hover:text-white transition-colors"
+            className="hover:text-white transition-colors"
             aria-label="Twitter"
           >
             <XIcon className="h-5 w-5" />
           </a>
           <a
-            href="#"
-            className="hover:text-text dark:hover:text-white transition-colors"
+            href="https://github.com/hiw3-org/cairn"
+            className="hover:text-white transition-colors"
             aria-label="GitHub"
           >
             <GitHubIcon className="h-5 w-5" />
@@ -946,36 +552,37 @@ export const LandingPage = ({
 }: {
   onNavigate: (page: "howitworks") => void;
 }) => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
-  const [authModalMode, setAuthModalMode] = React.useState<"login" | "signup">(
-    "login"
-  );
+  const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = React.useState(false);
 
-  const openAuthModal = (mode: "login" | "signup") => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
+  const openLoginModal = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const openSignupModal = () => {
+    setIsSignupModalOpen(true);
   };
 
   return (
     <div className="bg-cairn-gray-950 font-sans">
       <LandingHeader
         onNavigate={onNavigate}
-        onLoginClick={() => openAuthModal("login")}
-        onSignupClick={() => openAuthModal("signup")}
+        onLoginClick={openLoginModal}
+        onSignupClick={openSignupModal}
       />
       <main>
         <HeroSection
-          onLoginClick={() => openAuthModal("login")}
-          onSignupClick={() => openAuthModal("signup")}
+          onLoginClick={openLoginModal}
+          onSignupClick={openSignupModal}
         />
         <FeaturesSection />
       </main>
       <AppFooter />
-      {isAuthModalOpen && (
-        <AuthModal
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-        />
+      {isLoginModalOpen && (
+        <AuthModal onClose={() => setIsLoginModalOpen(false)} />
+      )}
+      {isSignupModalOpen && (
+        <SignupModal onClose={() => setIsSignupModalOpen(false)} />
       )}
     </div>
   );

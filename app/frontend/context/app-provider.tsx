@@ -13,25 +13,17 @@ import {
   ToastInfo,
   UserProfile,
   Output,
-  PoRStatus,
   FundingEvent,
   FundingRound,
   RoundApplicant,
   Notification,
-  ResearchDomain,
+  ProjectStatus,
+  HFModel,
+  HFDataset,
 } from "../lib/types";
-// Removed mock imports - will use API data instead
-// import {
-//   MOCK_PROJECTS,
-//   MOCK_USERS,
-//   RESEARCHER_WALLET_ALICE,
-//   MOCK_FUNDING_HISTORY,
-//   CURRENT_USER_WALLET,
-//   MOCK_FUNDING_ROUNDS,
-//   MOCK_NOTIFICATIONS,
-//   REPRODUCIBILITY_TEMPLATES,
-//   MOCK_HUGGINGFACE_OUTPUTS,
-// } from "../lib/constants";
+
+import { useApi } from "./api-context";
+
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -39,10 +31,19 @@ import {
   CloseIcon,
 } from "../components/ui/icons";
 
+// Simplified HuggingFace output type for now
+interface HuggingFaceOutput {
+  id: string;
+  name: string;
+  status: string;
+  cairnProjectId?: string;
+}
+
 interface AppContextType {
   isDarkMode: boolean;
   setIsDarkMode: (dark: boolean) => void;
-  userRole: UserRole;
+  userRole: UserRole | null;
+  setUserRole: React.Dispatch<React.SetStateAction<UserRole | null>>;
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   huggingFaceOutputs: HuggingFaceOutput[];
@@ -50,6 +51,7 @@ interface AppContextType {
     React.SetStateAction<HuggingFaceOutput[]>
   >;
   currentUser: UserProfile | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   toasts: ToastInfo[];
   addToast: (message: string, type?: ToastInfo["type"]) => void;
   dismissToast: (id: number) => void;
@@ -57,6 +59,7 @@ interface AppContextType {
     projectId: string,
     reproducibilityData: { notes: string; evidence: Output[] }
   ) => void;
+  handleLoginSuccess: (user: UserProfile) => void;
   handleAddProject: (project: Project) => void;
   handleSubmitForReproducibility: (projectId: string) => void;
   handleDispute: (projectId: string, reproducibilityId: string) => void;
@@ -69,6 +72,8 @@ interface AppContextType {
   fundingHistory: FundingEvent[];
   fundingRounds: FundingRound[];
   setFundingRounds: React.Dispatch<React.SetStateAction<FundingRound[]>>;
+  isAuthenticated: boolean;
+  setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
   handleCreateFundingRound: (
     round: Omit<
       FundingRound,
@@ -86,17 +91,22 @@ interface AppContextType {
     attachments: File[]
   ) => void;
   notifications: Notification[];
-  usdcBalance: number;
   handleCreateProjectFromHuggingFace: (
     hfOutputs: HuggingFaceOutput[]
   ) => string;
   handleMintImpactAsset: (roundId: string) => Promise<void>;
 
+  hfModels: HFModel[];
+  setHfModels: React.Dispatch<React.SetStateAction<HFModel[]>>;
+  hfDatasets: HFDataset[];
+  setHfDatasets: React.Dispatch<React.SetStateAction<HFDataset[]>>;
+  hfLastSync: Date | null;
+  setHfLastSync: React.Dispatch<React.SetStateAction<Date | null>>;
+
   // Auth & Navigation
   connectedWallet: string | null;
-  isAuthenticated: boolean;
+  setConnectedWallet: React.Dispatch<React.SetStateAction<string | null>>;
   connectWallet: (role?: UserRole) => Promise<void>;
-
   login: (method: "huggingface" | "metamask") => Promise<void>;
   signUp: (data: {
     name: string;
@@ -108,9 +118,11 @@ interface AppContextType {
   }) => Promise<void>;
   disconnectWallet: () => void;
   forceShowLanding: boolean;
+  setForceShowLanding: React.Dispatch<React.SetStateAction<boolean>>;
   goToLandingPage: () => void;
   enterApp: () => void;
   isGuestBrowsing: boolean;
+  setIsGuestBrowsing: React.Dispatch<React.SetStateAction<boolean>>;
   enterAppAsGuest: () => void;
 }
 
@@ -118,29 +130,16 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDarkMode, setIsDarkModeState] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.Researcher);
-  const [projects, setProjects] = useState<Project[]>([]); // Start with empty array
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [huggingFaceOutputs, setHuggingFaceOutputs] = useState<
     HuggingFaceOutput[]
-  >([]); // Start with empty array
-
-  // Commented out mock data initialization
-  // const [fundingHistory, setFundingHistory] = useState<FundingEvent[]>(MOCK_FUNDING_HISTORY);
-  // const [fundingRounds, setFundingRounds] = useState<FundingRound[]>(MOCK_FUNDING_ROUNDS);
+  >([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [fundingHistory, setFundingHistory] = useState<FundingEvent[]>([]);
   const [fundingRounds, setFundingRounds] = useState<FundingRound[]>([]);
-
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
-
-  // Commented out mock notifications
-  // const [notifications, setNotifications] = useState<Notification[]>(
-  //   MOCK_NOTIFICATIONS.sort(
-  //     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  //   )
-  // );
   const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  const [usdcBalance, setUsdcBalance] = useState(0); // Start with 0 instead of mock balance
 
   // Auth & Navigation State
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
@@ -148,7 +147,29 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [forceShowLanding, setForceShowLanding] = useState(false);
   const [isGuestBrowsing, setIsGuestBrowsing] = useState(false);
 
-  const isAuthenticated = !!connectedWallet;
+  const [hfModels, setHfModels] = useState<HFModel[]>([]);
+  const [hfDatasets, setHfDatasets] = useState<HFDataset[]>([]);
+  const [hfLastSync, setHfLastSync] = useState<Date | null>(null);
+
+  const api = useApi();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await api.checkAuthStatus();
+        if (isAuth) {
+          const user = await api.getCurrentUser();
+          handleLoginSuccess(user, true); // Pass true for initial load
+        }
+      } catch (error) {
+        console.log("Not authenticated");
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const setIsDarkMode = (dark: boolean) => {
     setIsDarkModeState(dark);
@@ -163,8 +184,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set initial theme to light mode by default.
-    // The toggle in the header will still allow users to switch.
     setIsDarkMode(isDarkMode);
   }, [isDarkMode]);
 
@@ -183,34 +202,64 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     [dismissToast]
   );
 
+  // Updated handleLoginSuccess function
+  const handleLoginSuccess = (user: UserProfile, isInitialLoad = false) => {
+    console.log("handleLoginSuccess called with user:", user);
+    setCurrentUser(user);
+
+    let frontendRole: UserRole;
+    switch (user.role) {
+      case "researcher":
+        frontendRole = UserRole.Researcher;
+        break;
+      case "funder":
+        frontendRole = UserRole.Funder;
+        break;
+      case "admin":
+        frontendRole = UserRole.Admin;
+        break;
+      default:
+        console.warn(
+          "Unknown user role:",
+          user.role,
+          "defaulting to Researcher"
+        );
+        frontendRole = UserRole.Researcher;
+        break;
+    }
+
+    setUserRole(frontendRole);
+    setIsAuthenticated(true);
+    setIsGuestBrowsing(false);
+    setForceShowLanding(false);
+
+    // Only show toast for actual logins, not initial page load
+    if (!isInitialLoad) {
+      addToast(
+        `Welcome back, ${user.profile?.firstName || user.username}!`,
+        "success"
+      );
+    }
+  };
+
+  const connectWallet = async () => {
+    // TODO: Implement wallet connection logic
+    addToast("Wallet connection functionality to be implemented", "info");
+  };
+
   const login = async (method: "huggingface" | "metamask") => {
     setForceShowLanding(false);
     setIsGuestBrowsing(false);
 
     // TODO: Replace with real authentication
-    // const mockAccount = CURRENT_USER_WALLET;
-    const mockAccount = "0x1234567890abcdef"; // Temporary for demo
-
-    // TODO: Replace with real user lookup from API
-    // let userProfile = MOCK_USERS.find(
-    //   (u) => u.walletAddress.toLowerCase() === mockAccount.toLowerCase()
-    // );
-    // if (!userProfile) {
-    //   userProfile = {
-    //     walletAddress: mockAccount,
-    //     name: "Test User",
-    //     porContributedCount: 0,
-    //     isVerified: true,
-    //     role: method === "huggingface" ? UserRole.Researcher : UserRole.Funder,
-    //   };
-    // }
+    const mockAccount = "0x1234567890abcdef";
 
     // Temporary user profile for demo
     const userProfile: UserProfile = {
       _id: "temp-user-id",
       username: "demo_user",
       email: "demo@example.com",
-      role: method === "huggingface" ? UserRole.Researcher : UserRole.Funder,
+      role: method === "huggingface" ? "researcher" : "funder",
     };
 
     setCurrentUser(userProfile);
@@ -220,12 +269,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       setUserRole(UserRole.Researcher);
       addToast(`Logged in as Researcher via Hugging Face.`, "success");
     } else {
-      // metamask
       setUserRole(UserRole.Funder);
       addToast(`Logged in as Funder via MetaMask.`, "success");
     }
 
-    setIsDarkMode(false); // Default to light mode for the app
+    setIsAuthenticated(true);
+    setIsDarkMode(false);
   };
 
   const signUp = async (data: {
@@ -246,13 +295,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const disconnectWallet = () => {
     setConnectedWallet(null);
     setCurrentUser(null);
-    setUserRole(UserRole.Researcher); // Reset to a default role
+    setUserRole(null);
+    setIsAuthenticated(false);
     setForceShowLanding(false);
     setIsGuestBrowsing(false);
 
-    // Revert to dark mode for landing page
-    setIsDarkMode(true);
+    // Clear auth tokens
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+    }
 
+    setIsDarkMode(true);
     addToast("You have been logged out.", "info");
   };
 
@@ -272,51 +326,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleAddProject = (project: Project) => {
-    setProjects((prev) => [project, ...prev]);
-    addToast(`Project draft "${project.title}" created!`, "success");
+    setProjects((prevProjects) => {
+      const newProjects = [...prevProjects, project];
+      return newProjects;
+    });
   };
 
-  // TODO: This function needs significant updates to work with new schema
-  // Currently commented out the mock-dependent parts
   const handleCreateProjectFromHuggingFace = (
     hfOutputs: HuggingFaceOutput[]
   ): string => {
     if (!currentUser || hfOutputs.length === 0) return "";
 
     const newProjectId = `proj-${Date.now()}`;
-
-    // TODO: Update this to create projects using the new backend schema
-    // This function currently uses many mock constants that need to be replaced
-    /*
-    const newProject: Project = {
-      _id: newProjectId,
-      title: `Project from ${hfOutputs[0].name}`,
-      researcher_id: currentUser._id || "",
-      field: "ml", // Default field
-      description: `A new project created by importing ${hfOutputs.length} output(s) from Hugging Face.`,
-      project_status: "Draft",
-      por_status: "InReview",
-      funded_amount: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Add other required fields based on new schema
-    };
-
-    setProjects((prev) => [newProject, ...prev]);
-    setHuggingFaceOutputs((prev) =>
-      prev.map((o) =>
-        hfOutputs.find((ho) => ho.id === o.id)
-          ? { ...o, status: "Imported", cairnProjectId: newProjectId }
-          : o
-      )
-    );
-    addToast(
-      `Successfully created new project draft: "${newProject.title}"`,
-      "success"
-    );
-    */
-
-    // Temporary placeholder
     addToast("Project creation from HuggingFace is currently disabled", "info");
     return newProjectId;
   };
@@ -324,10 +345,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const handleSubmitForReproducibility = (projectId: string) => {
     addToast("Submitting for reproducibility evaluation...", "info");
 
-    // Update to use new schema field names
     setProjects((prev) =>
       prev.map((p) =>
-        p._id === projectId ? { ...p, project_status: "Pending Evaluation" } : p
+        p._id === projectId
+          ? { ...p, project_status: ProjectStatus.PendingEvaluation }
+          : p
       )
     );
 
@@ -339,11 +361,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       )
     );
 
-    // Simulate evaluation delay
     setTimeout(() => {
       setProjects((prev) =>
         prev.map((p) =>
-          p._id === projectId ? { ...p, project_status: "Evaluated" } : p
+          p._id === projectId
+            ? { ...p, project_status: ProjectStatus.Evaluated }
+            : p
         )
       );
       setHuggingFaceOutputs((prev) =>
@@ -355,40 +378,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }, 5000);
   };
 
-  // TODO: This function needs to be updated to work with new project schema
-  // The new schema doesn't have a 'reproducibilities' array
   const handlePorSubmit = (
     projectId: string,
     reproducibilityData: { notes: string; evidence: Output[] }
   ) => {
     if (!currentUser) return;
-
-    // TODO: Update this to work with the new backend schema
-    // The new Project schema doesn't have reproducibilities array
-    /*
-    setProjects((prevProjects) =>
-      prevProjects.map((p) => {
-        if (p._id === projectId) {
-          // Update POR status instead of adding to reproducibilities array
-          return {
-            ...p,
-            por_status: "Phase1", // Or appropriate status
-          };
-        }
-        return p;
-      })
-    );
-    */
-
     addToast(
       "PoR submission functionality needs to be updated for new schema",
       "info"
     );
   };
 
-  // TODO: Update this function for new schema
   const handleDispute = (projectId: string, reproducibilityId: string) => {
-    // TODO: Implement dispute logic for new schema
     addToast(
       "Dispute functionality needs to be updated for new schema",
       "info"
@@ -400,11 +401,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setProjects((prevProjects) =>
       prevProjects.map((p) => {
         if (p._id === projectId) {
-          // Updated to use _id
           projectTitle = p.title;
           const updatedProject = {
             ...p,
-            funded_amount: (p.funded_amount || 0) + amount, // Updated field name
+            funded_amount: (p.funded_amount || 0) + amount,
           };
           addToast(
             `Successfully funded $${amount.toLocaleString()} to "${p.title}"!`,
@@ -423,7 +423,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         projectTitle,
         amount,
         timestamp: new Date().toISOString().split("T")[0],
-        funderWallet: currentUser._id || "unknown", // Updated field
+        funderWallet: currentUser._id || "unknown",
         txHash: `0x${Date.now().toString(16)}${Math.random()
           .toString(16)
           .substring(2, 12)}`,
@@ -432,16 +432,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // TODO: Update this function for new schema
   const handleClaimOwnership = (projectId: string) => {
     if (!currentUser) return;
-
-    // TODO: The new schema doesn't have impactAssetOwners
-    // This functionality needs to be redesigned
     addToast("Ownership claiming needs to be updated for new schema", "info");
   };
 
-  // TODO: Update this function for new schema
   const handleRegisterClaim = async (
     projectCid: string,
     projectOwnerAddress: string
@@ -450,8 +445,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addToast("Please connect your wallet first.", "error");
       return false;
     }
-
-    // TODO: Update for new schema - projects don't have cid or ownerId fields
     addToast("Claim registration needs to be updated for new schema", "info");
     return false;
   };
@@ -519,13 +512,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updatedProjects = projects.map((p) => {
       const fundingInfo = applicantsToFund.find(
-        (app) => app.projectId === p._id // Updated to use _id
+        (app) => app.projectId === p._id
       );
       if (fundingInfo && fundingInfo.fundingAmount) {
         return {
           ...p,
-          funded_amount: (p.funded_amount || 0) + fundingInfo.fundingAmount, // Updated field
-          project_status: "Funded", // Updated field
+          funded_amount: (p.funded_amount || 0) + fundingInfo.fundingAmount,
+          project_status: ProjectStatus.Funded,
         };
       }
       return p;
@@ -542,15 +535,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addToast(`Successfully distributed funds for "${round.title}"!`, "success");
   };
 
-  // TODO: Update this function for new schema
-  const getImpactLevel = (fraction: number): "High" | "Medium" | "Low" => {
-    // This function references hypercertFraction which doesn't exist in new schema
-    if (fraction >= 0.75) return "High";
-    if (fraction >= 0.3) return "Medium";
-    return "Low";
-  };
-
-  // TODO: Update this function for new schema
   const handleApplyToFundingRound = (
     projectId: string,
     roundId: string,
@@ -562,17 +546,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updatedProjects = projects.map((p) => {
       if (p._id === projectId) {
-        // Updated to use _id
         projectTitle = p.title;
         applicantData = {
-          projectId: p._id, // Updated to use _id
+          projectId: p._id,
           projectTitle: p.title,
-          verifiedPors: 0, // TODO: Calculate from new schema
-          impactLevel: "Medium", // TODO: Calculate from new schema
-          hfUpvotes: 0, // TODO: Get from new schema
-          communityScore: 0, // TODO: Calculate from new schema
+          verifiedPors: 0,
+          impactLevel: "Medium",
+          hfUpvotes: 0,
+          communityScore: 0,
         };
-        return { ...p, project_status: "Pending Evaluation" }; // Updated field
+        return { ...p, project_status: ProjectStatus.PendingEvaluation };
       }
       return p;
     });
@@ -599,7 +582,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleMintImpactAsset = async (roundId: string) => {
     addToast("Minting your Impact Asset NFT...", "info");
-    // Simulate a delay for the minting process
     await new Promise((resolve) => setTimeout(resolve, 3000));
     setFundingRounds((prevRounds) =>
       prevRounds.map((round) =>
@@ -613,15 +595,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     isDarkMode,
     setIsDarkMode,
     userRole,
+    setUserRole,
     projects,
     setProjects,
     huggingFaceOutputs,
     setHuggingFaceOutputs,
     currentUser,
+    setCurrentUser,
     toasts,
     addToast,
     dismissToast,
     handlePorSubmit,
+    handleLoginSuccess,
     handleAddProject,
     handleSubmitForReproducibility,
     handleDispute,
@@ -631,23 +616,33 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     fundingHistory,
     fundingRounds,
     setFundingRounds,
+    isAuthenticated,
+    setIsAuthenticated,
     handleCreateFundingRound,
     handleDistributeRoundFunds,
     handleApplyToFundingRound,
     notifications,
-    usdcBalance,
     connectedWallet,
-    isAuthenticated,
+    setConnectedWallet,
+    connectWallet,
     login,
     signUp,
     disconnectWallet,
     forceShowLanding,
+    setForceShowLanding,
     goToLandingPage,
     enterApp,
     isGuestBrowsing,
+    setIsGuestBrowsing,
     enterAppAsGuest,
     handleCreateProjectFromHuggingFace,
     handleMintImpactAsset,
+    hfModels,
+    setHfModels,
+    hfDatasets,
+    setHfDatasets,
+    hfLastSync,
+    setHfLastSync,
   };
 
   return (

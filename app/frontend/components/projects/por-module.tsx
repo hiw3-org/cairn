@@ -1,60 +1,63 @@
 import React from "react";
-import { Project, Reproducibility, PoRStatus } from "../../lib/types";
+import { Project } from "../../lib/types";
 import { downloadFromFileCoin } from "../../utils/filecoin";
 import {
-  EyeIcon,
   FlagIcon,
   ClockIcon,
   CheckCircleIcon,
-  PlusIcon,
-  BeakerIcon,
-  ClipboardCheckIcon,
+  DownloadIcon,
 } from "../ui/icons";
-import { Tooltip } from "../ui/tooltip";
 
-export default function PoRModule({
-  project,
-  isOwner,
-  onPorSubmitClick,
-  onViewReproducibility,
-  onGetProofClick,
-}: {
-  project: Project;
-  isOwner: boolean;
-  onPorSubmitClick: () => void;
-  onViewReproducibility: (rep: Reproducibility) => void;
-  onGetProofClick: () => void;
-}) {
+export default function PoRModule({ project }: { project: Project }) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
-  // Check if project has reached Phase2 (successful PoR) or has a POR CID available
-  const hasSuccessPor =
-    project.por_status === "Phase2" ||
-    (project.por?.por_cid && project.por.por_cid.trim());
-
-  // Get the appropriate CID for downloading proof
-  const getProofCID = () => {
-    // Try POR CID first
-    if (project.por?.por_cid && project.por.por_cid.trim()) {
-      return project.por.por_cid;
+  // Get status configuration based on por_status
+  const statusConfig = React.useMemo(() => {
+    switch (project.por_status) {
+      case "Phase2":
+        return {
+          icon: CheckCircleIcon,
+          color: "text-status-success",
+          bg: "bg-status-success-bg dark:bg-status-success-bg-dark",
+          text: "Phase 2 - Verified",
+          description:
+            "This project has been fully verified and is reproducible.",
+        };
+      case "Phase1":
+        return {
+          icon: CheckCircleIcon,
+          color: "text-blue-600 dark:text-blue-400",
+          bg: "bg-blue-100 dark:bg-blue-900/30",
+          text: "Phase 1 - Initial Verification",
+          description: "This project has passed initial verification.",
+        };
+      case "Disputed":
+        return {
+          icon: FlagIcon,
+          color: "text-status-danger",
+          bg: "bg-status-danger-bg dark:bg-status-danger-bg-dark",
+          text: "Disputed",
+          description: "This project's reproducibility is under dispute.",
+        };
+      case "InReview":
+      default:
+        return {
+          icon: ClockIcon,
+          color: "text-status-warning",
+          bg: "bg-status-warning-bg dark:bg-status-warning-bg-dark",
+          text: "In Review",
+          description: "This project is awaiting reproducibility verification.",
+        };
     }
+  }, [project.por_status]);
 
-    // Fallback to HuggingFace contents CID
-    if (
-      project.huggingface?.contents_cid &&
-      project.huggingface.contents_cid.trim()
-    ) {
-      return project.huggingface.contents_cid;
-    }
-
-    return null;
-  };
+  const StatusIcon = statusConfig.icon;
+  const canDownload = project.por_status !== "InReview" && project.por?.por_cid;
 
   const handleDownloadProof = async () => {
-    const cid = getProofCID();
-    if (!cid) {
-      setDownloadError("No CID found for proof of reproducibility");
+    if (!project.por?.por_cid) {
+      setDownloadError("No CID available for download");
       return;
     }
 
@@ -64,59 +67,30 @@ export default function PoRModule({
 
       const result = await downloadFromFileCoin({
         walletAddress: import.meta.env.VITE_FILECOIN_WALLET_ADDRESS || "",
-        pieceCID: cid,
-        filename: `${project.title}_proof_of_reproducibility.zip`,
+        pieceCID: project.por.por_cid,
+        filename: `${project.title}_PoR.zip`,
       });
 
       if (!result.success) {
         throw new Error(result.error || "Download failed");
       }
 
-      console.log(`Successfully downloaded proof: ${result.filename}`);
+      console.log(`Successfully downloaded PoR: ${result.filename}`);
     } catch (err: any) {
-      console.error("Failed to download proof:", err);
+      console.error("Failed to download PoR:", err);
       setDownloadError(err.message || "Failed to download proof");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const proofCID = getProofCID();
-
-  // Create a status display based on the actual project data
-  const statusConfig = React.useMemo(() => {
-    // Only log in development
-    if (process.env.NODE_ENV === "development") {
-      console.log("Project has POR CID:", project.por?.por_cid);
-    }
-    if (project.por?.por_cid && project.por.por_cid.trim()) {
-      return {
-        icon: CheckCircleIcon,
-        color: "text-status-success",
-        bg: "bg-status-success-bg dark:bg-status-success-bg-dark",
-        text: "Reproducible",
-        description: "This project has a proof of reproducibility available.",
-      };
-    } else {
-      return {
-        icon: ClockIcon,
-        color: "text-status-warning",
-        bg: "bg-status-warning-bg dark:bg-status-warning-bg-dark",
-        text: "In Review",
-        description: "This project is under review for reproducibility.",
-      };
-    }
-  }, [project]);
-
-  const StatusIcon = statusConfig.icon;
-
   return (
-    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark flex flex-col">
+    <div className="bg-background-light dark:bg-background-dark-light rounded-xl shadow-sm p-6 border border-border dark:border-border-dark">
       {/* Error display */}
       {downloadError && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
           <p className="text-red-800 dark:text-red-200 text-sm">
-            Download error: {downloadError}
+            {downloadError}
           </p>
           <button
             onClick={() => setDownloadError(null)}
@@ -128,109 +102,62 @@ export default function PoRModule({
       )}
 
       <h3 className="text-lg font-semibold text-text-primary dark:text-dark-text-primary mb-4">
-        Reproducibility
+        Proof of Reproducibility Status
       </h3>
 
       <div className="space-y-4">
-        {/* Current Status Display */}
+        {/* Status Display */}
         <div className="flex items-start space-x-3">
           <div
-            className={`relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${statusConfig.bg}`}
+            className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${statusConfig.bg}`}
           >
-            <StatusIcon className={`h-5 w-5 ${statusConfig.color}`} />
+            <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
           </div>
           <div className="flex-grow">
-            <p className="font-semibold text-sm text-text-primary dark:text-dark-text-primary">
+            <p className="font-semibold text-base text-text-primary dark:text-dark-text-primary">
               {statusConfig.text}
             </p>
-            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mt-1">
+            <p className="text-sm text-text-secondary dark:text-dark-text-secondary mt-1">
               {statusConfig.description}
             </p>
-            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mt-1">
+            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mt-2">
               Last updated: {new Date(project.updated_at).toLocaleDateString()}
             </p>
           </div>
         </div>
 
-        {/* Project Details */}
-        <div className="bg-background dark:bg-background-dark rounded-lg p-3 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-text-secondary dark:text-dark-text-secondary">
-              Field:
-            </span>
-            <span className="text-text-primary dark:text-dark-text-primary font-medium">
-              {project.field}
-            </span>
+        {/* CID Display */}
+        {project.por?.por_cid && (
+          <div className="bg-background dark:bg-background-dark rounded-lg p-3">
+            <p className="text-xs text-text-secondary dark:text-dark-text-secondary mb-1">
+              Proof CID:
+            </p>
+            <p className="text-sm font-mono text-text-primary dark:text-dark-text-primary break-all">
+              {project.por.por_cid}
+            </p>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-text-secondary dark:text-dark-text-secondary">
-              Status:
+        )}
+
+        {/* Download Button */}
+        {canDownload && (
+          <button
+            onClick={handleDownloadProof}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center space-x-2 bg-primary text-primary-text font-semibold py-2.5 px-4 rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <DownloadIcon className="w-5 h-5" />
+            <span>
+              {isLoading ? "Downloading..." : "Download Proof from Filecoin"}
             </span>
-            <span className="text-text-primary dark:text-dark-text-primary font-medium">
-              {project.project_status}
-            </span>
+          </button>
+        )}
+
+        {!canDownload && project.por_status === "InReview" && (
+          <div className="text-center py-3 px-4 bg-hf-gray-100 dark:bg-hf-gray-800 rounded-lg">
+            <p className="text-sm text-text-secondary dark:text-dark-text-secondary">
+              Proof will be available after verification is complete
+            </p>
           </div>
-          {project.funded_amount > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-text-secondary dark:text-dark-text-secondary">
-                Funding:
-              </span>
-              <span className="text-text-primary dark:text-dark-text-primary font-medium">
-                ${project.funded_amount.toLocaleString()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          {project.por_status === "InReview" && !isOwner && (
-            <button
-              onClick={onPorSubmitClick}
-              className="w-full flex items-center justify-center space-x-2 bg-primary text-primary-text font-semibold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors text-sm shadow-md"
-            >
-              <PlusIcon className="w-4 h-4" />
-              <span>Submit Reproducibility Evidence</span>
-            </button>
-          )}
-
-          {isOwner && (
-            <button
-              onClick={onGetProofClick}
-              className="w-full flex items-center justify-center space-x-2 bg-secondary text-secondary-text font-semibold py-2 px-4 rounded-lg hover:bg-secondary-hover transition-colors text-sm"
-            >
-              <BeakerIcon className="w-4 h-4" />
-              <span>Get Proof of Reproducibility</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Download Proof Section */}
-      <div className="mt-6 pt-4 border-t border-border dark:border-border-dark">
-        <button
-          onClick={handleDownloadProof}
-          disabled={!hasSuccessPor || !proofCID || isLoading}
-          className="w-full flex items-center justify-center space-x-2 text-sm font-semibold py-2 px-4 rounded-lg transition-colors bg-primary-light text-primary hover:bg-blue-200 dark:bg-primary/20 dark:text-primary-light dark:hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-light dark:disabled:hover:bg-primary/20"
-        >
-          <ClipboardCheckIcon className="w-5 h-5" />
-          <span>
-            {isLoading
-              ? "Downloading..."
-              : proofCID && hasSuccessPor
-              ? "Download Proof from Filecoin"
-              : hasSuccessPor
-              ? "No Proof CID Available"
-              : "Proof Not Yet Available"}
-          </span>
-        </button>
-        {proofCID && (
-          <p className="mt-2 text-xs text-text-secondary dark:text-dark-text-secondary text-center">
-            CID:{" "}
-            {proofCID.length > 20
-              ? proofCID.substring(0, 20) + "..."
-              : proofCID}
-          </p>
         )}
       </div>
     </div>

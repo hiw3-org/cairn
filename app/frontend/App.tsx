@@ -2,14 +2,16 @@ import React from "react";
 import { LandingPage } from "./components/landing/landing-page";
 import { HowItWorksPage } from "./components/how-it-works/how-it-works-page";
 import Header from "./components/layout/header";
-// import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
-// import { FunderDashboard } from "./components/dashboard/funder-dashboard";
-// import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
+import { ResearcherDashboard } from "./components/dashboard/scientist-dashboard";
+import { FunderDashboard } from "./components/dashboard/funder-dashboard";
+import { ImpactOwnerDashboard } from "./components/dashboard/impact-owner-dashboard";
 import { ProjectDetailView } from "./components/projects/project-detail-view";
 import { SubmitPorModal } from "./components/modals/submit-por-modal";
 import { ReproducibilityDetailModal } from "./components/modals/reproduction-detail-modal";
 import { useAppContext } from "./context/app-provider";
+import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { useApi } from "./context/api-context";
+import { useWalletConnection, useWalletActions, usePrivyAuth } from "./context/wallet-context";
 import {
   UserRole,
   Project,
@@ -27,7 +29,7 @@ import {
 } from "./components/ui/icons";
 import { AppFooter } from "./components/landing/landing-page";
 import { BottomNavBar } from "./components/layout/bottom-nav-bar";
-import { FundingRoundDetailModal } from "./components/modals/funding-round-detail-modal";
+import { FundingRoundDetailView } from "./components/modals/funding-round-detail-modal";
 import { OutputsLibrary } from "./components/dashboard/outputs-library";
 import { ApplyToFundingModal } from "./components/modals/apply-to-funding-modal";
 import { ProofOfReproducibilityModal } from "./components/modals/proof-of-reproducibility-modal";
@@ -62,7 +64,8 @@ const Sidebar = ({
       id: "funding",
       label: "Funding",
       icon: ChartBarIcon,
-      notificationCount: newOpportunitiesCount, // Shows count of new funding opportunities
+      notificationCount: newOpportunitiesCount,
+      disabled: true, // Shows count of new funding opportunities
     },
     { id: "dao", label: "DAO", icon: GavelIcon, disabled: true }, // Coming soon feature
   ];
@@ -111,11 +114,11 @@ const Sidebar = ({
             <span>{item.label}</span>
 
             {/* Notification badge for items with counts */}
-            {"notificationCount" in item && item.notificationCount > 0 && (
+            {/* {"notificationCount" in item && item.notificationCount > 0 && (
               <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-status-danger text-white text-xs font-bold">
                 {item.notificationCount}
               </span>
-            )}
+            )} */}
 
             {/* "Soon" badge for disabled items */}
             {(item as any).disabled && (
@@ -186,15 +189,9 @@ const AppLayout = ({
  * Simpler layout without sidebar, used for guest browsing and landing pages
  */
 const PublicLayout = ({
-  children,
-  selectedProject,
-  onSelectProject,
-  onBackToLibrary,
+  children
 }: {
   children: React.ReactNode;
-  selectedProject?: Project | null;
-  onSelectProject?: (project: Project) => void;
-  onBackToLibrary?: () => void;
 }) => {
   const { goToLandingPage } = useAppContext();
 
@@ -237,6 +234,11 @@ export function App() {
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
+  const hasLoadedHFData = React.useRef(false);
+
+  // Wallet connection and authentication hooks
+  const walletConnection = useWalletConnection();
+  const privyAuth = usePrivyAuth();
 
   // Get app context and API functions
   const {
@@ -252,6 +254,9 @@ export function App() {
     isGuestBrowsing,
     setProjects,
     addToast,
+    setHfModels,
+    setHfDatasets,
+    setHfLastSync,
   } = useAppContext();
 
   const api = useApi();
@@ -263,6 +268,12 @@ export function App() {
   const [activeDashboardPage, setActiveDashboardPage] = React.useState(
     userRole === UserRole.Researcher ? "outputs" : "dashboard"
   );
+
+  const [isNewProjectWizardOpen, setIsNewProjectWizardOpen] =
+    React.useState(false);
+  const [newProjectOutputs, setNewProjectOutputs] = React.useState<
+    HuggingFaceOutput[]
+  >([]);
 
   // Guest browsing handlers
   const handleGuestSelectProject = (project: Project) => {
@@ -315,16 +326,13 @@ export function App() {
     setIsLoadingProjects(true);
     try {
       const result = await api.fetchProjects({ limit: 50 });
-      console.log("Fetched projects from API:", result);
 
       if (!result || !result.projects) {
         throw new Error("Invalid response from server");
       }
 
       // Projects from API already match our unified Project interface
-      // No conversion needed since we updated the schema
       setProjects(result.projects);
-      console.log("Set projects:", result.projects);
     } catch (error) {
       console.error("Failed to load projects:", error);
       addToast("Failed to load projects from server", "error");
@@ -340,6 +348,62 @@ export function App() {
     }
   }, [isAuthenticated, isGuestBrowsing]);
 
+  // ===== HUGGINGFACE DATA LOADING =====
+  /**
+   * Loads HuggingFace repos and datasets if user has connected their account
+   * This enriches the UI with real data from their HF profile
+   */
+  React.useEffect(() => {
+    const fetchHFData = async () => {
+      // Don't fetch if user/auth not ready
+      if (!isAuthenticated || !currentUser) return;
+
+      const isHFConnected = currentUser?.integrations?.huggingface?.connected;
+
+      // If HF is not connected, reset the flag and return
+      if (!isHFConnected) {
+        hasLoadedHFData.current = false;
+        return;
+      }
+
+      // Don't fetch if already loaded
+      if (hasLoadedHFData.current) return;
+
+      hasLoadedHFData.current = true; // Set before fetching to prevent race conditions
+
+      try {
+        const [repos, datasets] = await Promise.all([
+          api.getHFRepos(50),
+          api.getHFDatasets(50),
+        ]);
+
+        setHfModels(repos);
+        setHfDatasets(datasets);
+        setHfLastSync(new Date());
+
+        addToast("HuggingFace data synced successfully", "success");
+      } catch (error) {
+        console.error("Failed to load HuggingFace data:", error);
+        hasLoadedHFData.current = false; // Reset on error so they can retry
+        addToast("Failed to sync HuggingFace data", "error");
+      }
+    };
+
+    fetchHFData();
+
+    // Reset the flag when user logs out
+    if (!isAuthenticated) {
+      hasLoadedHFData.current = false;
+    }
+  }, [
+    isAuthenticated,
+    currentUser?.integrations?.huggingface?.connected, // Watch HF connection status specifically
+    api,
+    setHfModels,
+    setHfDatasets,
+    setHfLastSync,
+    addToast,
+  ]);
   // Count draft projects for the current researcher
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;
@@ -350,6 +414,12 @@ export function App() {
     ).length;
   }, [projects, currentUser, userRole]);
 
+  const newOpportunitiesCount = React.useMemo(() => {
+    // For now, return 0 as a placeholder
+    // TODO: Calculate based on funding rounds or opportunities from your app context
+    return 0;
+  }, []);
+
   // ===== NAVIGATION HANDLERS =====
 
   const handleStaticNavigate = (page: StaticPage) => {
@@ -358,8 +428,12 @@ export function App() {
   };
 
   const handleSelectProject = (project: Project) => {
-    console.log("handleSelectProject called with:", project.title, project._id);
     setSelectedProject(project);
+  };
+
+  const handleOpenNewProjectModal = () => {
+    setNewProjectOutputs([]); // Start with no outputs
+    setIsNewProjectWizardOpen(true);
   };
 
   const handleBackToDashboard = () => {
@@ -439,6 +513,14 @@ export function App() {
     setIsProofOfReproModalOpen(true);
   };
 
+  const handleProjectCreated = React.useCallback(
+    (createdProject: Project) => {
+      // Call the context handler
+      handleAddProject(createdProject);
+    },
+    [handleAddProject, projects]
+  );
+
   // Set default dashboard page based on user role
   React.useEffect(() => {
     if (userRole === UserRole.Researcher) {
@@ -454,9 +536,10 @@ export function App() {
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
-    console.log("Rendering landing page");
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
@@ -465,8 +548,9 @@ export function App() {
     // Guest browsing - can view projects but not interact
     if (isGuestBrowsing) {
       return (
-        <PublicLayout>
-          <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
+        <>
+          <PublicLayout>
+            <div className="p-6 lg:p-8 w-full max-w-screen-2xl mx-auto">
             {isLoadingProjects ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-text-primary dark:text-dark-text-primary">
@@ -503,37 +587,41 @@ export function App() {
             )}
           </div>
         </PublicLayout>
+        </>
       );
     }
 
     // Static public pages
     if (staticPage === "howitworks") {
       return (
-        <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        <>
+          <HowItWorksPage onNavigate={() => handleStaticNavigate("landing")} />
+        </>
       );
     }
 
     // Default landing page
     return (
-      <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      <>
+        <LandingPage onNavigate={() => handleStaticNavigate("howitworks")} />
+      </>
     );
   }
 
   // Loading state while user data is being fetched
   if (!currentUser) {
-    console.log("No current user, showing loading");
     return (
-      <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
-        Loading user profile...
-      </div>
+      <>
+        <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark text-text-primary dark:text-dark-text-primary">
+          Loading user profile...
+        </div>
+      </>
     );
   }
 
   // ===== AUTHENTICATED USER FLOW =====
-  console.log("About to render main AppLayout");
-
   return (
-    <>
+    <>      
       {/* Main application layout */}
       <AppLayout
         activePage={activeDashboardPage}
@@ -551,18 +639,8 @@ export function App() {
 
           {/* Main content routing */}
           {(() => {
-            console.log("Dashboard render check:", {
-              selectedProject,
-              userRole,
-              activeDashboardPage,
-            });
-
             // Show project detail view if a project is selected
             if (selectedProject) {
-              console.log(
-                "About to render ProjectDetailView for:",
-                selectedProject.title
-              );
               return (
                 <ProjectDetailView
                   project={selectedProject}
@@ -577,36 +655,37 @@ export function App() {
             }
 
             // Show appropriate dashboard based on user role
-            // if (userRole === UserRole.Researcher) {
-            //   return (
-            //     <ResearcherDashboard
-            //       key={`researcher-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       currentUser={currentUser}
-            //       activePage={activeDashboardPage}
-            //       onOpenCreateProjectWizard={handleOpenCreateProjectWizard}
-            //       onNavigate={handleDashboardNavigation}
-            //       onApplyToFunding={handleOpenApplyFundingModal}
-            //     />
-            //   );
-            // } else if (userRole === UserRole.ImpactOwner) {
-            //   return (
-            //     <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
-            //   );
-            // } else {
-            //   // Funder dashboard
-            //   return (
-            //     <FunderDashboard
-            //       key={`funder-${activeDashboardPage}`}
-            //       projects={projects}
-            //       onSelectProject={handleSelectProject}
-            //       activePage={activeDashboardPage}
-            //       onNavigate={handleDashboardNavigation}
-            //       onViewInfo={handleOpenFundingRoundDetail}
-            //     />
-            //   );
-            // }
+            if (userRole === UserRole.Researcher) {
+              return (
+                <ResearcherDashboard
+                  key={`researcher-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  currentUser={currentUser}
+                  activePage={activeDashboardPage}
+                  onNewProject={handleOpenNewProjectModal}
+                  onNavigate={handleDashboardNavigation}
+                  onApplyToFunding={handleOpenApplyFundingModal}
+                  onProjectCreated={handleProjectCreated}
+                />
+              );
+            } else if (userRole === UserRole.ImpactOwner) {
+              return (
+                <ImpactOwnerDashboard onSelectProject={handleSelectProject} />
+              );
+            } else {
+              // Funder dashboard
+              return (
+                <FunderDashboard
+                  key={`funder-${activeDashboardPage}`}
+                  projects={projects}
+                  onSelectProject={handleSelectProject}
+                  activePage={activeDashboardPage}
+                  onNavigate={handleDashboardNavigation}
+                  onViewInfo={handleOpenFundingRoundDetail}
+                />
+              );
+            }
           })()}
         </div>
       </AppLayout>
@@ -622,9 +701,18 @@ export function App() {
         />
       )}
 
+      {/* Create new project wizard modal */}
+      {isNewProjectWizardOpen && (
+        <CreateProjectWizardModal
+          initialOutputs={newProjectOutputs}
+          onClose={() => setIsNewProjectWizardOpen(false)}  
+          onProjectCreated={handleProjectCreated}
+        />
+      )}
+
       {/* Funding round detail modal */}
       {isFundingRoundDetailModalOpen && selectedFundingRound && (
-        <FundingRoundDetailModal
+        <FundingRoundDetailView
           round={selectedFundingRound}
           onClose={handleCloseFundingRoundDetail}
           onSelectProject={handleSelectProjectFromRoundModal}

@@ -27,6 +27,8 @@ import { useAppContext } from "../../context/app-provider";
 import React from "react";
 import { useClipboard } from "../../hooks/use-clipboard";
 import { ReproducibilityBadge } from "../ui/reproducibility-badge";
+import { StoragePaymentModal } from "../modals/storage-payment-modal";
+import { DatabaseIcon } from "../ui/icons";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -88,14 +90,15 @@ const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
         {/* Researcher Section */}
         <div>
           <h3 className="text-lg font-semibold text-text dark:text-text-dark mb-2">
-            Researcher
+            Researcher Info
           </h3>
           <div className="py-2">
             <p className="font-semibold text-text dark:text-text-dark text-sm">
-              {project.researcher?.username || "Unknown Researcher"}
+              {project.researcher_id?.profile.firstName || "Unknown Researcher"}{" "}
+              {project.researcher_id?.profile.lastName || "Unknown Last Name"}
             </p>
             <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
-              {project.researcher?.email || "No email provided"}
+              {project.researcher_id?.email || "No email provided"}
             </p>
           </div>
         </div>
@@ -131,34 +134,58 @@ const ProjectResourceCard = ({
   url,
   type,
   project,
+  onStoreClick,
 }: {
   title: string;
   url?: string;
   type: string;
   project: Project;
+  onStoreClick?: () => void;
 }) => {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
+  const { currentUser } = useAppContext();
 
   const reproducibilityStatus: ReproducibilityStatus =
     project.por_status === "Phase2" ? "Verified" : "Pending";
+
+  // Check if user is the project owner
+  const isOwner = currentUser ? project.researcher_id?._id === (currentUser.id || currentUser._id) : false;
+
+  // Check if this resource is already stored on Filecoin
+  const isStoredOnFilecoin = type === "HuggingFace" && project.huggingface?.contents_cid;
 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
       setDownloadError(null);
 
-      // Check if output has a CID for Filecoin download
-      if (output.data && output.data.cid && output.data.cid.trim()) {
-        // Use the new utility function for FileCoin download with output-specific CID
+      // Check if we should download from Filecoin
+      const hasCid =
+        (type === "HuggingFace" && project.huggingface?.contents_cid) ||
+        project.por?.por_cid;
+
+      if (hasCid) {
         const walletAddress = import.meta.env.VITE_FILECOIN_WALLET_ADDRESS;
-        if (!walletAddress || typeof walletAddress !== "string" || walletAddress.trim() === "") {
-          throw new Error("Missing required environment variable: VITE_FILECOIN_WALLET_ADDRESS");
+        if (
+          !walletAddress ||
+          typeof walletAddress !== "string" ||
+          walletAddress.trim() === ""
+        ) {
+          throw new Error(
+            "Missing required environment variable: VITE_FILECOIN_WALLET_ADDRESS"
+          );
         }
+
+        const cidToUse =
+          type === "HuggingFace"
+            ? project.huggingface?.contents_cid
+            : project.por?.por_cid;
+
         const result = await downloadFromFileCoin({
           walletAddress,
-          pieceCID: output.data.cid, // Use the output-specific CID
-          filename: `${project.title}_${output.description}.zip`,
+          pieceCID: cidToUse!,
+          filename: `${project.title}_${type}.zip`,
         });
 
         if (!result.success) {
@@ -167,8 +194,8 @@ const ProjectResourceCard = ({
 
         console.log(`Successfully downloaded: ${result.filename}`);
       } else if (url) {
-        // Open URL in new tab
-        window.open(url, "_blank");
+        // Open URL in new tab for direct links
+        window.open(url, "_blank", "noopener,noreferrer");
       } else {
         throw new Error("No CID or URL found for this resource");
       }
@@ -191,7 +218,7 @@ const ProjectResourceCard = ({
     if (hasCid) {
       return "Download from Filecoin";
     } else if (url) {
-      return type === "HuggingFace" ? "View on HuggingFace" : "View Paper";
+      return type === "HuggingFace" ? "View on HuggingFace" : "View on ArXiv";
     }
     return "No Download Available";
   };
@@ -233,8 +260,9 @@ const ProjectResourceCard = ({
         </span>
       </div>
 
-      {/* Download button */}
-      <div className="flex items-center space-x-2">
+      {/* Action buttons */}
+      <div className="flex items-center space-x-2 flex-wrap gap-2">
+        {/* Download/View button */}
         <button
           onClick={handleDownload}
           disabled={!isDownloadAvailable() || isDownloading}
@@ -245,6 +273,25 @@ const ProjectResourceCard = ({
             {isDownloading ? "Downloading..." : getDownloadButtonText()}
           </span>
         </button>
+
+        {/* Store on Filecoin button - only show for HuggingFace repos and project owners */}
+        {type === "HuggingFace" && isOwner && !isStoredOnFilecoin && onStoreClick && (
+          <button
+            onClick={onStoreClick}
+            className="flex items-center space-x-2 bg-hf-gray-100 dark:bg-hf-gray-800 text-text dark:text-text-dark text-sm font-semibold py-1.5 px-3 rounded-md hover:bg-hf-gray-200 dark:hover:bg-hf-gray-700 transition-colors border border-border dark:border-border-dark"
+          >
+            <DatabaseIcon className="w-4 h-4" />
+            <span>Store on Filecoin</span>
+          </button>
+        )}
+
+        {/* Stored indicator */}
+        {type === "HuggingFace" && isStoredOnFilecoin && (
+          <div className="flex items-center space-x-2 bg-status-success-bg text-status-success text-sm font-semibold py-1.5 px-3 rounded-md border border-status-success/20">
+            <CheckIcon className="w-4 h-4" />
+            <span>Stored on Filecoin</span>
+          </div>
+        )}
       </div>
 
       {/* CID display if available */}
@@ -280,35 +327,33 @@ export const ProjectDetailView = ({
 }) => {
   const { currentUser } = useAppContext();
   const isOwner = currentUser
-    ? project.researcher_id === currentUser._id
+    ? project.researcher_id?._id === (currentUser.id || currentUser._id)
     : false;
+
   const [isStarred, setIsStarred] = React.useState(false);
+  const [isStorageModalOpen, setIsStorageModalOpen] = React.useState(false);
 
   // Create resource cards from project data
   const projectResources = React.useMemo(() => {
     const resources = [];
 
     // Add HuggingFace resource if available
-    if (project.huggingface?.repo_url) {
+    if (project.huggingface?.repository_url) {
       resources.push({
         title: `${project.title} - HuggingFace Repository`,
-        url: project.huggingface.repo_url,
+        url: project.huggingface.repository_url,
         type: "HuggingFace",
       });
     }
 
     // Add paper resource if available
-    if (project.paper?.doi || project.paper?.arxiv_id) {
-      const paperUrl = project.paper.doi
-        ? `https://doi.org/${project.paper.doi}`
-        : project.paper.arxiv_id
-        ? `https://arxiv.org/abs/${project.paper.arxiv_id}`
-        : undefined;
+    if (project?.publication_url) {
+      const paperUrl = project.publication_url;
 
       resources.push({
-        title: project.paper.title || `${project.title} - Research Paper`,
+        title: project.description || `${project.title} - Research Paper`,
         url: paperUrl,
-        type: project.paper.doi ? "DOI Paper" : "ArXiv Paper",
+        type: "ArXiv Paper",
       });
     }
 
@@ -414,6 +459,7 @@ export const ProjectDetailView = ({
                     url={resource.url}
                     type={resource.type}
                     project={project}
+                    onStoreClick={() => setIsStorageModalOpen(true)}
                   />
                 ))
               ) : (
@@ -437,6 +483,18 @@ export const ProjectDetailView = ({
           />
         </div>
       </div>
+
+      {/* Storage Payment Modal */}
+      {isStorageModalOpen && (
+        <StoragePaymentModal
+          project={project}
+          onClose={() => setIsStorageModalOpen(false)}
+          onSuccess={() => {
+            setIsStorageModalOpen(false);
+            // Optionally refresh project data here
+          }}
+        />
+      )}
     </div>
   );
 };
