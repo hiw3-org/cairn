@@ -88,7 +88,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const API_BASE =
-    apiUrl || process.env.VITE_API_URL || "http://localhost:3000/api/v1";
+    apiUrl || import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   // Helper function to get headers (no auth token needed anymore)
   const getHeaders = () => {
