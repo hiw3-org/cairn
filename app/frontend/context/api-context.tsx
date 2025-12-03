@@ -117,7 +117,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/users/login`, {
+      const response = await fetch(`${API_BASE}/api/v1/users/login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -144,7 +144,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       console.log("Sending to backend:", userData);
-      const response = await fetch(`${API_BASE}/users/signup`, {
+      const response = await fetch(`${API_BASE}/api/v1/users/signup`, {
         method: "POST",
         credentials: "include", // Important: sends/receives cookies
         headers: { "Content-Type": "application/json" },
@@ -170,7 +170,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/users/me`, {
+      const response = await fetch(`${API_BASE}/api/v1/users/me`, {
         credentials: "include", // Important: sends cookies
         headers: getHeaders(),
       });
@@ -192,7 +192,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
   const checkAuthStatus = async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/users/me`, {
+      const response = await fetch(`${API_BASE}/api/v1/users/me`, {
         credentials: "include",
         headers: getHeaders(),
       });
@@ -212,7 +212,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      await fetch(`${API_BASE}/users/logout`, {
+      await fetch(`${API_BASE}/api/v1/users/logout`, {
         method: "POST",
         credentials: "include",
         headers: getHeaders(),
@@ -242,7 +242,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       if (params?.researcher_id)
         searchParams.append("researcher_id", params.researcher_id);
 
-      const response = await fetch(`${API_BASE}/projects?${searchParams}`, {
+      const response = await fetch(`${API_BASE}/api/v1/projects?${searchParams}`, {
         credentials: "include", // Important: sends cookies
         headers: getHeaders(),
       });
@@ -269,7 +269,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/projects/${id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/projects/${id}`, {
         credentials: "include",
         headers: getHeaders(),
       });
@@ -304,7 +304,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       if (params?.limit) searchParams.append("limit", params.limit.toString());
 
       const response = await fetch(
-        `${API_BASE}/projects/field/${field}?${searchParams}`,
+        `${API_BASE}/api/v1/projects/field/${field}?${searchParams}`,
         {
           credentials: "include",
           headers: getHeaders(),
@@ -335,7 +335,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/projects`, {
+      const response = await fetch(`${API_BASE}/api/v1/projects`, {
         method: "POST",
         credentials: "include",
         headers: getHeaders(),
@@ -363,7 +363,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/auth`,
+        `${API_BASE}/api/v1/integrations/huggingface/auth`,
         {
           method: "POST",
           credentials: "include",
@@ -391,7 +391,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/status`,
+        `${API_BASE}/api/v1/integrations/huggingface/status`,
         {
           credentials: "include",
           headers: getHeaders(),
@@ -418,7 +418,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/disconnect`,
+        `${API_BASE}/api/v1/integrations/huggingface/disconnect`,
         {
           method: "DELETE",
           credentials: "include",
@@ -444,7 +444,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/repos?limit=${limit}`,
+        `${API_BASE}/api/v1/integrations/huggingface/repos?limit=${limit}`,
         {
           credentials: "include",
           headers: getHeaders(),
@@ -473,7 +473,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/datasets?limit=${limit}`,
+        `${API_BASE}/api/v1/integrations/huggingface/datasets?limit=${limit}`,
         {
           credentials: "include",
           headers: getHeaders(),
@@ -500,7 +500,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/integrations/huggingface/refresh`,
+        `${API_BASE}/api/v1/integrations/huggingface/refresh`,
         {
           method: "POST",
           credentials: "include",
@@ -533,7 +533,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/arxiv/search-title?q=${encodeURIComponent(
+        `${API_BASE}/api/v1/arxiv/search-title?q=${encodeURIComponent(
           query
         )}&limit=${limit}`,
         {
@@ -569,7 +569,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/arxiv/search-author?author=${encodeURIComponent(
+        `${API_BASE}/api/v1/arxiv/search-author?author=${encodeURIComponent(
           author
         )}&limit=${limit}`,
         {
@@ -606,7 +606,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
       if (params?.page) searchParams.append("page", params.page.toString());
       if (params?.limit) searchParams.append("limit", params.limit.toString());
 
-      const response = await fetch(`${API_BASE}/users?${searchParams}`, {
+      const response = await fetch(`${API_BASE}/api/v1/users?${searchParams}`, {
         credentials: "include",
         headers: getHeaders(),
       });
@@ -632,7 +632,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
   // Generic HTTP methods
   const get = async (endpoint: string): Promise<any> => {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const response = await fetch(`${API_BASE}/api/v1${endpoint}`, {
         credentials: "include",
         headers: getHeaders(),
       });
@@ -652,7 +652,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
   const post = async (endpoint: string, body?: any): Promise<any> => {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const response = await fetch(`${API_BASE}/api/v1${endpoint}`, {
         method: "POST",
         credentials: "include",
         headers: getHeaders(),
@@ -674,7 +674,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
   const put = async (endpoint: string, body?: any): Promise<any> => {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const response = await fetch(`${API_BASE}/api/v1${endpoint}`, {
         method: "PUT",
         credentials: "include",
         headers: getHeaders(),
@@ -696,7 +696,7 @@ export const ApiProvider = ({ children, apiUrl }: ApiProviderProps) => {
 
   const deleteMethod = async (endpoint: string): Promise<any> => {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const response = await fetch(`${API_BASE}/api/v1${endpoint}`, {
         method: "DELETE",
         credentials: "include",
         headers: getHeaders(),
