@@ -42,21 +42,6 @@ export interface Metric {
   trend: number; // percentage change
 }
 
-export interface AdoptionMetrics {
-  githubStars: Metric;
-  githubForks: Metric;
-  dependencies: Metric;
-  huggingFaceDownloads: Metric;
-  huggingFaceModels?: string[];
-  huggingFaceDatasets?: string[];
-  huggingFaceSpaces?: string[];
-}
-
-export interface ScientificMetrics {
-  citations: Metric;
-  arxivDownloads: Metric;
-}
-
 // Project interface - exactly matches backend schema
 export interface Project {
   _id: string;

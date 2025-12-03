@@ -1,5 +1,3 @@
-import { useState, useCallback } from "react";
-
 export interface FileCoinDownloadOptions {
   walletAddress: string;
   pieceCID: string;
@@ -73,57 +71,4 @@ export async function downloadFromFileCoin({
     console.error("FileCoin download failed:", err);
     return { success: false, filename: "", error: errorMessage };
   }
-}
-
-/**
- * React hook for FileCoin downloads with loading state
- */
-export function useFileCoinDownload() {
-  const [isDownloading, setIsDownloading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const download = React.useCallback(
-    async (
-      options: FileCoinDownloadOptions,
-      callbacks?: {
-        onSuccess?: () => void;
-        onError?: (error: string) => void;
-      }
-    ) => {
-      setIsDownloading(true);
-      setError(null);
-
-      try {
-        const result = await downloadFromFileCoin(options);
-
-        if (result.success) {
-          callbacks?.onSuccess?.();
-        } else {
-          setError(result.error || "Download failed");
-          callbacks?.onError?.(result.error || "Download failed");
-        }
-
-        return result;
-      } catch (err: any) {
-        const errorMessage = err.message || "Download failed";
-        setError(errorMessage);
-        callbacks?.onError?.(errorMessage);
-        return { success: false, filename: "", error: errorMessage };
-      } finally {
-        setIsDownloading(false);
-      }
-    },
-    []
-  );
-
-  const clearError = React.useCallback(() => {
-    setError(null);
-  }, []);
-
-  return {
-    download,
-    isDownloading,
-    error,
-    clearError,
-  };
 }

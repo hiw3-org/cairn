@@ -478,27 +478,6 @@ export const GitHubIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-export const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" {...props}>
-    <path
-      fill="#FFC107"
-      d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
-    />
-    <path
-      fill="#FF3D00"
-      d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
-    />
-    <path
-      fill="#4CAF50"
-      d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
-    />
-    <path
-      fill="#1976D2"
-      d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.99,36.626,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"
-    />
-  </svg>
-);
-
 export const LightbulbIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -614,23 +593,6 @@ export const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-    />
-  </svg>
-);
-
-export const ChevronUpDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
     />
   </svg>
 );
@@ -856,39 +818,6 @@ export const MetaMaskIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export const OpenIdIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    {...props}
-  >
-    <path
-      fillRule="evenodd"
-      d="M12.5 2.25a.75.75 0 00-1.5 0v3.313c-1.21-.242-2.458-.242-3.668 0V2.25a.75.75 0 00-1.5 0v3.313a7.46 7.46 0 00-4.332 2.766.75.75 0 101.06 1.06 5.96 5.96 0 013.272-2.213V15.75a2.25 2.25 0 002.25 2.25h.334A2.25 2.25 0 0015 15.75V9.436a5.96 5.96 0 013.272 2.213.75.75 0 101.06-1.06A7.46 7.46 0 0015.5 5.563V2.25z"
-      clipRule="evenodd"
-    />
-    <path d="M9 18a.75.75 0 000 1.5h6a.75.75 0 000-1.5H9z" />
-  </svg>
-);
-
-export const TrendingUpIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-3.94.886M21.75 5.25v6"
-    />
-  </svg>
-);
-
 export const StarIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -1019,33 +948,6 @@ export const CitationIcon = (props: React.SVGProps<SVGSVGElement>) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-    />
-  </svg>
-);
-
-export const ClipboardCheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M11.35 3.836l-8.25 4.764 8.25 4.763 8.25-4.763-8.25-4.764z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M3.099 8.6l8.25 4.763v9.527l-8.25-4.763V8.6z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21.9 8.6v9.527l-8.25 4.763v-9.527L21.9 8.6z"
     />
   </svg>
 );
