@@ -12,7 +12,7 @@ if (!rootElement) {
 }
 
 // Get the API URL from environment variables
-const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

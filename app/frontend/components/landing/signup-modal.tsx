@@ -102,7 +102,7 @@ export const SignupModal = ({ onClose }: { onClose: () => void }) => {
           formData.role === UserRole.Researcher ? "researcher" : "funder";
 
         // Call backend signup endpoint
-        const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
+        const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
         const response = await fetch(`${API_BASE}/api/v1/users/signup`, {
           method: "POST",
           headers: {

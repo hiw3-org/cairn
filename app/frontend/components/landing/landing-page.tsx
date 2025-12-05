@@ -64,7 +64,7 @@ const AuthModal = ({
 
       try {
         // Call backend Privy auth endpoint
-        const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
+        const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
         const response = await fetch(`${API_BASE}/api/v1/users/privy-auth`, {
           method: 'POST',
           headers: {
