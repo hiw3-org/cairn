@@ -1,7 +1,6 @@
 "use client";
 
 import { useClipboard } from "../../hooks/use-clipboard";
-import { Output, OutputType } from "../../lib/types";
 import {
   FileTextIcon,
   LinkIcon,

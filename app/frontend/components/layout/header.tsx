@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { UserRole } from "../../lib/types";
 import {
   SunIcon,
   MoonIcon,
   WalletIcon,
   SearchIcon,
-  BellIcon,
   ChevronDownIcon,
   UserCircleIcon,
-  CheckIcon,
   HomeIcon,
 } from "../ui/icons";
 import { useAppContext } from "../../context/app-provider";
@@ -147,12 +144,7 @@ export default function Header({
             <MoonIcon className="w-5 h-5" />
           )}
         </IconButton>
-        {/* <IconButton>
-                    <div className="relative">
-                        <BellIcon className="w-5 h-5" />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-danger rounded-full"></span>
-                    </div>
-                </IconButton> */}
+
         <div className="h-8 w-px bg-border dark:border-border-dark"></div>
         <UserMenu />
       </div>

@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { FundingRound, Project, RoundApplicant, UserRole } from '../../lib/types';
-import { ChartBarIcon, ClockIcon, EyeIcon, GavelIcon, InfoIcon, SpinnerIcon, CheckIcon, DownloadIcon, StarIcon, BookOpenIcon, ChevronLeftIcon, UsersIcon, PlusIcon } from '../ui/icons';
+import { ChevronLeftIcon, UsersIcon, PlusIcon } from '../ui/icons';
 import { useAppContext } from '../../context/app-provider';
-import { Tooltip } from '../ui/tooltip';
 import { ImpactLevelBadge } from '../ui/impact-level-badge';
 
 const numberFormatter = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });

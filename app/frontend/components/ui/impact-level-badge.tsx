@@ -1,7 +1,5 @@
 "use client";
 
-import React from 'react';
-
 type ImpactLevel = 'High' | 'Medium' | 'Low';
 
 export const ImpactLevelBadge = ({ level }: { level: ImpactLevel }) => {

@@ -3,8 +3,6 @@
 import {
   Project,
   Reproducibility,
-  Output,
-  ProjectStatus,
   ReproducibilityStatus,
 } from "../../lib/types";
 import { downloadFromFileCoin } from "../../utils/filecoin";
@@ -12,7 +10,6 @@ import {
   ChevronLeftIcon,
   DownloadIcon,
   StarIcon,
-  BookOpenIcon,
   CopyIcon,
   CheckIcon,
   ShareIcon,
@@ -25,48 +22,9 @@ import { StatusBadge } from "../ui/status-badge";
 import PoRModule from "./por-module";
 import { useAppContext } from "../../context/app-provider";
 import React from "react";
-import { useClipboard } from "../../hooks/use-clipboard";
-import { ReproducibilityBadge } from "../ui/reproducibility-badge";
 import { StoragePaymentModal } from "../modals/storage-payment-modal";
 import { DatabaseIcon } from "../ui/icons";
 
-const numberFormatter = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-const AddressWithCopy = ({ address }: { address: string }) => {
-  const { copy, copied } = useClipboard();
-  const formatAddress = (addr: string) => {
-    if (!addr || addr.length < 10) return addr;
-    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-  };
-
-  return (
-    <div className="flex items-center space-x-2 group">
-      <span
-        className="font-mono text-sm text-text-secondary dark:text-text-dark-secondary"
-        title={address}
-      >
-        {formatAddress(address)}
-      </span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          copy(address);
-        }}
-        className="p-1 rounded-full text-text-secondary hover:bg-cairn-gray-200 dark:hover:bg-cairn-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
-        aria-label="Copy address"
-      >
-        {copied ? (
-          <CheckIcon className="h-4 w-4 text-status-success" />
-        ) : (
-          <CopyIcon className="h-4 w-4" />
-        )}
-      </button>
-    </div>
-  );
-};
 
 const FundingAndOwnershipWidget = ({ project }: { project: Project }) => {
   return (

@@ -1,4 +1,3 @@
-import React from "react";
 import { ReproducibilityStatus } from "../../lib/types";
 import { CheckCircleIcon, ClockIcon, FlagIcon } from "./icons";
 import { Tooltip } from "./tooltip";

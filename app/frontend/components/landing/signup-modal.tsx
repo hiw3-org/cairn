@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "../ui/modal";
 import { UserRole } from "../../lib/types";
 import { SpinnerIcon, CheckCircleIcon } from "../ui/icons";

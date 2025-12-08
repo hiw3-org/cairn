@@ -1,14 +1,6 @@
 "use client";
 
 import React from "react";
-import {
-  Project,
-  ResearchDomain,
-  ProjectStatus,
-  Output,
-  HuggingFaceOutput,
-  OutputType,
-} from "../../lib/types";
 import { Modal } from "../ui/modal";
 import { useAppContext } from "../../context/app-provider";
 import { useApi } from "../../context/api-context";
@@ -20,7 +12,6 @@ import {
   HuggingFaceIcon,
   TrashIcon,
   FileTextIcon,
-  UploadCloudIcon,
   LightbulbIcon,
   SearchIcon,
   EyeIcon,
