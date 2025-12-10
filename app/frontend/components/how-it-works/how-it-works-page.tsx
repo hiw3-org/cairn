@@ -11,9 +11,7 @@ import {
   GavelIcon,
   ScaleIcon,
   BeakerIcon,
-  UsersGroupIcon,
 } from "../ui/icons";
-import React from "react";
 import { useAppContext } from "../../context/app-provider";
 import { AppFooter } from "../landing/landing-page";
 
@@ -36,26 +34,7 @@ const HowItWorksHeader = ({
 );
 
 const CtaSection = () => {
-  /* const { connectWallet } = useAppContext();
 
-    return (
-        <section className="bg-gradient-to-r from-blue-700 to-primary">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
-                <div className="relative isolate overflow-hidden text-center">
-                    <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Ready to Pioneer the Future of Research?</h2>
-                    <p className="mt-6 text-lg leading-8 text-blue-200">Join CAIRN today. Start a project, fund groundbreaking science, and be part of the DeSci revolution.</p>
-                    <div className="mt-10 flex items-center justify-center gap-x-6">
-                        <button onClick={() => connectWallet()} className="rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-primary shadow-lg hover:bg-primary-light/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-transform hover:scale-105">
-                            Enter the Platform
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-}; */
-
-  //  Replaced `connectWallet` with `login` as `connectWallet` does not exist on the AppContext.
   const { login } = useAppContext();
 
   return (

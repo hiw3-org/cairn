@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Project, FundingEvent, FundingRound, PoRStatus, ProjectStatus } from '../../lib/types';
-import { PlusIcon, EyeIcon, SparklesIcon, CheckBadgeIcon, UsersIcon, DownloadIcon, ShareIcon, SpinnerIcon, ClockIcon, ChevronRightIcon } from '../ui/icons';
+import { Project, FundingRound, PoRStatus } from '../../lib/types';
+import { PlusIcon, EyeIcon, SparklesIcon, CheckBadgeIcon, DownloadIcon, ShareIcon, SpinnerIcon } from '../ui/icons';
 import { useAppContext } from '../../context/app-provider';
 import { NewFundingRoundModal } from '../modals/new-funding-round-modal';
 import { GenerativePlaceholder } from '../ui/generative-placeholder';
@@ -123,7 +123,7 @@ const ImpactAssetCard = ({ round }: { round: FundingRound }) => {
     );
 }
 
-export const FunderDashboard = ({ projects, onViewInfo }: { projects: Project[], onSelectProject: (p: Project) => void, onViewInfo: (round: FundingRound) => void }) => {
+export const FunderDashboard = ({ onViewInfo }: { onViewInfo: (round: FundingRound) => void }) => {
     const { fundingRounds, handleMintImpactAsset } = useAppContext();
     const [isNewRoundModalOpen, setIsNewRoundModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'Active' | 'Voting' | 'Closed'>('Active');

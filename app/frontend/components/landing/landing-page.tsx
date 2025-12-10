@@ -11,18 +11,13 @@ import {
   ChevronDownIcon,
   MenuIcon,
   CloseIcon,
-  MetaMaskIcon,
   SpinnerIcon,
-  HuggingFaceIcon,
-  CheckCircleIcon,
 } from "../ui/icons";
 import { LandingHeaderLogo, AppLogo } from "../ui/logo";
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/app-provider";
-import { useApi } from "../../context/api-context";
-import { UserRole } from "../../lib/types";
 import { Modal } from "../ui/modal";
-import { usePrivyAuth, useWalletConnection } from "../../context/wallet-context";
+import { usePrivyAuth } from "../../context/wallet-context";
 import { useWallets } from "@privy-io/react-auth";
 import { SignupModal } from "./signup-modal";
 
@@ -515,18 +510,6 @@ export const AppFooter = () => (
           className="flex items-center gap-x-6"
           aria-label="Footer navigation"
         >
-          {/* <a
-            href="#"
-            className="text-sm font-medium hover:text-white transition-colors"
-          >
-            Docs
-          </a>
-          <a
-            href="#"
-            className="text-sm font-medium hover:text-white transition-colors"
-          >
-            FAQ
-          </a> */}
           <a
             href="https://x.com/cairn_platform"
             className="hover:text-white transition-colors"

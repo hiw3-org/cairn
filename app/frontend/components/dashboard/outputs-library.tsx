@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Project,
   LibraryOutput,
@@ -13,7 +13,6 @@ import {
   ChevronDownIcon,
   DownloadIcon,
   StarIcon,
-  BookOpenIcon,
   StorageIcon,
   ChevronRightIcon,
 } from "../ui/icons";

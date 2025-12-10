@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { FileTextIcon, ChartBarIcon, GavelIcon, BookOpenIcon, HuggingFaceIcon } from '../ui/icons';
+import { FileTextIcon, ChartBarIcon, GavelIcon, BookOpenIcon } from '../ui/icons';
 import { useAppContext } from '../../context/app-provider';
 import { UserRole } from '../../lib/types';
 

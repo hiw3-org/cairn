@@ -4,8 +4,7 @@
 
 import React from 'react';
 import { LibraryOutput, Project } from '../../lib/types';
-import { CloseIcon, FileTextIcon, UsersIcon, CheckCircleIcon, ClockIcon, FlagIcon, LinkIcon } from '../ui/icons';
-import { Tooltip } from '../ui/tooltip';
+import { CloseIcon, FileTextIcon, CheckCircleIcon, ClockIcon, FlagIcon, LinkIcon } from '../ui/icons';
 
 const DetailRow = ({ label, value }: { label: string, value: string | undefined }) => {
     if (!value) return null;

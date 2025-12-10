@@ -11,7 +11,7 @@ import { ReproducibilityDetailModal } from "./components/modals/reproduction-det
 import { useAppContext } from "./context/app-provider";
 import { CreateProjectWizardModal } from "./components/modals/create-project-wizard-modal";
 import { useApi } from "./context/api-context";
-import { useWalletConnection, useWalletActions, usePrivyAuth } from "./context/wallet-context";
+import { useWalletConnection, usePrivyAuth } from "./context/wallet-context";
 import {
   UserRole,
   Project,
@@ -112,13 +112,6 @@ const Sidebar = ({
           >
             <item.icon className="w-5 h-5" />
             <span>{item.label}</span>
-
-            {/* Notification badge for items with counts */}
-            {/* {"notificationCount" in item && item.notificationCount > 0 && (
-              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-status-danger text-white text-xs font-bold">
-                {item.notificationCount}
-              </span>
-            )} */}
 
             {/* "Soon" badge for disabled items */}
             {(item as any).disabled && (
@@ -226,7 +219,7 @@ const PublicLayout = ({
  * Orchestrates the entire application flow based on authentication status and user role
  */
 export function App() {
-  // Static page routing for public pages
+  // Static page routing for public pages (landing, how it works)
   type StaticPage = "landing" | "howitworks";
   const [staticPage, setStaticPage] = React.useState<StaticPage>("landing");
 
@@ -234,6 +227,8 @@ export function App() {
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
   const [guestSelectedProject, setGuestSelectedProject] =
     React.useState<Project | null>(null);
+
+  // Ref to track if we've already loaded HuggingFace data to prevent duplicate API calls
   const hasLoadedHFData = React.useRef(false);
 
   // Wallet connection and authentication hooks
@@ -265,10 +260,13 @@ export function App() {
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(
     null
   );
+
+  // Track which dashboard page is active - default depends on user role
   const [activeDashboardPage, setActiveDashboardPage] = React.useState(
     userRole === UserRole.Researcher ? "outputs" : "dashboard"
   );
 
+  // New project wizard state
   const [isNewProjectWizardOpen, setIsNewProjectWizardOpen] =
     React.useState(false);
   const [newProjectOutputs, setNewProjectOutputs] = React.useState<
@@ -341,7 +339,7 @@ export function App() {
     }
   }, [api, setProjects, addToast, isLoadingProjects]);
 
-  // Load projects when component mounts or authentication status changes
+  // Load projects when user is authenticated or browsing as guest
   React.useEffect(() => {
     if (isAuthenticated || isGuestBrowsing) {
       loadProjectsFromApi();
@@ -404,16 +402,19 @@ export function App() {
     setHfLastSync,
     addToast,
   ]);
+
   // Count draft projects for the current researcher
+  // Used to show notification badge in sidebar
   const draftProjectsCount = React.useMemo(() => {
     if (!currentUser || userRole !== UserRole.Researcher) return 0;
     return projects.filter(
       (p) =>
-        p.researcher_id === currentUser._id && // Updated to use new schema field
-        p.project_status === ProjectStatus.Draft // Updated to use new schema field
+        p.researcher_id === currentUser._id && // Only count user's own projects
+        p.project_status === ProjectStatus.Draft // Only count draft status
     ).length;
   }, [projects, currentUser, userRole]);
 
+  // Count new funding opportunities for researcher
   const newOpportunitiesCount = React.useMemo(() => {
     // For now, return 0 as a placeholder
     // TODO: Calculate based on funding rounds or opportunities from your app context
@@ -522,6 +523,7 @@ export function App() {
   );
 
   // Set default dashboard page based on user role
+  // Researchers see outputs library, funders see their dashboard, impact owners see claim page
   React.useEffect(() => {
     if (userRole === UserRole.Researcher) {
       setActiveDashboardPage("outputs");
@@ -533,6 +535,10 @@ export function App() {
   }, [userRole]);
 
   // ===== RENDER LOGIC =====
+  // The app has three main flows:
+  // 1. Force landing page (admin override)
+  // 2. Unauthenticated users (landing, guest browsing, how it works)
+  // 3. Authenticated users (role-based dashboards)
 
   // Force landing page display (admin override)
   if (forceShowLanding) {
@@ -637,9 +643,9 @@ export function App() {
             </div>
           )}
 
-          {/* Main content routing */}
+          {/* Main content routing - determines which view to show */}
           {(() => {
-            // Show project detail view if a project is selected
+            // Project detail takes priority - if a project is selected, show its detail view
             if (selectedProject) {
               return (
                 <ProjectDetailView
@@ -654,7 +660,7 @@ export function App() {
               );
             }
 
-            // Show appropriate dashboard based on user role
+            // Otherwise, show the appropriate dashboard based on user role
             if (userRole === UserRole.Researcher) {
               return (
                 <ResearcherDashboard

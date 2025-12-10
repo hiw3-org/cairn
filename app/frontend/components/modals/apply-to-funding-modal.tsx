@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Project, FundingRound, ProjectStatus } from '../../lib/types';
+import React, { useState, useMemo } from 'react';
+import { Project,ProjectStatus } from '../../lib/types';
 import { Modal } from '../ui/modal';
 import { useAppContext } from '../../context/app-provider';
 import { 
     CheckCircleIcon, AlertTriangleIcon, UploadCloudIcon, TrashIcon, 
-    SearchIcon, CurrencyDollarIcon, FileTextIcon, SpinnerIcon, GavelIcon
+    SearchIcon, SpinnerIcon
 } from '../ui/icons';
 
 type Step = 'form' | 'preview' | 'success';

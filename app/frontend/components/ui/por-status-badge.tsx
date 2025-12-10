@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { PoRStatus } from '../../lib/types';
 import { CheckCircleIcon, ClockIcon, FlagIcon } from './icons';
 
